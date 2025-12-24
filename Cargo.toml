@@ -2,6 +2,18 @@
 members = [
     "falcon",
     "dilithium",
+    "lamport_ots",
+    "winternitz_ots",
+    "lm_ots",
+    "lms",
+    "hss",
+    "xmss",
+    "xmssmt",
+    "sphincs_plus",
+    "sphincs",
+    "hors",
+    "horst",
+    "fors",
 ]
 resolver = "2"
 

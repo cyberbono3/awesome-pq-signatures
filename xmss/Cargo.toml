@@ -1,0 +1,6 @@
+[package]
+name = "xmss"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]

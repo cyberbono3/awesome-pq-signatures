@@ -9,3 +9,51 @@ version = "0.1.0"
 [[package]]
 name = "falcon"
 version = "0.1.0"
+
+[[package]]
+name = "fors"
+version = "0.1.0"
+
+[[package]]
+name = "hors"
+version = "0.1.0"
+
+[[package]]
+name = "horst"
+version = "0.1.0"
+
+[[package]]
+name = "hss"
+version = "0.1.0"
+
+[[package]]
+name = "lamport_ots"
+version = "0.1.0"
+
+[[package]]
+name = "lm_ots"
+version = "0.1.0"
+
+[[package]]
+name = "lms"
+version = "0.1.0"
+
+[[package]]
+name = "sphincs"
+version = "0.1.0"
+
+[[package]]
+name = "sphincs_plus"
+version = "0.1.0"
+
+[[package]]
+name = "winternitz_ots"
+version = "0.1.0"
+
+[[package]]
+name = "xmss"
+version = "0.1.0"
+
+[[package]]
+name = "xmssmt"
+version = "0.1.0"

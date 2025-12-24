@@ -1,0 +1,6 @@
+[package]
+name = "lamport_ots"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
