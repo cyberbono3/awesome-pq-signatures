@@ -1,0 +1,6 @@
+[package]
+name = "horst"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]

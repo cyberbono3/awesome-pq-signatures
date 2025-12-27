@@ -1,6 +1,23 @@
-[package]
-name = "awesome-pq-signatures"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+members = [
+    "crates/falcon",
+    "crates/dilithium",
+    "crates/lamport_ots",
+    "crates/winternitz_ots",
+    "crates/lm_ots",
+    "crates/lms",
+    "crates/hss",
+    "crates/xmss",
+    "crates/xmssmt",
+    "crates/sphincs_plus",
+    "crates/sphincs",
+    "crates/hors",
+    "crates/horst",
+    "crates/fors",
+]
+resolver = "2"
 
-[dependencies]
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.92"

@@ -1,0 +1,6 @@
+[package]
+name = "winternitz_ots"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]

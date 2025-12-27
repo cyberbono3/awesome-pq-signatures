@@ -1,0 +1,6 @@
+[package]
+name = "sphincs_plus"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
