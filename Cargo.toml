@@ -1,19 +1,19 @@
 [workspace]
 members = [
-    "falcon",
-    "dilithium",
-    "lamport_ots",
-    "winternitz_ots",
-    "lm_ots",
-    "lms",
-    "hss",
-    "xmss",
-    "xmssmt",
-    "sphincs_plus",
-    "sphincs",
-    "hors",
-    "horst",
-    "fors",
+    "crates/falcon",
+    "crates/dilithium",
+    "crates/lamport_ots",
+    "crates/winternitz_ots",
+    "crates/lm_ots",
+    "crates/lms",
+    "crates/hss",
+    "crates/xmss",
+    "crates/xmssmt",
+    "crates/sphincs_plus",
+    "crates/sphincs",
+    "crates/hors",
+    "crates/horst",
+    "crates/fors",
 ]
 resolver = "2"
 
