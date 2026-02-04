@@ -4,8 +4,7 @@ use std::time::Instant;
 use xmss_bench::{benchmark_message, XmssParamSet, XmssScheme};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let operation =
-        env::var("OPERATION").unwrap_or_else(|_| "keygen".to_owned());
+    let operation = env::var("OPERATION").unwrap_or_else(|_| "keygen".to_owned());
     let param_set = env::var("PARAM_SET")
         .unwrap_or_else(|_| "XMSS-SHA2_10_256".to_owned())
         .parse::<XmssParamSet>()?;
@@ -85,10 +84,7 @@ fn bench_verify(
     Ok(start.elapsed())
 }
 
-fn parse_usize_env(
-    name: &str,
-    default: usize,
-) -> Result<usize, Box<dyn std::error::Error>> {
+fn parse_usize_env(name: &str, default: usize) -> Result<usize, Box<dyn std::error::Error>> {
     match env::var(name) {
         Ok(value) => Ok(value.parse::<usize>()?),
         Err(_) => Ok(default),

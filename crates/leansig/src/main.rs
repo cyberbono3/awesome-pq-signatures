@@ -7,7 +7,5 @@ fn main() {
     println!("║  Poseidon2-based XMSS with Target Sum Encoding  ║");
     println!("╚══════════════════════════════════════════════════╝\n");
 
-    run_and_print::<SIGTargetSumLifetime18W4NoOff>(
-        "LeanSig Poseidon - L 2^18 - Target Sum - w 4",
-    );
+    run_and_print::<SIGTargetSumLifetime18W4NoOff>("LeanSig Poseidon - L 2^18 - Target Sum - w 4");
 }
