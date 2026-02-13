@@ -3,4 +3,10 @@ name = "falcon"
 version.workspace = true
 edition.workspace = true
 
+[[bin]]
+name = "falcon-bench"
+path = "src/main.rs"
+
 [dependencies]
+pqcrypto-falcon = "0.4.1"
+pqcrypto-traits = "0.3"
