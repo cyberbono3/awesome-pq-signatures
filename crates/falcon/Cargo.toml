@@ -7,6 +7,13 @@ edition.workspace = true
 name = "falcon-bench"
 path = "src/main.rs"
 
+[[bench]]
+name = "falcon_divan"
+harness = false
+
 [dependencies]
 pqcrypto-falcon = "0.4.1"
 pqcrypto-traits = "0.3"
+
+[dev-dependencies]
+divan = "0.1"
