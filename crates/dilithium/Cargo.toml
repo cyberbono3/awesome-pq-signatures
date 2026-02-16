@@ -3,4 +3,9 @@ name = "dilithium"
 version.workspace = true
 edition.workspace = true
 
+[[bin]]
+name = "dilithium"
+path = "src/main.rs"
+
 [dependencies]
+ml-dsa = "0.0.4"
