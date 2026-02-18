@@ -4,31 +4,38 @@ use std::time::Instant;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let operation =
-        env::var("OPERATION").unwrap_or_else(|_| "keygen".to_owned());
-    let iterations = parse_usize_env("ITERATIONS", 100)?;
-    let message_size = parse_usize_env("MSG_SIZE", 32)?;
-    let deterministic = parse_bool_env("DETERMINISTIC_RNG", true);
+    let message_size = parse_usize_env("LAMPORT_MESSAGE_SIZE", 1024)?;
+    let iterations = parse_usize_env("LAMPORT_ITERATIONS", 100)?;
+    let deterministic = parse_bool_env("LAMPORT_DETERMINISTIC", true);
 
     let scheme = LamportOtsScheme;
+    let sizes = scheme.sizes();
+
+    println!("algorithm: {}", scheme.algorithm_name());
+    println!("backend: {}", scheme.backend_name());
+    println!("param_set: {}", scheme.param_set_name());
+    println!("public_key_bytes: {}", sizes.public_key_bytes);
+    println!("secret_key_bytes: {}", sizes.secret_key_bytes);
+    println!("signature_bytes: {}", sizes.signature_bytes);
+    println!("message_size: {}", message_size);
+    println!("iterations: {}", iterations);
+    println!("deterministic_rng: {}", deterministic);
+
     let mut message = vec![0_u8; message_size];
     for (i, byte) in message.iter_mut().enumerate() {
         *byte = (i % 251) as u8;
     }
 
-    let total = match operation.as_str() {
-        "keygen" => bench_keygen(scheme, iterations, deterministic)?,
-        "sign" => bench_sign(scheme, &message, iterations, deterministic)?,
-        "verify" => bench_verify(scheme, &message, iterations, deterministic)?,
-        other => {
-            return Err(format!(
-                "unsupported OPERATION={other}; expected one of: keygen, sign, verify"
-            )
-            .into())
-        }
-    };
+    let keygen_elapsed = bench_keygen(scheme, iterations, deterministic)?;
+    print_stats("keygen", iterations, keygen_elapsed.as_nanos());
 
-    println!("{}", total.as_nanos());
+    let sign_elapsed = bench_sign(scheme, &message, iterations, deterministic)?;
+    print_stats("sign", iterations, sign_elapsed.as_nanos());
+
+    let verify_elapsed =
+        bench_verify(scheme, &message, iterations, deterministic)?;
+    print_stats("verify", iterations, verify_elapsed.as_nanos());
+
     Ok(())
 }
 
@@ -88,9 +95,27 @@ fn bench_verify(
     Ok(start.elapsed())
 }
 
+fn print_stats(operation: &str, iterations: usize, total_ns: u128) {
+    let avg_ns = if iterations == 0 {
+        0
+    } else {
+        total_ns / iterations as u128
+    };
+
+    let throughput = if total_ns == 0 {
+        0.0
+    } else {
+        (iterations as f64 * 1_000_000_000.0) / total_ns as f64
+    };
+
+    println!("{operation}_total_ns: {total_ns}");
+    println!("{operation}_avg_ns: {avg_ns}");
+    println!("{operation}_throughput_ops_per_s: {:.3}", throughput);
+}
+
 fn bench_rng(label: &str, deterministic: bool) -> XorShift64 {
     if deterministic {
-        XorShift64::new(seed_from_str(&format!("lamport-bench-{label}")))
+        XorShift64::new(seed_from_str(&format!("lamport-main-{label}")))
     } else {
         XorShift64::new(random_seed(label))
     }

@@ -5,3 +5,18 @@ edition.workspace = true
 
 [dependencies]
 sha2 = "0.10"
+
+[dev-dependencies]
+divan = "0.1"
+
+[[bin]]
+name = "lamport_ots"
+path = "src/main.rs"
+
+[[bin]]
+name = "lamport_ots_bench"
+path = "src/bin/lamport_ots_bench.rs"
+
+[[bench]]
+name = "lamport_ots_divan"
+harness = false
