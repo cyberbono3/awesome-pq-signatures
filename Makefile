@@ -1,4 +1,4 @@
-.PHONY: format build test dilithium-bench-example xmss-bench-example
+.PHONY: format build test
 
 format:
 	cargo fmt --all
