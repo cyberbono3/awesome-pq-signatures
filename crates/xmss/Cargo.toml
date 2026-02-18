@@ -2,5 +2,24 @@
 name = "xmss"
 version.workspace = true
 edition.workspace = true
+build = "build.rs"
 
 [dependencies]
+
+[build-dependencies]
+cc = "1.2"
+
+[dev-dependencies]
+divan = "0.1"
+
+[[bin]]
+name = "xmss"
+path = "src/main.rs"
+
+[[bin]]
+name = "xmss_bench"
+path = "src/bin/xmss_bench.rs"
+
+[[bench]]
+name = "xmss_divan"
+harness = false

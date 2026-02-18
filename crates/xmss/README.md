@@ -1,55 +1,101 @@
 # XMSS
 
-Hash-based Merkle signature scheme (RFC 8391).
+Hash-based Merkle signature scheme (RFC 8391), implemented via Rust FFI over the XMSS C reference implementation.
 
-## Highlights
+## Backend
 
-- Hash-based, post-quantum security relying on the underlying hash function.
-- Stateful, single-tree construction built from WOTS+ one-time signatures.
-- Tunable parameters (tree height, hash function) trade signature size vs. total signatures.
-- Standardized in RFC 8391 with broad reference material.
+- Library backend: `xmss-reference` (vendored C sources in `vendor/xmss-reference`)
+- Rust wrapper: `src/lib.rs`
+- Current supported parameter sets:
+  - `XMSS-SHA2_10_256`
+  - `XMSS-SHA2_16_256`
+  - `XMSS-SHA2_20_256`
 
-## Pros
+Notes:
+- XMSS is stateful; each signature updates the secret key state.
+- The C reference backend requires OpenSSL `libcrypto` headers/libraries for SHA-2.
 
-- Conservative security assumptions (hash function only).
-- Compact public keys and simple verification structure.
-- No per-signature randomness required (deterministic given state).
+## Project layout
 
-## Cons
+- `src/lib.rs`: safe Rust wrapper (`XmssScheme`, keypair/sign/verify, sizes, parameter parsing)
+- `src/main.rs`: executable benchmark summary for keygen/sign/verify
+- `src/bin/xmss_bench.rs`: bench command used by `bench/run.sh`
+- `benches/xmss_divan.rs`: `divan` benchmark suite
+- `bench/run.sh`: metadata-rich benchmark harness with JSON/CSV outputs
 
-- Stateful signing: the signer must track and advance the leaf index to avoid reuse.
-- Hard limit on signatures per key pair (2^h leaves).
-- Signature size and signing cost grow with tree height.
+## Run
 
-## Benchmarking strategy
+```bash
+cargo run -p xmss --release --bin xmss
+```
 
-Outline for consistent, reproducible measurements:
+Environment overrides:
 
-- Define scope: keygen (tree init), sign (state advances), verify.
-- Select implementations: fix library + commit/tag; avoid mixed backends in one run.
-- Control environment: pin CPU cores, isolate background load, fix governor/turbo policy.
-- Build setup: record compiler version, optimization flags, and feature toggles.
-- Workload matrix: cover representative message sizes and iterations; include warmups.
-- Parameter sets: encode XMSS params (e.g., `XMSS-SHA2_10_256`).
-- Measure: wall-clock latency and throughput; optionally memory, cache misses if available.
-- Validate: check signature correctness and ensure state never reuses one-time keys.
+- `XMSS_PARAM_SET` (default `XMSS-SHA2_10_256`)
+- `XMSS_MESSAGE_SIZE` (default `1024`)
+- `XMSS_ITERATIONS` (default `100`)
 
-Minimum metadata to record per run:
+## Divan benchmark
 
-- CPU model, microcode, RAM, OS/kernel
-- Compiler version + flags
-- Library name + commit hash/tag
-- Algorithm + parameter set
-- Message sizes + number of iterations
-- Whether turbo scaling was on/off
-- RNG source
+Quick smoke run:
 
-## Benchmarking harness
+```bash
+cargo bench -p xmss --bench xmss_divan -- --test
+```
 
-`bench/run.sh` collects metadata and writes JSON/CSV results. See `bench/results_schema.json`,
-`bench/results_schema.csv`, `bench/example_results.json`, and `bench/example_results.csv`
-for the output layout.
+Regular benchmark run:
 
-## Library
+```bash
+cargo bench -p xmss --bench xmss_divan
+```
 
-[xmss-rust](https://gitlab.zapb.de/crypto/xmss-rust)
+## Structured benchmark harness
+
+```bash
+OUT_DIR=crates/xmss/bench/results-example \
+BENCH_CMD='cargo run -p xmss --release --bin xmss_bench --' \
+PARAM_SETS=XMSS-SHA2_10_256 \
+MSG_SIZES=32 \
+ITERATIONS=3 \
+WARMUP_RUNS=0 \
+RUNS=1 \
+OPERATIONS=keygen,sign,verify \
+PRINT_SUMMARY=1 \
+crates/xmss/bench/run.sh
+```
+
+## Latest local results
+
+Date: 2026-02-18
+
+`src/main.rs` (`XMSS_PARAM_SET=XMSS-SHA2_10_256`, `XMSS_MESSAGE_SIZE=1024`, `XMSS_ITERATIONS=10`):
+
+- `public_key_bytes: 68`
+- `secret_key_bytes: 136`
+- `signature_bytes: 2500`
+- `keygen_avg_ns: 1123783295`
+- `sign_avg_ns: 1104597258`
+- `verify_avg_ns: 557675`
+
+`bench/run.sh` sample (`MSG_SIZES=32`, `ITERATIONS=3`, `RUNS=1`):
+
+- `keygen_avg_ns: 1098196764`
+- `sign_avg_ns: 1099239070`
+- `verify_avg_ns: 560708`
+- Output files:
+  - `bench/results-example/run-20260218T200105Z-74065.json`
+  - `bench/results-example/run-20260218T200105Z-74065.csv`
+
+`divan --test` output:
+
+- `keygen`
+- `sign` (`32`, `1024`)
+- `verify` (`32`, `1024`)
+
+## Benchmark environment (captured)
+
+- Host: `andreis-MacBook-Pro.local`
+- OS/kernel: `Darwin 25.1.0 arm64`
+- Rust: `rustc 1.87.0-nightly (f4a216d28 2025-03-02)`
+- CPU model: `unknown` in sandbox
+- RAM: `unknown` in sandbox
