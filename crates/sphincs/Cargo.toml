@@ -16,8 +16,6 @@ harness = false
 [target.'cfg(any(target_arch = "x86", target_arch = "x86_64"))'.dependencies]
 gravity = { git = "https://github.com/gendx/gravity-rs", rev = "c9b3bb996550341e9cab2cbae9511ea84351029b" }
 
-[target.'cfg(not(any(target_arch = "x86", target_arch = "x86_64")))'.dependencies]
-pqcrypto-sphincsplus = "0.7"
 pqcrypto-traits = "0.3"
 
 [dev-dependencies]
