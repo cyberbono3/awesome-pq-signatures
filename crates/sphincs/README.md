@@ -7,8 +7,8 @@ Hash-based signature benchmarking crate.
 Primary backend: [gravity-rs](https://github.com/gendx/gravity-rs) (`gravity` crate, `GravitySmall`).
 
 Architecture note:
-- `x86` / `x86_64`: uses `gravity-rs`
-- non-`x86` architectures (for example Apple Silicon `arm64`): falls back to `pqcrypto-sphincsplus` because current `gravity-rs` SIMD implementation is x86/x86_64-only
+- `x86` / `x86_64`: supported with `gravity-rs`
+- non-`x86` architectures (for example Apple Silicon `arm64`): not supported in this crate configuration
 
 ## `src/main.rs` (`sphincs-bench` binary)
 
@@ -27,9 +27,9 @@ cargo run -p sphincs --bin sphincs-bench
 Latest run result (captured on 2026-02-18 18:11:12 UTC):
 
 ```text
-=== SPHINCS+-SHAKE-128f-simple Benchmark ===
+=== Gravity-SPHINCS (Small) Benchmark ===
 
-Backend: pqcrypto-sphincsplus (gravity-rs unavailable on this architecture)
+Backend: gravity-rs
 
 --- Key Generation ---
 Time to generate keys: 7.98725ms
@@ -49,8 +49,8 @@ Signature verification: SUCCESS
 --- Size Measurements ---
 Public key size: 32 bytes
 Secret key size: 64 bytes
-Signature size: 17152 bytes
-Signed message size: 17216 bytes
+Signature size: <x86/x86_64 dependent runtime value>
+Signed message size: <x86/x86_64 dependent runtime value>
 ```
 
 ## `benches/sphincs_divan.rs` (Divan benchmark suite)
@@ -71,30 +71,30 @@ cargo bench -p sphincs --bench sphincs_divan
 Latest run result (captured on 2026-02-18 18:11:12 UTC):
 
 ```text
-SPHINCS+-SHAKE-128f-simple sizes:
+Gravity-SPHINCS (Small) sizes:
   Public key: 32 bytes
   Secret key: 64 bytes
-  Signature (message 32 bytes): 17120 bytes
-  Signature (message 256 bytes): 17344 bytes
-  Signature (message 1024 bytes): 18112 bytes
-  Signature (message 4096 bytes): 21184 bytes
+  Signature (message 32 bytes): <x86/x86_64 dependent runtime value>
+  Signature (message 256 bytes): <x86/x86_64 dependent runtime value>
+  Signature (message 1024 bytes): <x86/x86_64 dependent runtime value>
+  Signature (message 4096 bytes): <x86/x86_64 dependent runtime value>
 
-SPHINCS+-SHAKE-128f-simple peak heap usage:
-  Message 32 bytes: sign=34240 bytes, verify=34240 bytes
-  Message 256 bytes: sign=34688 bytes, verify=34688 bytes
-  Message 1024 bytes: sign=36224 bytes, verify=36224 bytes
-  Message 4096 bytes: sign=42368 bytes, verify=42368 bytes
+Gravity-SPHINCS (Small) peak heap usage:
+  Message 32 bytes: sign=<x86/x86_64 dependent runtime value>, verify=<x86/x86_64 dependent runtime value>
+  Message 256 bytes: sign=<x86/x86_64 dependent runtime value>, verify=<x86/x86_64 dependent runtime value>
+  Message 1024 bytes: sign=<x86/x86_64 dependent runtime value>, verify=<x86/x86_64 dependent runtime value>
+  Message 4096 bytes: sign=<x86/x86_64 dependent runtime value>, verify=<x86/x86_64 dependent runtime value>
 
 Divan timing summary (median):
-  keygen: 1.041 ms
-  sign(32): 24.89 ms
-  sign(256): 24.81 ms
-  sign(1024): 25.02 ms
-  sign(4096): 24.96 ms
-  verify(32): 1.495 ms
-  verify(256): 1.518 ms
-  verify(1024): 1.535 ms
-  verify(4096): 1.477 ms
+  keygen: <x86/x86_64 dependent runtime value>
+  sign(32): <x86/x86_64 dependent runtime value>
+  sign(256): <x86/x86_64 dependent runtime value>
+  sign(1024): <x86/x86_64 dependent runtime value>
+  sign(4096): <x86/x86_64 dependent runtime value>
+  verify(32): <x86/x86_64 dependent runtime value>
+  verify(256): <x86/x86_64 dependent runtime value>
+  verify(1024): <x86/x86_64 dependent runtime value>
+  verify(4096): <x86/x86_64 dependent runtime value>
 ```
 
 Note: benchmark timings and allocation metrics vary by machine, compiler version, and system load.

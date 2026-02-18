@@ -97,6 +97,11 @@ pub trait SignatureScheme {
     fn signature_size(&self, signature: &Self::Signature) -> usize;
 }
 
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+compile_error!(
+    "crates/sphincs requires x86/x86_64 because it is configured to use gravity-rs only"
+);
+
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 mod backend {
     use super::SignatureScheme;
@@ -162,75 +167,7 @@ mod backend {
     }
 }
 
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-mod backend {
-    use super::SignatureScheme;
-    use pqcrypto_sphincsplus::sphincsshake128fsimple;
-    use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
-
-    #[derive(Clone, Copy, Debug, Default)]
-    pub struct SphincsScheme;
-
-    pub const SPHINCS_SCHEME: SphincsScheme = SphincsScheme;
-
-    impl SignatureScheme for SphincsScheme {
-        type PublicKey = sphincsshake128fsimple::PublicKey;
-        type SecretKey = sphincsshake128fsimple::SecretKey;
-        type Signature = Vec<u8>;
-
-        fn algorithm_name(&self) -> &'static str {
-            "SPHINCS+-SHAKE-128f-simple"
-        }
-
-        fn backend_name(&self) -> &'static str {
-            "pqcrypto-sphincsplus (gravity-rs unavailable on this architecture)"
-        }
-
-        fn keypair(&self) -> (Self::PublicKey, Self::SecretKey) {
-            sphincsshake128fsimple::keypair()
-        }
-
-        fn sign(
-            &self,
-            message: &[u8],
-            secret_key: &Self::SecretKey,
-        ) -> Self::Signature {
-            sphincsshake128fsimple::sign(message, secret_key)
-                .as_bytes()
-                .to_vec()
-        }
-
-        fn verify(
-            &self,
-            message: &[u8],
-            signature: &Self::Signature,
-            public_key: &Self::PublicKey,
-        ) -> bool {
-            let Ok(signed) =
-                sphincsshake128fsimple::SignedMessage::from_bytes(signature)
-            else {
-                return false;
-            };
-            match sphincsshake128fsimple::open(&signed, public_key) {
-                Ok(opened) => opened == message,
-                Err(_) => false,
-            }
-        }
-
-        fn public_key_size(&self, public_key: &Self::PublicKey) -> usize {
-            public_key.as_bytes().len()
-        }
-
-        fn secret_key_size(&self, secret_key: &Self::SecretKey) -> usize {
-            secret_key.as_bytes().len()
-        }
-
-        fn signature_size(&self, signature: &Self::Signature) -> usize {
-            signature.len()
-        }
-    }
-}
-
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub use backend::{SphincsScheme, SPHINCS_SCHEME};
 
 pub fn bench_message(size: usize) -> Vec<u8> {
