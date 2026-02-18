@@ -23,7 +23,7 @@ Notes:
 ## Run (`main.rs`)
 
 ```bash
-cargo run --manifest-path crates/lamport_ots/Cargo.toml --release --offline --bin lamport_ots
+cargo run -p lamport_ots --release --offline --bin lamport_ots
 ```
 
 Environment overrides:
@@ -37,41 +37,37 @@ Environment overrides:
 Smoke run:
 
 ```bash
-cargo bench --manifest-path crates/lamport_ots/Cargo.toml --bench lamport_ots_divan --offline -- --test
+cargo bench -p lamport_ots --bench lamport_ots_divan --offline -- --test
 ```
 
 Full run:
 
 ```bash
-cargo bench --manifest-path crates/lamport_ots/Cargo.toml --bench lamport_ots_divan --offline
-```
-
-## Direct benchmark commands
-
-```bash
-OPERATION=keygen MSG_SIZE=32 ITERATIONS=1000 DETERMINISTIC_RNG=1 cargo run --manifest-path crates/lamport_ots/Cargo.toml --release --offline --bin lamport_ots_bench
-OPERATION=sign MSG_SIZE=32 ITERATIONS=1000 DETERMINISTIC_RNG=1 cargo run --manifest-path crates/lamport_ots/Cargo.toml --release --offline --bin lamport_ots_bench
-OPERATION=verify MSG_SIZE=32 ITERATIONS=1000 DETERMINISTIC_RNG=1 cargo run --manifest-path crates/lamport_ots/Cargo.toml --release --offline --bin lamport_ots_bench
+cargo bench -p lamport_ots --bench lamport_ots_divan --offline
 ```
 
 ## Latest local results
 
-Date: 2026-02-18
+Captured at `2026-02-18T21:06:18Z`:
 
-`src/main.rs` (`LAMPORT_MESSAGE_SIZE=1024`, `LAMPORT_ITERATIONS=50`):
+`main.rs` (`cargo run -p lamport_ots --release --offline --bin lamport_ots`)
 
 - `public_key_bytes: 16384`
 - `secret_key_bytes: 16384`
 - `signature_bytes: 8192`
-- `keygen_avg_ns: 124295`
-- `sign_avg_ns: 4281`
-- `verify_avg_ns: 54690`
+- `message_size: 1024`
+- `iterations: 100`
+- `keygen_avg_ns: 177114`
+- `sign_avg_ns: 4885`
+- `verify_avg_ns: 74334`
 
-`lamport_ots_bench` sample (`MSG_SIZE=32`, `ITERATIONS=1000`):
+`lamport_ots_divan` (`cargo bench -p lamport_ots --bench lamport_ots_divan --offline`)
 
-- `keygen_total_ns: 111773708` (`avg_ns: 111773`)
-- `sign_total_ns: 1215208` (`avg_ns: 1215`)
-- `verify_total_ns: 59515291` (`avg_ns: 59515`)
+- `keygen mean: 97.68 µs` (`median: 96.41 µs`)
+- `sign(32) mean: 98.62 µs` (`median: 96.99 µs`)
+- `sign(1024) mean: 101.8 µs` (`median: 100 µs`)
+- `verify(32) mean: 49.23 µs` (`median: 48.35 µs`)
+- `verify(1024) mean: 51.97 µs` (`median: 51.2 µs`)
 
 ## Benchmark environment (captured)
 
