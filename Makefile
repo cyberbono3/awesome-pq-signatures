@@ -1,4 +1,4 @@
-.PHONY: format build test dilithium-bench-example
+.PHONY: format build test dilithium-bench-example sphincs_plus-bench-example
 
 format:
 	cargo fmt --all
