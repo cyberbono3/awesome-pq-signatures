@@ -2,6 +2,9 @@ use std::alloc::{GlobalAlloc, Layout};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+use gravity::{gravity_genpk, gravity_sign, gravity_verify, GravitySmall};
+
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
 
@@ -97,78 +100,105 @@ pub trait SignatureScheme {
     fn signature_size(&self, signature: &Self::Signature) -> usize;
 }
 
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-compile_error!(
-    "crates/sphincs requires x86/x86_64 because it is configured to use gravity-rs only"
-);
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SphincsScheme;
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-mod backend {
-    use super::SignatureScheme;
-    use gravity::{gravity_genpk, gravity_sign, gravity_verify, GravitySmall};
+pub const SPHINCS_SCHEME: SphincsScheme = SphincsScheme;
 
-    #[derive(Clone, Copy, Debug, Default)]
-    pub struct SphincsScheme;
+impl SignatureScheme for SphincsScheme {
+    type PublicKey = [u8; 32];
+    type SecretKey = [u8; 64];
+    type Signature = Vec<u8>;
 
-    pub const SPHINCS_SCHEME: SphincsScheme = SphincsScheme;
+    fn algorithm_name(&self) -> &'static str {
+        "Gravity-SPHINCS (Small)"
+    }
 
-    impl SignatureScheme for SphincsScheme {
-        type PublicKey = [u8; 32];
-        type SecretKey = [u8; 64];
-        type Signature = Vec<u8>;
-
-        fn algorithm_name(&self) -> &'static str {
-            "Gravity-SPHINCS (Small)"
-        }
-
-        fn backend_name(&self) -> &'static str {
+    fn backend_name(&self) -> &'static str {
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        {
             "gravity-rs"
         }
-
-        fn keypair(&self) -> (Self::PublicKey, Self::SecretKey) {
-            let secret_key = [7_u8; 64];
-            let mut public_key = [0_u8; 32];
-            gravity_genpk::<GravitySmall>(&mut public_key, &secret_key);
-            (public_key, secret_key)
+        #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+        {
+            "gravity-rs (unsupported on this architecture)"
         }
+    }
 
-        fn sign(
-            &self,
-            message: &[u8],
-            secret_key: &Self::SecretKey,
-        ) -> Self::Signature {
-            gravity_sign::<GravitySmall>(secret_key, message)
-        }
+    fn keypair(&self) -> (Self::PublicKey, Self::SecretKey) {
+        gravity_keypair()
+    }
 
-        fn verify(
-            &self,
-            message: &[u8],
-            signature: &Self::Signature,
-            public_key: &Self::PublicKey,
-        ) -> bool {
-            gravity_verify::<GravitySmall>(
-                public_key,
-                message,
-                signature.clone(),
-            )
-        }
+    fn sign(
+        &self,
+        message: &[u8],
+        secret_key: &Self::SecretKey,
+    ) -> Self::Signature {
+        gravity_sign_bytes(secret_key, message)
+    }
 
-        fn public_key_size(&self, public_key: &Self::PublicKey) -> usize {
-            public_key.len()
-        }
+    fn verify(
+        &self,
+        message: &[u8],
+        signature: &Self::Signature,
+        public_key: &Self::PublicKey,
+    ) -> bool {
+        gravity_verify_bytes(public_key, message, signature)
+    }
 
-        fn secret_key_size(&self, secret_key: &Self::SecretKey) -> usize {
-            secret_key.len()
-        }
+    fn public_key_size(&self, public_key: &Self::PublicKey) -> usize {
+        public_key.len()
+    }
 
-        fn signature_size(&self, signature: &Self::Signature) -> usize {
-            signature.len()
-        }
+    fn secret_key_size(&self, secret_key: &Self::SecretKey) -> usize {
+        secret_key.len()
+    }
+
+    fn signature_size(&self, signature: &Self::Signature) -> usize {
+        signature.len()
     }
 }
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-pub use backend::{SphincsScheme, SPHINCS_SCHEME};
+fn gravity_keypair() -> ([u8; 32], [u8; 64]) {
+    let secret_key = [7_u8; 64];
+    let mut public_key = [0_u8; 32];
+    gravity_genpk::<GravitySmall>(&mut public_key, &secret_key);
+    (public_key, secret_key)
+}
+
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+fn gravity_keypair() -> ([u8; 32], [u8; 64]) {
+    panic!("gravity-rs is only available on x86/x86_64")
+}
+
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+fn gravity_sign_bytes(secret_key: &[u8; 64], message: &[u8]) -> Vec<u8> {
+    gravity_sign::<GravitySmall>(secret_key, message)
+}
+
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+fn gravity_sign_bytes(_secret_key: &[u8; 64], _message: &[u8]) -> Vec<u8> {
+    panic!("gravity-rs is only available on x86/x86_64")
+}
+
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+fn gravity_verify_bytes(
+    public_key: &[u8; 32],
+    message: &[u8],
+    signature: &[u8],
+) -> bool {
+    gravity_verify::<GravitySmall>(public_key, message, signature.to_vec())
+}
+
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+fn gravity_verify_bytes(
+    _public_key: &[u8; 32],
+    _message: &[u8],
+    _signature: &[u8],
+) -> bool {
+    panic!("gravity-rs is only available on x86/x86_64")
+}
 
 pub fn bench_message(size: usize) -> Vec<u8> {
     vec![BENCH_MESSAGE_BYTE; size]
@@ -206,6 +236,7 @@ mod tests {
         assert_eq!(signed_message_size(10, 20), 30);
     }
 
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     #[test]
     fn sign_verify_roundtrip() {
         let scheme = SPHINCS_SCHEME;
@@ -216,5 +247,15 @@ mod tests {
         assert!(scheme.public_key_size(&public_key) > 0);
         assert!(scheme.secret_key_size(&secret_key) > 0);
         assert!(scheme.signature_size(&signature) > 0);
+    }
+
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+    #[test]
+    fn backend_reports_unsupported() {
+        let scheme = SPHINCS_SCHEME;
+        assert_eq!(
+            scheme.backend_name(),
+            "gravity-rs (unsupported on this architecture)"
+        );
     }
 }

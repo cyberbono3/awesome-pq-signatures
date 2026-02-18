@@ -9,6 +9,7 @@ Primary backend: [gravity-rs](https://github.com/gendx/gravity-rs) (`gravity` cr
 Architecture note:
 - `x86` / `x86_64`: supported with `gravity-rs`
 - non-`x86` architectures (for example Apple Silicon `arm64`): not supported in this crate configuration
+- On non-`x86` architectures, `backend_name()` reports unsupported and the crate panics only when Gravity operations (`keypair`, `sign`, `verify`) are called.
 
 ## `src/main.rs` (`sphincs-bench` binary)
 
