@@ -1,129 +1,74 @@
-use pqcrypto_falcon::falcon512;
+use falcon::{
+    measure_time, memory, signature_size, SignatureScheme, TrackingAllocator,
+    FALCON512,
+};
 use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
-use std::alloc::{GlobalAlloc, Layout, System};
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Instant;
+use std::alloc::System;
+use std::time::Duration;
 
-struct TrackingAllocator;
-
-static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static BASELINE: AtomicUsize = AtomicUsize::new(0);
-
-unsafe impl GlobalAlloc for TrackingAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ret = System.alloc(layout);
-        if !ret.is_null() {
-            let size = layout.size();
-            let current = ALLOCATED.fetch_add(size, Ordering::SeqCst) + size;
-
-            // Update peak relative to baseline
-            let baseline = BASELINE.load(Ordering::SeqCst);
-            let relative_current = current.saturating_sub(baseline);
-            let mut peak = PEAK_ALLOCATED.load(Ordering::SeqCst);
-
-            while relative_current > peak {
-                match PEAK_ALLOCATED.compare_exchange_weak(
-                    peak,
-                    relative_current,
-                    Ordering::SeqCst,
-                    Ordering::SeqCst,
-                ) {
-                    Ok(_) => break,
-                    Err(x) => peak = x,
-                }
-            }
-        }
-        ret
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        System.dealloc(ptr, layout);
-        ALLOCATED.fetch_sub(layout.size(), Ordering::SeqCst);
-    }
-}
+static SYSTEM_ALLOC: System = System;
 
 #[global_allocator]
-static GLOBAL: TrackingAllocator = TrackingAllocator;
+static GLOBAL: TrackingAllocator<System> =
+    TrackingAllocator::new(&SYSTEM_ALLOC);
 
-fn reset_memory_tracking() {
-    let current = ALLOCATED.load(Ordering::SeqCst);
-    BASELINE.store(current, Ordering::SeqCst);
-    PEAK_ALLOCATED.store(0, Ordering::SeqCst);
-}
+const MESSAGE: &[u8] =
+    b"This is a test message for Falcon signature scheme benchmarking";
 
-fn get_peak_memory() -> usize {
-    PEAK_ALLOCATED.load(Ordering::SeqCst)
+fn print_timing(label: &str, duration: Duration) {
+    println!("Time to {label}: {duration:?}");
+    println!("Time to {label} (ns): {}", duration.as_nanos());
 }
 
 fn main() {
-    println!("=== Falcon-512 Benchmark ===\n");
+    let scheme = FALCON512;
+    println!("=== {} Benchmark ===\n", scheme.algorithm_name());
 
-    // Message to sign
-    let message = b"This is a test message for Falcon signature scheme benchmarking";
-
-    // 1. Key Generation Timing
     println!("--- Key Generation ---");
+    let ((public_key, secret_key), keygen_duration) =
+        measure_time(|| scheme.keypair());
+    print_timing("generate keys", keygen_duration);
 
-    let start = Instant::now();
-    let (pk, sk) = falcon512::keypair();
-    let keygen_duration = start.elapsed();
-
-    println!("Time to generate keys: {:?}", keygen_duration);
-    println!("Time to generate keys (ns): {}", keygen_duration.as_nanos());
-
-    // 2. Signing Timing
     println!("\n--- Signing ---");
-    reset_memory_tracking();
+    memory::reset_peak();
+    let (signed_message, sign_duration) =
+        measure_time(|| scheme.sign(MESSAGE, &secret_key));
+    print_timing("sign", sign_duration);
+    let sign_peak_mem = memory::peak_bytes();
+    println!("Peak memory during signing: {sign_peak_mem} bytes");
 
-    let start = Instant::now();
-    let signed_msg = falcon512::sign(message, &sk);
-    let sign_duration = start.elapsed();
-
-    println!("Time to sign: {:?}", sign_duration);
-    println!("Time to sign (ns): {}", sign_duration.as_nanos());
-
-    let sign_peak_mem = get_peak_memory();
-    println!("Peak memory during signing: {} bytes", sign_peak_mem);
-
-    // 3. Verification Timing
     println!("\n--- Verification ---");
-    reset_memory_tracking();
+    memory::reset_peak();
+    let (opened_message, verify_duration) =
+        measure_time(|| scheme.open(&signed_message, &public_key));
+    print_timing("verify", verify_duration);
+    let verify_peak_mem = memory::peak_bytes();
+    println!("Peak memory during verification: {verify_peak_mem} bytes");
 
-    let start = Instant::now();
-    let verified_msg = falcon512::open(&signed_msg, &pk);
-    let verify_duration = start.elapsed();
-
-    println!("Time to verify: {:?}", verify_duration);
-    println!("Time to verify (ns): {}", verify_duration.as_nanos());
-
-    let verify_peak_mem = get_peak_memory();
-    println!("Peak memory during verification: {} bytes", verify_peak_mem);
-
-    match verified_msg {
-        Ok(msg) => {
-            if msg == message {
-                println!("Signature verification: SUCCESS");
-            } else {
-                println!("Signature verification: FAILED (message mismatch)");
-            }
+    match opened_message {
+        Some(message) if message == MESSAGE => {
+            println!("Signature verification: SUCCESS")
         }
-        Err(_) => println!("Signature verification: FAILED"),
+        Some(_) => {
+            println!("Signature verification: FAILED (message mismatch)")
+        }
+        None => println!("Signature verification: FAILED"),
     }
 
-    // 4. Size Measurements
     println!("\n--- Size Measurements ---");
-    println!("Public key size: {} bytes", pk.as_bytes().len());
-    println!("Secret key size: {} bytes", sk.as_bytes().len());
+    println!("Public key size: {} bytes", public_key.as_bytes().len());
+    println!("Secret key size: {} bytes", secret_key.as_bytes().len());
     println!(
         "Signature size: {} bytes",
-        signed_msg.as_bytes().len() - message.len()
+        signature_size(&signed_message, MESSAGE.len())
     );
-    println!("Signed message size: {} bytes", signed_msg.as_bytes().len());
+    println!(
+        "Signed message size: {} bytes",
+        signed_message.as_bytes().len()
+    );
 
-    // Summary
     println!("\n=== Summary ===");
-    println!("Algorithm: Falcon-512");
+    println!("Algorithm: {}", scheme.algorithm_name());
     println!("\nTiming:");
     println!(
         "  Key Generation: {:?} ({} ns)",
@@ -141,13 +86,13 @@ fn main() {
         verify_duration.as_nanos()
     );
     println!("\nSizes:");
-    println!("  Public Key:  {} bytes", pk.as_bytes().len());
-    println!("  Secret Key:  {} bytes", sk.as_bytes().len());
+    println!("  Public Key:  {} bytes", public_key.as_bytes().len());
+    println!("  Secret Key:  {} bytes", secret_key.as_bytes().len());
     println!(
         "  Signature:   {} bytes",
-        signed_msg.as_bytes().len() - message.len()
+        signature_size(&signed_message, MESSAGE.len())
     );
     println!("\nMemory Usage (heap allocations):");
-    println!("  Signing:      {} bytes", sign_peak_mem);
-    println!("  Verification: {} bytes", verify_peak_mem);
+    println!("  Signing:      {sign_peak_mem} bytes");
+    println!("  Verification: {verify_peak_mem} bytes");
 }

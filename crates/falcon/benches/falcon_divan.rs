@@ -1,124 +1,87 @@
 use divan::{black_box, AllocProfiler, Bencher};
-use pqcrypto_falcon::falcon512;
-use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
-use std::alloc::{GlobalAlloc, Layout};
-use std::sync::atomic::{AtomicUsize, Ordering};
-
-#[global_allocator]
-static ALLOC: TrackingAllocator = TrackingAllocator;
-
-struct TrackingAllocator;
+use falcon::{
+    bench_message, memory, signature_size, SignatureScheme, TrackingAllocator,
+    BENCH_MESSAGE_SIZES, FALCON512,
+};
+use pqcrypto_traits::sign::{PublicKey, SecretKey};
 
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
-static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static BASELINE: AtomicUsize = AtomicUsize::new(0);
 
-const MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
-
-unsafe impl GlobalAlloc for TrackingAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { DIVAN_ALLOC.alloc(layout) };
-        if !ptr.is_null() {
-            let size = layout.size();
-            let current = ALLOCATED.fetch_add(size, Ordering::SeqCst) + size;
-            let baseline = BASELINE.load(Ordering::SeqCst);
-            let relative_current = current.saturating_sub(baseline);
-            let mut peak = PEAK_ALLOCATED.load(Ordering::SeqCst);
-
-            while relative_current > peak {
-                match PEAK_ALLOCATED.compare_exchange_weak(
-                    peak,
-                    relative_current,
-                    Ordering::SeqCst,
-                    Ordering::SeqCst,
-                ) {
-                    Ok(_) => break,
-                    Err(observed) => peak = observed,
-                }
-            }
-        }
-        ptr
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        unsafe { DIVAN_ALLOC.dealloc(ptr, layout) };
-        ALLOCATED.fetch_sub(layout.size(), Ordering::SeqCst);
-    }
-}
-
-fn reset_memory_tracking() {
-    let current = ALLOCATED.load(Ordering::SeqCst);
-    BASELINE.store(current, Ordering::SeqCst);
-    PEAK_ALLOCATED.store(0, Ordering::SeqCst);
-}
-
-fn peak_memory_bytes() -> usize {
-    PEAK_ALLOCATED.load(Ordering::SeqCst)
-}
+#[global_allocator]
+static ALLOC: TrackingAllocator<AllocProfiler> =
+    TrackingAllocator::new(&DIVAN_ALLOC);
 
 #[divan::bench]
 fn keygen(bencher: Bencher) {
+    let scheme = FALCON512;
     bencher.bench(|| {
-        black_box(falcon512::keypair());
+        black_box(scheme.keypair());
     });
 }
 
-#[divan::bench(args = MESSAGE_SIZES)]
+#[divan::bench(args = BENCH_MESSAGE_SIZES)]
 fn sign(bencher: Bencher, message_size: usize) {
-    let message = vec![0x42; message_size];
-    let (_, secret_key) = falcon512::keypair();
+    let scheme = FALCON512;
+    let message = bench_message(message_size);
+    let (_, secret_key) = scheme.keypair();
 
     bencher.bench(|| {
-        black_box(falcon512::sign(
-            black_box(message.as_slice()),
-            black_box(&secret_key),
-        ));
+        black_box(
+            scheme.sign(black_box(message.as_slice()), black_box(&secret_key)),
+        );
     });
 }
 
-#[divan::bench(args = MESSAGE_SIZES)]
+#[divan::bench(args = BENCH_MESSAGE_SIZES)]
 fn verify(bencher: Bencher, message_size: usize) {
-    let message = vec![0x42; message_size];
-    let (public_key, secret_key) = falcon512::keypair();
-    let signed_message = falcon512::sign(&message, &secret_key);
+    let scheme = FALCON512;
+    let message = bench_message(message_size);
+    let (public_key, secret_key) = scheme.keypair();
+    let signed_message = scheme.sign(&message, &secret_key);
 
     bencher.bench(|| {
-        let opened = falcon512::open(black_box(&signed_message), black_box(&public_key))
+        let opened = scheme
+            .open(black_box(&signed_message), black_box(&public_key))
             .expect("falcon verify benchmark input should always be valid");
         black_box(opened);
     });
 }
 
 fn print_sizes() {
-    let (public_key, secret_key) = falcon512::keypair();
-    println!("Falcon-512 sizes:");
+    let scheme = FALCON512;
+    let (public_key, secret_key) = scheme.keypair();
+    println!("{} sizes:", scheme.algorithm_name());
     println!("  Public key: {} bytes", public_key.as_bytes().len());
     println!("  Secret key: {} bytes", secret_key.as_bytes().len());
 
-    for message_size in MESSAGE_SIZES {
-        let message = vec![0x42; message_size];
-        let signed_message = falcon512::sign(&message, &secret_key);
-        let signature_size = signed_message.as_bytes().len().saturating_sub(message.len());
-        println!("  Signature (message {} bytes): {} bytes", message_size, signature_size);
+    for message_size in BENCH_MESSAGE_SIZES {
+        let message = bench_message(message_size);
+        let signed_message = scheme.sign(&message, &secret_key);
+        println!(
+            "  Signature (message {} bytes): {} bytes",
+            message_size,
+            signature_size(&signed_message, message.len())
+        );
     }
 }
 
 fn print_memory_usage() {
-    println!("Falcon-512 peak heap usage:");
-    let (public_key, secret_key) = falcon512::keypair();
+    let scheme = FALCON512;
+    println!("{} peak heap usage:", scheme.algorithm_name());
+    let (public_key, secret_key) = scheme.keypair();
 
-    for message_size in MESSAGE_SIZES {
-        let message = vec![0x42; message_size];
+    for message_size in BENCH_MESSAGE_SIZES {
+        let message = bench_message(message_size);
 
-        reset_memory_tracking();
-        let signed_message = falcon512::sign(&message, &secret_key);
-        let sign_peak = peak_memory_bytes();
+        memory::reset_peak();
+        let signed_message = scheme.sign(&message, &secret_key);
+        let sign_peak = memory::peak_bytes();
 
-        reset_memory_tracking();
-        let _opened = falcon512::open(&signed_message, &public_key)
+        memory::reset_peak();
+        let _opened = scheme
+            .open(&signed_message, &public_key)
             .expect("benchmark setup should verify the signed message");
-        let verify_peak = peak_memory_bytes();
+        let verify_peak = memory::peak_bytes();
 
         println!(
             "  Message {} bytes: sign={} bytes, verify={} bytes",
