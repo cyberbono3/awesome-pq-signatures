@@ -24,28 +24,6 @@ This crate implements the Forest of Random Subsets (FORS) component used by SLH-
 - Slower signing and verification due to heavy hashing.
 - Primarily useful as a building block rather than a general-purpose standalone scheme.
 
-## Benchmarking Strategy
 
-Use the benchmark runner to collect repeatable measurements and record metadata alongside results.
-
-- Script: [`bench/run.sh`](bench/run.sh)
-- Scope: key generation, signing, and verification for selected SLH-DSA parameter sets.
-- Workload: keep message sizes fixed and prefer pre-hashed inputs to isolate FORS costs.
-- Method: run warmups, multiple runs, and fixed iterations; report avg ns and throughput.
-- Environment: capture compiler flags, RNG source, CPU/OS details, and library commit.
-- Validation: use deterministic RNG to generate test vectors and compare across builds.
-- Safety: enable buffer canaries or similar checks to detect out-of-bounds writes.
-- Memory: track stack usage and code size separately from shared hash implementations.
-
-Example:
-
-```bash
-BENCH_CMD='cargo run --release --bin fors_bench --' \
-  PARAM_SETS=SLH-DSA-SHA2-128s MSG_SIZES=32 ITERATIONS=100 \
-  WARMUP_RUNS=3 RUNS=5 OPERATIONS=keygen,sign,verify \
-  crates/fors/bench/run.sh
-```
-
-## Library
 
 [slh-dsa](https://crates.io/crates/slh-dsa)

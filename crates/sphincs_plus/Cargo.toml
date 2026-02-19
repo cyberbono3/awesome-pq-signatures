@@ -3,4 +3,17 @@ name = "sphincs_plus"
 version.workspace = true
 edition.workspace = true
 
+[[bin]]
+name = "sphincs-plus-bench"
+path = "src/main.rs"
+
+[[bench]]
+name = "sphincs_plus_divan"
+harness = false
+
 [dependencies]
+pqcrypto-sphincsplus = "0.7"
+pqcrypto-traits = "0.3"
+
+[dev-dependencies]
+divan = "0.1"
