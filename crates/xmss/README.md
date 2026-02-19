@@ -51,19 +51,6 @@ cargo bench -p xmss --bench xmss_divan
 
 ## Structured benchmark harness
 
-```bash
-OUT_DIR=crates/xmss/bench/results-example \
-BENCH_CMD='cargo run -p xmss --release --bin xmss_bench --' \
-PARAM_SETS=XMSS-SHA2_10_256 \
-MSG_SIZES=32 \
-ITERATIONS=3 \
-WARMUP_RUNS=0 \
-RUNS=1 \
-OPERATIONS=keygen,sign,verify \
-PRINT_SUMMARY=1 \
-crates/xmss/bench/run.sh
-```
-
 ## Latest local results
 
 Date: 2026-02-18
