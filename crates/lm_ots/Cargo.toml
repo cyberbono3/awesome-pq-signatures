@@ -3,4 +3,23 @@ name = "lm_ots"
 version.workspace = true
 edition.workspace = true
 
+[[bin]]
+name = "lm_ots"
+path = "src/main.rs"
+
+[[bin]]
+name = "lm_ots_bench"
+path = "src/bin/lm_ots_bench.rs"
+
+[[bench]]
+name = "lm_ots_divan"
+harness = false
+
 [dependencies]
+lms-signature = "0.1.0-rc.2"
+getrandom = { version = "0.4", features = ["sys_rng"] }
+rand_core = "0.10"
+signature = "3.0.0-rc.10"
+
+[dev-dependencies]
+divan = "0.1"
