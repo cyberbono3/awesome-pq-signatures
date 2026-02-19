@@ -4,3 +4,17 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+lms-signature = "0.1.0-rc.2"
+getrandom = "0.4"
+signature = "3.0.0-rc.10"
+
+[dev-dependencies]
+divan = "0.1"
+
+[[bin]]
+name = "lms-bench"
+path = "src/main.rs"
+
+[[bench]]
+name = "lms_divan"
+harness = false
