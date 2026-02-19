@@ -3,4 +3,16 @@ name = "dilithium"
 version.workspace = true
 edition.workspace = true
 
+[[bin]]
+name = "dilithium"
+path = "src/main.rs"
+
+[[bench]]
+name = "dilithium_divan"
+harness = false
+
 [dependencies]
+ml-dsa = "0.0.4"
+
+[dev-dependencies]
+divan = "0.1"
