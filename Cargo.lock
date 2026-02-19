@@ -227,6 +227,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
+name = "hbs-lms"
+version = "0.2.0-alpha.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "024739dc43a6da5138b8392d4d373af06b4273a7ff2e91002c1555d1b2c0905a"
+dependencies = [
+ "digest",
+ "sha2",
+ "sha3",
+ "signature 1.6.4",
+ "subtle",
+ "tinyvec",
+ "zeroize",
+]
+
+[[package]]
 name = "hors"
 version = "0.1.0"
 
@@ -237,6 +252,10 @@ version = "0.1.0"
 [[package]]
 name = "hss"
 version = "0.1.0"
+dependencies = [
+ "divan",
+ "hbs-lms",
+]
 
 [[package]]
 name = "hybrid-array"
@@ -306,7 +325,7 @@ dependencies = [
  "pkcs8",
  "rand_core",
  "sha3",
- "signature",
+ "signature 2.2.0",
 ]
 
 [[package]]
@@ -450,6 +469,12 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "signature"
+version = "1.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74233d3b3b2f6d4b006dc19dee745e73e2a6bfb6f93607cd3b02bd5b00797d7c"
+
+[[package]]
+name = "signature"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77549399552de45a898a580c1b41d445bf730df867cc44e6c0233bbc4b8329de"
@@ -481,6 +506,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "subtle"
+version = "2.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
+
+[[package]]
 name = "syn"
 version = "2.0.116"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -500,6 +531,12 @@ dependencies = [
  "rustix",
  "windows-sys 0.60.2",
 ]
+
+[[package]]
+name = "tinyvec"
+version = "1.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bfa5fdc3bce6191a1dbc8c02d5c8bffcf557bafa17c124c5264a458f1b0613fa"
 
 [[package]]
 name = "typenum"
@@ -646,3 +683,17 @@ name = "zeroize"
 version = "1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b97154e67e32c85465826e8bcc1c59429aaaf107c1e4a9e53c8d8ccd5eff88d0"
+dependencies = [
+ "zeroize_derive",
+]
+
+[[package]]
+name = "zeroize_derive"
+version = "1.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85a5b4158499876c763cb03bc4e49185d3cccbabb15b33c627f7884f43db852e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
