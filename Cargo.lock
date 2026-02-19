@@ -638,8 +638,20 @@ name = "xmss"
 version = "0.1.0"
 
 [[package]]
+name = "xmss-rs"
+version = "0.1.0"
+source = "git+https://github.com/thomwiggers/xmss-rs.git?rev=9f627f45e87c19156288d805c5348199912e3a7d#9f627f45e87c19156288d805c5348199912e3a7d"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "xmssmt"
 version = "0.1.0"
+dependencies = [
+ "divan",
+ "xmss-rs",
+]
 
 [[package]]
 name = "zeroize"
