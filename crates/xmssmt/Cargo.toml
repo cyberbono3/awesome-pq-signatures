@@ -4,3 +4,15 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+xmss-rs = { git = "https://github.com/thomwiggers/xmss-rs.git", rev = "9f627f45e87c19156288d805c5348199912e3a7d", features = ["level1", "level3", "level5"] }
+
+[dev-dependencies]
+divan = "0.1"
+
+[[bin]]
+name = "xmssmt-bench"
+path = "src/main.rs"
+
+[[bench]]
+name = "xmssmt_divan"
+harness = false
