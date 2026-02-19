@@ -1,55 +1,60 @@
 # XMSSMT
 
-Multi-tree XMSS variant for faster signing.
+XMSSMT benchmark workspace wired to the upstream
+[`thomwiggers/xmss-rs`](https://github.com/thomwiggers/xmss-rs) implementation.
 
-## Highlights
+## Backend
 
-- Hash-based, post-quantum security relying on the underlying hash function.
-- Multi-tree structure trades faster signing for more state and storage.
-- Tunable parameters (total height, layers, hash function) balance size vs. speed.
-- Standardized in RFC 8391 alongside XMSS.
+- Algorithm: `XMSSMT`
+- Backend: `thomwiggers/xmss-rs` (C reference backend via FFI)
+- Parameter sets:
+  - `XMSSMT-L1` (`xmss_rs::level1`)
+  - `XMSSMT-L3` (`xmss_rs::level3`)
+  - `XMSSMT-L5` (`xmss_rs::level5`)
+- Library crate entry: `src/lib.rs`
 
-## Pros
+Notes:
+- Signing is stateful: secret keys are mutated by `sign`.
+- The first build fetches `xmss-rs` from GitHub and compiles its C backend.
+- `libcrypto` must be available on the system linker path.
 
-- Faster signing than XMSS for comparable security levels (smaller per-tree height).
-- Conservative security assumptions (hash function only).
-- No per-signature randomness required (deterministic given state).
+## Project layout
 
-## Cons
+- `src/lib.rs`: reusable scheme model + timing/allocation helpers
+- `src/main.rs`: one-shot benchmark report binary (`xmssmt-bench`)
+- `benches/xmssmt_divan.rs`: Divan microbench suite
 
-- Stateful signing: signer must track and advance indices across layers.
-- Larger public keys and signatures than XMSS for similar security.
-- More complex parameter selection and implementation.
+## Run (`src/main.rs`)
 
-## Benchmarking strategy
+```bash
+cargo run -p xmssmt --release --bin xmssmt-bench
+```
 
-Outline for consistent, reproducible measurements:
+Environment overrides:
 
-- Define scope: keygen (multi-tree init), sign (state advances), verify.
-- Select implementations: fix library + commit/tag; avoid mixed backends in one run.
-- Control environment: pin CPU cores, isolate background load, fix governor/turbo policy.
-- Build setup: record compiler version, optimization flags, and feature toggles.
-- Workload matrix: cover representative message sizes and iterations; include warmups.
-- Parameter sets: encode XMSSMT params (e.g., `XMSSMT-SHA2_20/2_256`).
-- Measure: wall-clock latency and throughput; optionally memory, cache misses if available.
-- Validate: check signature correctness and ensure state never reuses one-time keys.
+- `PARAM_SET` (default `XMSSMT-L1`)
+- `MESSAGE_SIZE` (default `1024`)
 
-Minimum metadata to record per run:
+## Divan benchmark
 
-- CPU model, microcode, RAM, OS/kernel
-- Compiler version + flags
-- Library name + commit hash/tag
-- Algorithm + parameter set
-- Message sizes + number of iterations
-- Whether turbo scaling was on/off
-- RNG source
+Smoke run:
 
-## Benchmarking harness
+```bash
+cargo bench -p xmssmt --bench xmssmt_divan -- --test
+```
 
-`bench/run.sh` collects metadata and writes JSON/CSV results. See `bench/results_schema.json`,
-`bench/results_schema.csv`, `bench/example_results.json`, and `bench/example_results.csv`
-for the output layout.
+Full run:
 
-## Library
+```bash
+cargo bench -p xmssmt --bench xmssmt_divan
+```
+
+## Strategy (same pattern as Dilithium/Falcon)
+
+- Use `src/main.rs` for a human-readable single-run benchmark report.
+- Use Divan for stable microbench trends on `keygen`, `sign`, and `verify`.
+- Record param set, message size, and environment metadata with each benchmark capture.
+
+## Upstream reference
 
 [xmss-rs](https://github.com/thomwiggers/xmss-rs)
