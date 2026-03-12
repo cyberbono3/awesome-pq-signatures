@@ -20,4 +20,7 @@ LM-OTS is typically used inside LMS as its one-time signature component, so LMS 
 | 9 | SPHINCS+ (SLH-DSA) | Hash-based | Non-stateful | Stateless hash-based signature scheme. | [sphincs_plus](./sphincs_plus/README.md) | [pqcrypto-sphincsplus](https://crates.io/crates/pqcrypto-sphincsplus) |
 | 10 | SQIsign | Isogeny-based | Non-stateful | Isogeny-based signature scheme from supersingular isogenies. | - | [sqisign](https://crates.io/crates/sqisign)<br>[sqisign.org](https://sqisign.org) |
 | 11 | Mayo | System-of-equations | Non-stateful | Multivariate post-quantum signature scheme (MAYO). | - | [pq-mayo](https://crates.io/crates/pq-mayo) |
-| 12 | Classic McEliece | Code-based | Non-stateful | Code-based post-quantum scheme (primarily KEM, not a signature scheme). | - | [classic-mceliece-rust](https://github.com/Colfenor/classic-mceliece-rust) |
+| 12 | CROSS | Code-based | Non-stateful | Code-based post-quantum signature candidate (CROSS). | - | [cross-crypto.com](https://www.cross-crypto.com/cross.html) |
+| 13 | LESS | Code-based | Non-stateful | Code-based post-quantum signature candidate (LESS). | - | [less-project.com](https://www.less-project.com/) |
+| 14 | SQIsignHD | Isogeny-based | Non-stateful | Isogeny-based SQIsign high-dimensional variant (research line). | - | [ePrint 2023/436](https://eprint.iacr.org/2023/436) |
+| 15 | Wave/Wavelet | Code-based | Non-stateful | Code-based post-quantum signature family (Wave/Wavelet). | - | [ePrint 2021/1432](https://eprint.iacr.org/2021/1432) |
