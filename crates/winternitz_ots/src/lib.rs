@@ -22,9 +22,7 @@ impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
     }
 }
 
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
-    for TrackingAllocator<A>
-{
+unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ptr = unsafe { self.inner.alloc(layout) };
         if !ptr.is_null() {
@@ -122,8 +120,7 @@ impl SignatureScheme for WinternitzOtsScheme {
     }
 
     fn verify(&self, signature: &Self::Signature) -> bool {
-        std::panic::catch_unwind(AssertUnwindSafe(|| signature.verify()))
-            .unwrap_or(false)
+        std::panic::catch_unwind(AssertUnwindSafe(|| signature.verify())).unwrap_or(false)
     }
 
     fn public_key_size(&self, keypair: &Self::Keypair) -> usize {
@@ -172,8 +169,7 @@ fn hex_string_byte_len(value: &str) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, message_digest_hex, SignatureScheme, BENCH_MESSAGE_BYTE,
-        WINTERNITZ_OTS,
+        bench_message, message_digest_hex, SignatureScheme, BENCH_MESSAGE_BYTE, WINTERNITZ_OTS,
     };
 
     #[test]
