@@ -14,11 +14,8 @@ LM-OTS is typically used inside LMS as its one-time signature component, so LMS 
 | 3 | Lamport one-time signature (OTS) | Hash-based | Stateful | One-time hash-based signature using many random secrets. | [lamport_ots](./lamport_ots/README.md) | [lamport_signature](https://crates.io/crates/lamport_signature)<br>[lamport_sigs](https://crates.io/crates/lamport_sigs)<br>[lsig](https://crates.io/crates/lsig) |
 | 4 | Winternitz OTS (W-OTS) | Hash-based | Stateful | One-time hash-based signature with Winternitz chaining. | [winternitz_ots](./winternitz_ots/README.md) | [winternitz-ots](https://crates.io/crates/winternitz-ots)<br>[wots-rs](https://crates.io/crates/wots-rs) |
 | 5 | LMS | Hash-based | Stateful | Stateful Merkle tree signature scheme (RFC 8554). | [lms](./lms/README.md) | [hbs-lms](https://crates.io/crates/hbs-lms) |
-| 6 | HSS | Hash-based | Stateful | Hierarchical LMS for large key hierarchies. | [hss](./hss/README.md) | C: [cisco/hash-sigs](https://github.com/cisco/hash-sigs) |
-| 7 | XMSS | Hash-based | Stateful | Hash-based Merkle signature scheme (RFC 8391). | [xmss](./xmss/README.md) | [xmss-rust](https://gitlab.zapb.de/crypto/xmss-rust) |
-| 8 | XMSSMT | Hash-based | Stateful | Multi-tree XMSS variant for faster signing. | [xmssmt](./xmssmt/README.md) | [xmss-rs](https://github.com/thomwiggers/xmss-rs) |
-| 9 | SPHINCS+ (SLH-DSA) | Hash-based | Non-stateful | Stateless hash-based signature scheme. | [sphincs_plus](./sphincs_plus/README.md) | [slh-dsa](https://crates.io/crates/slh-dsa)<br>[Argyle-Software/sphincsplus](https://github.com/Argyle-Software/sphincsplus)<br>[pqcrypto-sphincsplus](https://crates.io/crates/pqcrypto-sphincsplus) |
-| 10 | SPHINCS (original) | Hash-based | Non-stateful | Predecessor to SPHINCS+ with older parameters. | [sphincs](./sphincs/README.md) | [gravity-rs](https://github.com/gendx/gravity-rs) |
-| 11 | HORS | Hash-based | Stateful | Few-time hash-based signature scheme. | [hors](./hors/README.md) | Java: [Orfey95/HORS](https://github.com/Orfey95/HORS) |
-| 12 | HORST | Hash-based | Stateful | Few-time hash-based signature with trees. | [horst](./horst/README.md) | C: [gravity-postquantum/prune-horst](https://github.com/gravity-postquantum/prune-horst) |
-| 13 | FORS | Hash-based | Stateful | Forest of Random Subsets used inside SPHINCS+. | [fors](./fors/README.md) | [slh-dsa](https://crates.io/crates/slh-dsa) |
+| 6 | HSS | Hash-based | Stateful | Hierarchical LMS for large key hierarchies. | [hss](./hss/README.md) | [hbs-lms](https://crates.io/crates/hbs-lms) |
+| 7 | XMSS | Hash-based | Stateful | Hash-based Merkle signature scheme (RFC 8391). | [xmss](./xmss/README.md) | [xmss (RustCrypto)](https://github.com/RustCrypto/signatures/tree/master/xmss) |
+| 8 | XMSSMT | Hash-based | Stateful | Multi-tree XMSS variant for faster signing. | [xmssmt](./xmssmt/README.md) | [xmss (RustCrypto)](https://github.com/RustCrypto/signatures/tree/master/xmss) |
+| 9 | SPHINCS+ (SLH-DSA) | Hash-based | Non-stateful | Stateless hash-based signature scheme. | [sphincs_plus](./sphincs_plus/README.md) | [pqcrypto-sphincsplus](https://crates.io/crates/pqcrypto-sphincsplus) |
+
