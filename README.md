@@ -18,6 +18,6 @@ LM-OTS is typically used inside LMS as its one-time signature component, so LMS 
 | 7 | XMSS | Hash-based | Stateful | Hash-based Merkle signature scheme (RFC 8391). | [xmss](./xmss/README.md) | [xmss (RustCrypto)](https://github.com/RustCrypto/signatures/tree/master/xmss) |
 | 8 | XMSSMT | Hash-based | Stateful | Multi-tree XMSS variant for faster signing. | [xmssmt](./xmssmt/README.md) | [xmss (RustCrypto)](https://github.com/RustCrypto/signatures/tree/master/xmss) |
 | 9 | SPHINCS+ (SLH-DSA) | Hash-based | Non-stateful | Stateless hash-based signature scheme. | [sphincs_plus](./sphincs_plus/README.md) | [pqcrypto-sphincsplus](https://crates.io/crates/pqcrypto-sphincsplus) |
-| 10 | SQIsign | Isogeny-based | Non-stateful | Isogeny-based signature scheme from supersingular isogenies. | - | [sqisign](https://crates.io/crates/sqisign) |
+| 10 | SQIsign | Isogeny-based | Non-stateful | Isogeny-based signature scheme from supersingular isogenies. | - | [sqisign](https://crates.io/crates/sqisign)<br>[sqisign.org](https://sqisign.org) |
 | 11 | Mayo | System-of-equations | Non-stateful | Multivariate post-quantum signature scheme (MAYO). | - | [pq-mayo](https://crates.io/crates/pq-mayo) |
 | 12 | Classic McEliece | Code-based | Non-stateful | Code-based post-quantum scheme (primarily KEM, not a signature scheme). | - | [classic-mceliece-rust](https://github.com/Colfenor/classic-mceliece-rust) |
