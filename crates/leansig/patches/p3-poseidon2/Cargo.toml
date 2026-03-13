@@ -1,0 +1,15 @@
+[package]
+name = "p3-poseidon2"
+description = "An implementation of the Poseidon2 cryptographic permutation for zero-knowledge applications."
+version = "0.4.2"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Plonky3/Plonky3"
+
+[dependencies]
+p3-field = { git = "https://github.com/Plonky3/Plonky3.git", rev = "c38eb05" }
+p3-mds = { git = "https://github.com/Plonky3/Plonky3.git", rev = "c38eb05" }
+p3-symmetric = { git = "https://github.com/Plonky3/Plonky3.git", rev = "c38eb05" }
+p3-util = { git = "https://github.com/Plonky3/Plonky3.git", rev = "c38eb05" }
+
+rand = "0.10"
