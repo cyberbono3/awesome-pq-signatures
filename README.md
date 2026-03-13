@@ -1,6 +1,6 @@
 # Comparing & Benchmarking Post Quantum Digital Security Schemes
 
-Benchmarking post-quantum signature schemes (Falcon-512, Dilithium, SPHINCS+, LeanSig and more) with real performance numbers, sizes, security assumptions, implementation risks, and zkVM verification overhead to guide production-ready choices.
+Benchmarking post-quantum signature schemes (Falcon-512, Dilithium, SPHINCS+ and more) with real performance numbers, sizes, security assumptions, implementation risks, and zkVM verification overhead to guide production-ready choices.
 
 ## Workspace schemes
 
@@ -22,4 +22,3 @@ Each workspace crate has a short description and a pointer to a Rust library or 
 | 12 | HORS | Few-time hash-based signature scheme. | [hors](./hors/README.md) | Java: [Orfey95/HORS](https://github.com/Orfey95/HORS) |
 | 13 | HORST | Few-time hash-based signature with trees. | [horst](./horst/README.md) | C: [gravity-postquantum/prune-horst](https://github.com/gravity-postquantum/prune-horst) |
 | 14 | FORS | Forest of Random Subsets used inside SPHINCS+. | [fors](./fors/README.md) | [slh-dsa](https://crates.io/crates/slh-dsa) |
-| 15 | LeanSig | Hash-based synchronized signatures using Poseidon2 and incomparable encodings for post-quantum Ethereum. | [leansig](./leansig/README.md) | [leanSig](https://github.com/leanEthereum/leanSig) |
