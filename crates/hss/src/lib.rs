@@ -362,6 +362,8 @@ impl XorShift64 {
 static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
 static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
 static BASELINE: AtomicUsize = AtomicUsize::new(0);
+static TOTAL_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
+static TRACKING_ENABLED: AtomicUsize = AtomicUsize::new(0);
 
 pub struct TrackingAllocator<A: GlobalAlloc + Sync + 'static> {
     inner: &'static A,
@@ -390,6 +392,11 @@ unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A
 
 fn track_alloc(size: usize) {
     let current = ALLOCATED.fetch_add(size, Ordering::SeqCst) + size;
+
+    if TRACKING_ENABLED.load(Ordering::SeqCst) != 0 {
+        TOTAL_ALLOCATED.fetch_add(size, Ordering::SeqCst);
+    }
+
     let baseline = BASELINE.load(Ordering::SeqCst);
     let relative_current = current.saturating_sub(baseline);
     let mut peak = PEAK_ALLOCATED.load(Ordering::SeqCst);
@@ -412,16 +419,37 @@ fn track_dealloc(size: usize) {
 }
 
 pub mod memory {
-    use super::{Ordering, ALLOCATED, BASELINE, PEAK_ALLOCATED};
+    use super::{Ordering, ALLOCATED, BASELINE, PEAK_ALLOCATED, TOTAL_ALLOCATED, TRACKING_ENABLED};
 
+    /// Reset all tracking counters and set the baseline to the current heap usage.
+    /// Call this immediately before the operation you want to measure.
     pub fn reset_peak() {
         let current = ALLOCATED.load(Ordering::SeqCst);
         BASELINE.store(current, Ordering::SeqCst);
         PEAK_ALLOCATED.store(0, Ordering::SeqCst);
+        TOTAL_ALLOCATED.store(0, Ordering::SeqCst);
+        TRACKING_ENABLED.store(1, Ordering::SeqCst);
     }
 
+    /// Stop tracking and return results.
+    pub fn stop_tracking() {
+        TRACKING_ENABLED.store(0, Ordering::SeqCst);
+    }
+
+    /// Peak *net* heap usage above the baseline (high-water mark of live allocations).
     pub fn peak_bytes() -> usize {
         PEAK_ALLOCATED.load(Ordering::SeqCst)
+    }
+
+    /// Total cumulative bytes allocated during the measurement window.
+    /// This counts every allocation, even if it was freed before the next one.
+    pub fn total_allocated_bytes() -> usize {
+        TOTAL_ALLOCATED.load(Ordering::SeqCst)
+    }
+
+    /// Current live heap usage (absolute, not relative to baseline).
+    pub fn current_bytes() -> usize {
+        ALLOCATED.load(Ordering::SeqCst)
     }
 }
 

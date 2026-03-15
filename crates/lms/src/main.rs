@@ -1,15 +1,9 @@
 use lms::{
-    bench_message, default_seed, measure_time, memory, signed_message_size, LmsScheme,
-    TrackingAllocator, DEFAULT_PARAM_SET_NAME,
+    bench_message, default_seed, measure_time, signed_message_size, LmsScheme,
+    DEFAULT_PARAM_SET_NAME,
 };
-use std::alloc::System;
 use std::env;
 use std::time::Duration;
-
-static SYSTEM_ALLOC: System = System;
-
-#[global_allocator]
-static GLOBAL: TrackingAllocator<System> = TrackingAllocator::new(&SYSTEM_ALLOC);
 
 fn print_timing(label: &str, duration: Duration) {
     println!("Time to {label}: {duration:?}");
@@ -44,26 +38,20 @@ fn main() {
     print_timing("generate keys", keygen_duration);
 
     println!("\n--- Signing ---");
-    memory::reset_peak();
     let (signature, sign_duration) = measure_time(|| {
         scheme
             .sign(&message, &mut secret_key)
             .expect("LMS signing should succeed")
     });
     print_timing("sign", sign_duration);
-    let sign_peak_mem = memory::peak_bytes();
-    println!("Peak memory during signing: {sign_peak_mem} bytes");
 
     println!("\n--- Verification ---");
-    memory::reset_peak();
     let (verified, verify_duration) = measure_time(|| {
         scheme
             .verify(&message, &signature, &public_key)
             .expect("LMS verify call should succeed")
     });
     print_timing("verify", verify_duration);
-    let verify_peak_mem = memory::peak_bytes();
-    println!("Peak memory during verification: {verify_peak_mem} bytes");
 
     if verified {
         println!("Signature verification: SUCCESS");
@@ -111,7 +99,4 @@ fn main() {
     println!("  Public Key:  {pk_size} bytes");
     println!("  Secret Key:  {sk_size} bytes");
     println!("  Signature:   {sig_size} bytes");
-    println!("\nMemory Usage (heap allocations):");
-    println!("  Signing:      {sign_peak_mem} bytes");
-    println!("  Verification: {verify_peak_mem} bytes");
 }
