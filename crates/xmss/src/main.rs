@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use xmss_bench::{measure_time, XmssParamSet, XmssScheme};
 
-const MESSAGE: &[u8] = b"This is a test message for XMSS signature scheme benchmarking";
+const MESSAGE: &[u8] = b"This is a test message for XMSS benchmarking";
 
 fn print_timing(label: &str, duration: Duration) {
     println!("Time to {label}: {duration:?}");
@@ -16,6 +16,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         scheme.param_set().as_str(),
         scheme.backend_name()
     );
+
+    println!("╔══════════════════════════════════════════════════╗");
+    println!("║              XMSS Benchmark                      ║");
+    println!("║  NIST SP 800-208 Hash-Based Signature Scheme    ║");
+    println!("╚══════════════════════════════════════════════════╝\n");
 
     println!("=== {} Benchmark ===\n", algorithm_name);
 
@@ -53,7 +58,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n--- Size Measurements ---");
     println!("Public key size: {} bytes", public_key.len());
     println!("Secret key size: {} bytes", secret_key.len());
-    println!("Signature size: {} bytes", signature.len());
+    println!("Signature size:  {} bytes", signature.len());
 
     // --- Summary ---
     println!("\n=== Summary ===");
