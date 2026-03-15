@@ -1,6 +1,6 @@
 use hss::{
-    bench_message, default_seed, measure_time, memory, signed_message_size,
-    HssScheme, TrackingAllocator, DEFAULT_PARAM_SET_NAME,
+    bench_message, default_seed, measure_time, memory, signed_message_size, HssScheme,
+    TrackingAllocator, DEFAULT_PARAM_SET_NAME,
 };
 use std::alloc::System;
 use std::env;
@@ -9,8 +9,7 @@ use std::time::Duration;
 static SYSTEM_ALLOC: System = System;
 
 #[global_allocator]
-static GLOBAL: TrackingAllocator<System> =
-    TrackingAllocator::new(&SYSTEM_ALLOC);
+static GLOBAL: TrackingAllocator<System> = TrackingAllocator::new(&SYSTEM_ALLOC);
 
 fn print_timing(label: &str, duration: Duration) {
     println!("Time to {label}: {duration:?}");
@@ -25,11 +24,10 @@ fn parse_usize_env(name: &str, default: usize) -> usize {
 }
 
 fn main() {
-    let param_set_name = env::var("PARAM_SET")
-        .unwrap_or_else(|_| DEFAULT_PARAM_SET_NAME.to_owned());
+    let param_set_name =
+        env::var("PARAM_SET").unwrap_or_else(|_| DEFAULT_PARAM_SET_NAME.to_owned());
     let message_size = parse_usize_env("MESSAGE_SIZE", 1024);
-    let scheme = HssScheme::from_param_set_name(&param_set_name)
-        .expect("valid HSS parameter set");
+    let scheme = HssScheme::from_param_set_name(&param_set_name).expect("valid HSS parameter set");
     let message = bench_message(message_size);
     let seed = default_seed();
 

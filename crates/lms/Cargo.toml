@@ -12,7 +12,7 @@ signature = "3.0.0-rc.10"
 divan = "0.1"
 
 [[bin]]
-name = "lms-bench"
+name = "lms"
 path = "src/main.rs"
 
 [[bench]]

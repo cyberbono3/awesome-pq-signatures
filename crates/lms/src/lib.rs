@@ -13,8 +13,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
-pub const DEFAULT_PARAM_SET_NAME: &str =
-    "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4";
+pub const DEFAULT_PARAM_SET_NAME: &str = "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4";
 
 const LMS_PUBLIC_KEY_BYTES: usize = 56;
 const LMS_SECRET_KEY_BYTES: usize = 60;
@@ -55,8 +54,7 @@ impl LmsParamSet {
     }
 }
 
-pub const LMS_PARAM_SETS: [LmsParamSet; 2] =
-    [LmsParamSet::H5W4, LmsParamSet::H10W4];
+pub const LMS_PARAM_SETS: [LmsParamSet; 2] = [LmsParamSet::H5W4, LmsParamSet::H10W4];
 
 pub fn param_set_by_name(name: &str) -> Option<LmsParamSet> {
     LMS_PARAM_SETS
@@ -132,10 +130,8 @@ impl LmsScheme {
     }
 
     pub fn from_param_set_name(name: &str) -> Result<Self, LmsError> {
-        let params = param_set_by_name(name).ok_or_else(|| {
-            LmsError::UnknownParamSet {
-                name: name.to_owned(),
-            }
+        let params = param_set_by_name(name).ok_or_else(|| LmsError::UnknownParamSet {
+            name: name.to_owned(),
         })?;
         Ok(Self::new(params))
     }
@@ -181,9 +177,8 @@ impl LmsScheme {
 
         match self.params {
             LmsParamSet::H5W4 => {
-                let secret_key =
-                    RawSigningKey::<ModeH5W4>::new_from_seed(id, seed)
-                        .map_err(|_| LmsError::KeygenFailed)?;
+                let secret_key = RawSigningKey::<ModeH5W4>::new_from_seed(id, seed)
+                    .map_err(|_| LmsError::KeygenFailed)?;
                 let public_key = secret_key.public();
                 Ok((
                     LmsPublicKey::H5W4(public_key),
@@ -191,9 +186,8 @@ impl LmsScheme {
                 ))
             }
             LmsParamSet::H10W4 => {
-                let secret_key =
-                    RawSigningKey::<ModeH10W4>::new_from_seed(id, seed)
-                        .map_err(|_| LmsError::KeygenFailed)?;
+                let secret_key = RawSigningKey::<ModeH10W4>::new_from_seed(id, seed)
+                    .map_err(|_| LmsError::KeygenFailed)?;
                 let public_key = secret_key.public();
                 Ok((
                     LmsPublicKey::H10W4(public_key),
@@ -241,10 +235,9 @@ impl LmsScheme {
             (LmsSignature::H5W4(signature), LmsPublicKey::H5W4(public_key)) => {
                 Ok(public_key.verify(message, signature).is_ok())
             }
-            (
-                LmsSignature::H10W4(signature),
-                LmsPublicKey::H10W4(public_key),
-            ) => Ok(public_key.verify(message, signature).is_ok()),
+            (LmsSignature::H10W4(signature), LmsPublicKey::H10W4(public_key)) => {
+                Ok(public_key.verify(message, signature).is_ok())
+            }
             _ => Err(LmsError::VerifyFailed),
         }
     }
@@ -263,18 +256,12 @@ impl LmsScheme {
         signature.param_set().signature_size_bytes()
     }
 
-    pub fn remaining_signatures(
-        &self,
-        secret_key: &LmsSecretKey,
-    ) -> Result<u32, LmsError> {
+    pub fn remaining_signatures(&self, secret_key: &LmsSecretKey) -> Result<u32, LmsError> {
         self.ensure_secret_key_params(secret_key)?;
         Ok(self.max_signatures_per_key().saturating_sub(secret_key.q()))
     }
 
-    fn ensure_secret_key_params(
-        &self,
-        secret_key: &LmsSecretKey,
-    ) -> Result<(), LmsError> {
+    fn ensure_secret_key_params(&self, secret_key: &LmsSecretKey) -> Result<(), LmsError> {
         if secret_key.param_set() != self.params {
             return Err(LmsError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -284,10 +271,7 @@ impl LmsScheme {
         Ok(())
     }
 
-    fn ensure_public_key_params(
-        &self,
-        public_key: &LmsPublicKey,
-    ) -> Result<(), LmsError> {
+    fn ensure_public_key_params(&self, public_key: &LmsPublicKey) -> Result<(), LmsError> {
         if public_key.param_set() != self.params {
             return Err(LmsError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -297,10 +281,7 @@ impl LmsScheme {
         Ok(())
     }
 
-    fn ensure_signature_params(
-        &self,
-        signature: &LmsSignature,
-    ) -> Result<(), LmsError> {
+    fn ensure_signature_params(&self, signature: &LmsSignature) -> Result<(), LmsError> {
         if signature.param_set() != self.params {
             return Err(LmsError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -431,9 +412,7 @@ impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
     }
 }
 
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
-    for TrackingAllocator<A>
-{
+unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ptr = unsafe { self.inner.alloc(layout) };
         if !ptr.is_null() {
@@ -488,14 +467,13 @@ pub mod memory {
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, param_set_by_name, LmsScheme, BENCH_MESSAGE_BYTE,
-        DEFAULT_PARAM_SET_NAME,
+        bench_message, param_set_by_name, LmsScheme, BENCH_MESSAGE_BYTE, DEFAULT_PARAM_SET_NAME,
     };
 
     #[test]
     fn param_set_lookup_works() {
-        let found = param_set_by_name(DEFAULT_PARAM_SET_NAME)
-            .expect("known param set should resolve");
+        let found =
+            param_set_by_name(DEFAULT_PARAM_SET_NAME).expect("known param set should resolve");
         assert_eq!(found.name(), DEFAULT_PARAM_SET_NAME);
     }
 

@@ -10,7 +10,7 @@ hbs-lms = "0.2.0-alpha.1"
 divan = "0.1"
 
 [[bin]]
-name = "hss-bench"
+name = "hss"
 path = "src/main.rs"
 
 [[bench]]
