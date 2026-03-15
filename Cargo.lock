@@ -1119,6 +1119,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "mayo"
+version = "0.1.0"
+dependencies = [
+ "divan",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

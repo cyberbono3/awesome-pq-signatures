@@ -6,6 +6,7 @@ members = [
     "crates/winternitz_ots",
     "crates/lm_ots",
     "crates/lms",
+    "crates/mayo",
     "crates/hss",
     "crates/xmss",
     "crates/xmssmt",
