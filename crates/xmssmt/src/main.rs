@@ -35,12 +35,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     let scheme = XmssmtScheme::from_param_set_name(&param_set_name)?;
     let message = bench_message(message_size);
 
-    println!(
-        "=== {} ({}) Benchmark ===\n",
+    println!("╔══════════════════════════════════════════════════╗");
+    println!("║              XMSS^MT Benchmark                   ║");
+    println!("║  NIST SP 800-208 Hash-Based Signature Scheme    ║");
+    println!("╚══════════════════════════════════════════════════╝\n");
+
+    let algorithm_name = format!(
+        "{}-{} ({})",
         scheme.algorithm_name(),
-        scheme.param_set_name()
+        scheme.param_set_name(),
+        scheme.backend_name()
     );
-    println!("Backend: {}", scheme.backend_name());
+    println!("=== {} Benchmark ===\n", algorithm_name);
     println!("Signatures per key: {}", scheme.signatures_per_key());
 
     println!("\n--- Key Generation ---");
