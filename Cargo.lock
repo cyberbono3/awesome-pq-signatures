@@ -265,14 +265,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
-name = "hors"
-version = "0.1.0"
-
-[[package]]
-name = "horst"
-version = "0.1.0"
-
-[[package]]
 name = "hss"
 version = "0.1.0"
 
@@ -530,10 +522,6 @@ checksum = "77549399552de45a898a580c1b41d445bf730df867cc44e6c0233bbc4b8329de"
 dependencies = [
  "rand_core",
 ]
-
-[[package]]
-name = "sphincs"
-version = "0.1.0"
 
 [[package]]
 name = "sphincs_plus"
