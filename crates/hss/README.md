@@ -1,6 +1,10 @@
 # HSS
 
-Hierarchical hash-based signatures benchmark crate.
+**HSS (Hierarchical Signature System)** is a **stateful hash-based post-quantum signature scheme** built by stacking multiple **LMS trees** in a hierarchy. Upper-level LMS keys sign the public keys of lower-level LMS trees, and the **bottom-level LMS tree signs the actual messages**. Like LMS, HSS is stateful: every one-time leaf can be used only once, and the implementation must track and persist signing state safely. Its main benefit is scalability: an HSS key with tree heights **h₀, h₁, …, hₗ₋₁** can sign up to **2^(h₀ + h₁ + … + hₗ₋₁)** messages in total, while avoiding the up-front cost of building one huge single tree. The tradeoff is larger signatures and more operational complexity than plain LMS. ([RFC 8554][rfc8554])
+
+[rfc8554]: https://datatracker.ietf.org/doc/html/rfc8554
+
+Benchmark crate for HSS.
 
 ## Backend
 
@@ -20,8 +24,8 @@ Notes:
 `src/main.rs` is a single-run benchmark/report binary. It performs:
 
 - key generation timing
-- sign timing + peak heap allocation tracking
-- verify timing + peak heap allocation tracking
+- sign timing
+- verify timing
 - key/signature size and estimated key lifetime reporting
 
 Run it with:
@@ -87,9 +91,6 @@ Results:
 - Signature size: `4464 bytes`
 - Signed message size: `5488 bytes`
 - Estimated signatures per key: `31`
-- Peak heap usage:
-  - Signing: `0 bytes`
-  - Verification: `0 bytes`
 
 ### `hss_divan` (`benches/hss_divan.rs`)
 
@@ -102,7 +103,6 @@ cargo bench -p hss --bench hss_divan
 Reported sizes:
 - `HSS-SHA256-H5-W2-L1`: `pk=60`, `sk=48`, `sig(32B)=4464`, `signed(32B)=4496`, `lifetime=31`
 - `HSS-SHA256-H5-W2-L2`: `pk=60`, `sk=48`, `sig(32B)=8980`, `signed(32B)=9012`, `lifetime=1023`
-- Peak heap usage (sign/verify): `0 bytes` for message sizes `32`, `256`, `1024`, `4096`
 
 Divan timing summary (median, from latest run):
 - `keygen`

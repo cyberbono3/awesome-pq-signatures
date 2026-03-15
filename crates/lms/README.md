@@ -1,6 +1,10 @@
 # LMS
 
-Leighton-Micali signatures benchmark crate.
+**LMS (Leighton–Micali Signature)** is a **stateful hash-based post-quantum signature scheme** built from **LM-OTS one-time signatures** arranged under a **single Merkle tree**. Each signature consumes exactly one unused leaf, so **state must be updated after every signature** and **a used leaf must never be reused**. An LMS key with tree height **h** can sign **at most 2^h messages** total; after that, the key is exhausted and must be replaced. LMS is simple and conservative, but careful state management is mandatory because key/leaf reuse breaks the scheme's security. ([RFC 8554][rfc8554])
+
+[rfc8554]: https://datatracker.ietf.org/doc/html/rfc8554
+
+Benchmark crate for LMS.
 
 ## Backend
 
@@ -20,8 +24,8 @@ Notes:
 `src/main.rs` is a single-run benchmark/report binary. It performs:
 
 - key generation timing
-- sign timing + peak heap allocation tracking
-- verify timing + peak heap allocation tracking
+- sign timing
+- verify timing
 - key/signature size and remaining-signature reporting
 
 Run it with:
@@ -88,9 +92,6 @@ Results:
 - Signature size: `2348 bytes`
 - Signed message size: `3372 bytes`
 - Estimated signatures remaining: `31`
-- Peak heap usage:
-  - Signing: `0 bytes`
-  - Verification: `0 bytes`
 
 ### `lms_divan` (`benches/lms_divan.rs`)
 
@@ -103,7 +104,6 @@ cargo bench -p lms --bench lms_divan
 Reported sizes:
 - `LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4`: `pk=56`, `sk=60`, `sig(32B)=2348`, `signed(32B)=2380`, `lifetime=32`
 - `LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4`: `pk=56`, `sk=60`, `sig(32B)=2508`, `signed(32B)=2540`, `lifetime=1024`
-- Peak heap usage (sign/verify): `0 bytes` for message sizes `32`, `256`, `1024`, `4096`
 
 Divan timing summary (median, from latest run):
 - `keygen`
