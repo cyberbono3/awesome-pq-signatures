@@ -133,8 +133,10 @@ impl SignatureScheme for MayoScheme {
         "MAYO"
     }
 
-    fn keypair(&self, _seed: &Self::Seed) -> Self::KeyPair {
+    fn keypair(&self, seed: &Self::Seed) -> Self::KeyPair {
         // TODO: Implement actual key generation
+        // For now, just access the seed to avoid unused field warning
+        let _ = seed.0;
         MayoKeyPair {}
     }
 
