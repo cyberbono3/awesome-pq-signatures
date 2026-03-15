@@ -1,0 +1,12 @@
+[package]
+name = "leansig-bench"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "leansig"
+path = "src/main.rs"
+
+[dependencies]
+leansig = { git = "https://github.com/leanEthereum/leanSig.git", rev = "16c660e" }
+rand = "0.9"
