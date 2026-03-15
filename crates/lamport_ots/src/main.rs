@@ -32,8 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sign_elapsed = bench_sign(scheme, &message, iterations, deterministic)?;
     print_stats("sign", iterations, sign_elapsed.as_nanos());
 
-    let verify_elapsed =
-        bench_verify(scheme, &message, iterations, deterministic)?;
+    let verify_elapsed = bench_verify(scheme, &message, iterations, deterministic)?;
     print_stats("verify", iterations, verify_elapsed.as_nanos());
 
     Ok(())
@@ -130,10 +129,7 @@ fn random_seed(label: &str) -> u64 {
     mix ^ seed_from_str(label)
 }
 
-fn parse_usize_env(
-    name: &str,
-    default: usize,
-) -> Result<usize, Box<dyn std::error::Error>> {
+fn parse_usize_env(name: &str, default: usize) -> Result<usize, Box<dyn std::error::Error>> {
     match env::var(name) {
         Ok(value) => Ok(value.parse::<usize>()?),
         Err(_) => Ok(default),
