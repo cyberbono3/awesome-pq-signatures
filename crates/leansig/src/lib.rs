@@ -2,7 +2,7 @@ use leansig::serialization::Serializable;
 use leansig::signature::SignatureScheme;
 use leansig::signature::SignatureSchemeSecretKey;
 use leansig::MESSAGE_LENGTH;
-use rand::RngExt;
+use rand::Rng as _;
 use std::time::{Duration, Instant};
 
 /// Measure wall-clock time of a closure.

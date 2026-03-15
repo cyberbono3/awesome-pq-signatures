@@ -8,5 +8,5 @@ name = "leansig-bench"
 path = "src/main.rs"
 
 [dependencies]
-leansig = { path = "patches/leansig" }
-rand = "0.10"
+leansig = { git = "https://github.com/leanEthereum/leanSig.git", rev = "16c660e" }
+rand = "0.9"
