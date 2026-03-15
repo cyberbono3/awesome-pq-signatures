@@ -4,7 +4,6 @@ members = [
     "crates/dilithium",
     "crates/lamport_ots",
     "crates/winternitz_ots",
-    "crates/lm_ots",
     "crates/lms",
     "crates/hss",
     "crates/xmss",
