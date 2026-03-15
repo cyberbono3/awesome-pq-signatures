@@ -1945,6 +1945,9 @@ dependencies = [
 [[package]]
 name = "sqisign"
 version = "0.1.0"
+dependencies = [
+ "divan",
+]
 
 [[package]]
 name = "static_assertions"
