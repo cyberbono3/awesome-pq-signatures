@@ -1,5 +1,5 @@
 use divan::Bencher;
-use xmss::{XmssParamSet, XmssScheme};
+use xmss_bench::{XmssParamSet, XmssScheme};
 
 fn main() {
     divan::main();
@@ -21,8 +21,7 @@ fn sign(bencher: Bencher, message_size: usize) {
     let message = vec![0x3C; message_size];
 
     bencher.bench(|| {
-        let (_, mut secret_key) =
-            scheme.keypair().expect("xmss keypair must succeed");
+        let (_, mut secret_key) = scheme.keypair().expect("xmss keypair must succeed");
         let signature = scheme
             .sign(&message, &mut secret_key)
             .expect("xmss sign must succeed");
@@ -34,8 +33,7 @@ fn sign(bencher: Bencher, message_size: usize) {
 fn verify(bencher: Bencher, message_size: usize) {
     let scheme = XmssScheme::new(XmssParamSet::XmssSha2_10_256);
     let message = vec![0x3C; message_size];
-    let (public_key, mut secret_key) =
-        scheme.keypair().expect("xmss keypair must succeed");
+    let (public_key, mut secret_key) = scheme.keypair().expect("xmss keypair must succeed");
     let signature = scheme
         .sign(&message, &mut secret_key)
         .expect("xmss sign must succeed");

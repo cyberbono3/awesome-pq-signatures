@@ -1,13 +1,11 @@
 [package]
-name = "xmss"
+name = "xmss-bench"
 version.workspace = true
 edition.workspace = true
-build = "build.rs"
 
 [dependencies]
-
-[build-dependencies]
-cc = "1.2"
+xmss = "0.1.0-pre.0"
+rand = "0.10"
 
 [dev-dependencies]
 divan = "0.1"
