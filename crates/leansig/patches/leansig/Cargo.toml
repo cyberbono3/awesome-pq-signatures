@@ -1,0 +1,66 @@
+[package]
+name = "leansig"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.87"
+
+[lints.clippy]
+# all lints that are on by default (correctness, suspicious, style, complexity, perf)
+all = { level = "warn", priority = -1 }
+
+# new lints that are still under development
+nursery = { level = "warn", priority = -1 }
+# avoid lints that are too pedantic
+doc_markdown = "allow"
+
+# lints which are rather strict or have occasional false positives
+pedantic = { level = "warn", priority = -1 }
+# avoid lints that are too pedantic
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+many_single_char_names = "allow"
+should_panic_without_expect = "allow"
+similar_names = "allow"
+suboptimal_flops = "allow"
+cast_sign_loss = "allow"
+cast_lossless = "allow"
+uninlined_format_args = "allow"
+upper_case_acronyms = "allow"
+
+[dependencies]
+rand = "0.10"
+sha3 = "0.10.8"
+num-bigint = "0.4.6"
+rayon = "1.10.0"
+num-traits = "0.2.19"
+dashmap = "6.1.0"
+serde = { version = "1.0", features = ["derive", "alloc"] }
+thiserror = "2.0"
+
+ssz = { package = "ethereum_ssz", version = "0.10.0" }
+
+p3-field = { git = "https://github.com/Plonky3/Plonky3.git", rev = "c38eb05" }
+p3-baby-bear = { git = "https://github.com/Plonky3/Plonky3.git", rev = "c38eb05" }
+p3-koala-bear = { git = "https://github.com/Plonky3/Plonky3.git", rev = "c38eb05" }
+p3-symmetric = { git = "https://github.com/Plonky3/Plonky3.git", rev = "c38eb05" }
+
+[dev-dependencies]
+criterion = "0.7"
+proptest = "1.7"
+bincode = { version = "2.0.1", features = ["serde"] }
+
+[features]
+slow-tests = []
+with-gen-benches-sha = []
+with-gen-benches-poseidon = []
+with-gen-benches-poseidon-top-level = []
+
+[[bench]]
+name = "benchmark"
+harness = false
+
+[profile.profiling]
+inherits = "release"
+debug = true

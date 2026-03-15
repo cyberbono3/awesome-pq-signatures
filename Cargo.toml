@@ -13,7 +13,6 @@ members = [
     "crates/sphincs",
     "crates/hors",
     "crates/horst",
-    "crates/fors",
 ]
 resolver = "2"
 
