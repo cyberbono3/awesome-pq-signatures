@@ -23,5 +23,3 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.92"
 
-[patch."https://github.com/Plonky3/Plonky3.git"]
-p3-poseidon2 = { path = "crates/leansig/patches/p3-poseidon2" }
