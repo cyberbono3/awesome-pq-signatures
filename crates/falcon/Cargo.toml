@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [[bin]]
-name = "falcon-bench"
+name = "falcon"
 path = "src/main.rs"
 
 [[bench]]
