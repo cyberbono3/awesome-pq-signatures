@@ -1,0 +1,1 @@
+// SQISign scheme placeholder.
