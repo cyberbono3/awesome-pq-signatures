@@ -1,6 +1,5 @@
 use sqisign::{
-    default_seed, measure_time, memory, signed_message_size, SignatureScheme, TrackingAllocator,
-    SQISIGN,
+    measure_time, memory, signed_message_size, TrackingAllocator, SQISIGN,
 };
 use std::alloc::System;
 use std::time::Duration;
@@ -8,10 +7,11 @@ use std::time::Duration;
 static SYSTEM_ALLOC: System = System;
 
 #[global_allocator]
-static GLOBAL: TrackingAllocator<System> = TrackingAllocator::new(&SYSTEM_ALLOC);
+static GLOBAL: TrackingAllocator<System> =
+    TrackingAllocator::new(&SYSTEM_ALLOC);
 
-const MESSAGE: &[u8] = b"This is a test message for SQISign signature scheme benchmarking";
-const CONTEXT: &[u8] = &[];
+const MESSAGE: &[u8] =
+    b"This is a test message for SQISign signature scheme benchmarking";
 
 fn print_timing(label: &str, duration: Duration) {
     println!("Time to {label}: {duration:?}");
@@ -20,21 +20,19 @@ fn print_timing(label: &str, duration: Duration) {
 
 fn main() {
     let scheme = SQISIGN;
-    let seed = default_seed();
-    println!(
-        "=== SQISign ({}) Benchmark ===\n",
-        scheme.algorithm_name()
-    );
+    println!("=== SQISign ({}) Benchmark ===\n", scheme.algorithm_name());
 
     println!("--- Key Generation ---");
-    let (keypair, keygen_duration) = measure_time(|| scheme.keypair(&seed));
+    let (keypair, keygen_duration) = measure_time(|| {
+        scheme.keypair().expect("key generation should succeed")
+    });
     print_timing("generate keys", keygen_duration);
 
     println!("\n--- Signing ---");
     memory::reset_peak();
     let (signature, sign_duration) = measure_time(|| {
         scheme
-            .sign(&keypair, MESSAGE, CONTEXT)
+            .sign(&keypair, MESSAGE)
             .expect("signing should succeed")
     });
     print_timing("sign", sign_duration);
@@ -43,8 +41,11 @@ fn main() {
 
     println!("\n--- Verification ---");
     memory::reset_peak();
-    let (verified, verify_duration) =
-        measure_time(|| scheme.verify(&keypair, MESSAGE, CONTEXT, &signature));
+    let (verified, verify_duration) = measure_time(|| {
+        scheme
+            .verify(&keypair, MESSAGE, &signature)
+            .expect("verification should succeed")
+    });
     print_timing("verify", verify_duration);
     let verify_peak_mem = memory::peak_bytes();
     println!("Peak memory during verification: {verify_peak_mem} bytes");

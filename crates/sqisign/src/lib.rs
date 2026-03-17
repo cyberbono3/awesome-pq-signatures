@@ -1,3 +1,4 @@
+use sqisign_lvl1::{KeyPair, Signature as RawSqisignSignature, SqisignError};
 use std::alloc::{GlobalAlloc, Layout};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
@@ -73,110 +74,51 @@ pub mod memory {
     }
 }
 
-pub trait SignatureScheme {
-    type Seed;
-    type KeyPair;
-    type Signature;
-    type Error;
-
-    fn algorithm_name(&self) -> &'static str;
-    fn keypair(&self, seed: &Self::Seed) -> Self::KeyPair;
-    fn sign(
-        &self,
-        keypair: &Self::KeyPair,
-        message: &[u8],
-        context: &[u8],
-    ) -> Result<Self::Signature, Self::Error>;
-    fn verify(
-        &self,
-        keypair: &Self::KeyPair,
-        message: &[u8],
-        context: &[u8],
-        signature: &Self::Signature,
-    ) -> bool;
-    fn public_key_size(&self, keypair: &Self::KeyPair) -> usize;
-    fn secret_key_size(&self, keypair: &Self::KeyPair) -> usize;
-    fn signature_size(&self, signature: &Self::Signature) -> usize;
-}
-
-// Placeholder types for SQISign
-#[derive(Clone, Debug)]
-pub struct SqisignSeed([u8; 32]);
-
-#[derive(Clone, Debug)]
-pub struct SqisignKeyPair {
-    // TODO: Implement actual key pair structure
-}
-
-#[derive(Clone, Debug)]
-pub struct SqisignSignature {
-    // TODO: Implement actual signature structure
-}
-
-#[derive(Debug)]
-pub struct SqisignError {
-    // TODO: Implement actual error type
-}
+pub type SqisignKeyPair = KeyPair;
+pub type SqisignSignature = RawSqisignSignature;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SqisignScheme;
 
 pub const SQISIGN: SqisignScheme = SqisignScheme;
 
-impl SignatureScheme for SqisignScheme {
-    type Seed = SqisignSeed;
-    type KeyPair = SqisignKeyPair;
-    type Signature = SqisignSignature;
-    type Error = SqisignError;
-
-    fn algorithm_name(&self) -> &'static str {
+impl SqisignScheme {
+    pub fn algorithm_name(&self) -> &'static str {
         "SQISign"
     }
 
-    fn keypair(&self, _seed: &Self::Seed) -> Self::KeyPair {
-        // TODO: Implement actual key generation
-        SqisignKeyPair {}
+    pub fn keypair(&self) -> Result<SqisignKeyPair, SqisignError> {
+        SqisignKeyPair::generate()
     }
 
-    fn sign(
+    pub fn sign(
         &self,
-        _keypair: &Self::KeyPair,
-        _message: &[u8],
-        _context: &[u8],
-    ) -> Result<Self::Signature, Self::Error> {
-        // TODO: Implement actual signing
-        Ok(SqisignSignature {})
+        keypair: &SqisignKeyPair,
+        message: &[u8],
+    ) -> Result<SqisignSignature, SqisignError> {
+        keypair.sign(message)
     }
 
-    fn verify(
+    pub fn verify(
         &self,
-        _keypair: &Self::KeyPair,
-        _message: &[u8],
-        _context: &[u8],
-        _signature: &Self::Signature,
-    ) -> bool {
-        // TODO: Implement actual verification
-        true
+        keypair: &SqisignKeyPair,
+        message: &[u8],
+        signature: &SqisignSignature,
+    ) -> Result<bool, SqisignError> {
+        keypair.verify(message, signature)
     }
 
-    fn public_key_size(&self, _keypair: &Self::KeyPair) -> usize {
-        // TODO: Return actual public key size
-        64
+    pub fn public_key_size(&self, keypair: &SqisignKeyPair) -> usize {
+        keypair.public_key.as_bytes().len()
     }
 
-    fn secret_key_size(&self, _keypair: &Self::KeyPair) -> usize {
-        // TODO: Return actual secret key size
-        64
+    pub fn secret_key_size(&self, keypair: &SqisignKeyPair) -> usize {
+        keypair.secret_key.as_bytes().len()
     }
 
-    fn signature_size(&self, _signature: &Self::Signature) -> usize {
-        // TODO: Return actual signature size
-        128
+    pub fn signature_size(&self, signature: &SqisignSignature) -> usize {
+        signature.as_bytes().len()
     }
-}
-
-pub fn default_seed() -> SqisignSeed {
-    SqisignSeed([7_u8; 32])
 }
 
 pub fn bench_message(size: usize) -> Vec<u8> {
@@ -199,8 +141,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, default_seed, signed_message_size, SignatureScheme,
-        BENCH_MESSAGE_BYTE, SQISIGN,
+        bench_message, signed_message_size, BENCH_MESSAGE_BYTE, SQISIGN,
     };
 
     #[test]
@@ -218,15 +159,16 @@ mod tests {
     #[test]
     fn sqisign_sign_verify_roundtrip() {
         let scheme = SQISIGN;
-        let seed = default_seed();
         let message = b"sqisign";
-        let context: &[u8] = &[];
 
-        let keypair = scheme.keypair(&seed);
+        let keypair =
+            scheme.keypair().expect("keypair generation should succeed");
         let signature = scheme
-            .sign(&keypair, message, context)
+            .sign(&keypair, message)
             .expect("signing should succeed");
-        let verified = scheme.verify(&keypair, message, context, &signature);
+        let verified = scheme
+            .verify(&keypair, message, &signature)
+            .expect("verification should succeed");
         assert!(verified, "signature verification should succeed");
     }
 }
