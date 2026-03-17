@@ -19,7 +19,7 @@ Notes:
 - LMS signing is stateful: every signature advances key index `q`.
 - This crate wraps `lms-signature` with a benchmark-oriented API.
 
-## `src/main.rs` (`lms-bench` binary)
+## `src/main.rs` (`lms` binary)
 
 `src/main.rs` is a single-run benchmark/report binary. It performs:
 
@@ -31,7 +31,7 @@ Notes:
 Run it with:
 
 ```bash
-cargo run -p lms --release --bin lms-bench
+cargo run -p lms --release --bin lms
 ```
 
 Environment overrides:
@@ -56,12 +56,6 @@ Run it with:
 cargo bench -p lms --bench lms_divan
 ```
 
-Smoke run:
-
-```bash
-cargo bench -p lms --bench lms_divan -- --test
-```
-
 ## Latest benchmark results
 
 Run timestamp (UTC): `2026-02-19 11:41:52 UTC`
@@ -71,12 +65,12 @@ Environment:
 - `rustc`: `1.87.0-nightly (f4a216d28 2025-03-02)`
 - `cargo`: `1.87.0-nightly (2622e844b 2025-02-28)`
 
-### `lms-bench` (`src/main.rs`)
+### `lms` (`src/main.rs`)
 
 Command:
 
 ```bash
-cargo run -p lms --release --bin lms-bench
+cargo run -p lms --release --bin lms
 ```
 
 Configuration used:
