@@ -6,6 +6,17 @@
 
 Benchmark crate for LMS.
 
+## HSS vs LMS
+
+- `LMS` is a single stateful Merkle-tree signature scheme.
+- `HSS` is a hierarchy of LMS trees, where upper levels sign lower-level LMS public keys.
+- `LMS` is simpler and usually smaller/faster.
+- `HSS` is used when a single LMS tree does not provide enough total signatures.
+- In this repo, `LMS` benches single-tree parameter sets such as `H5W4` and `H10W4` in `crates/lms/src/lib.rs`.
+- In this repo, `HSS` benches hierarchical parameter sets such as `L1H5W2` and `L2H5W2` in `crates/hss/src/lib.rs`.
+- `HSS` signatures and signing times are naturally larger/slower because signing passes through a hierarchy instead of a single LMS tree.
+- `HSS` `print_sizes()` does real key generation plus signing to measure sizes, while `LMS` currently uses fixed size calculations/constants.
+
 ## Backend
 
 - Algorithm: `LMS`

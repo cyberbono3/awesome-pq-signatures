@@ -19,7 +19,7 @@ Notes:
 - HSS signing is stateful: every signature mutates the signing key.
 - This crate wraps `hbs-lms` with a small benchmark-oriented API.
 
-## `src/main.rs` (`hss-bench` binary)
+## `src/main.rs` (`hss` binary)
 
 `src/main.rs` is a single-run benchmark/report binary. It performs:
 
@@ -31,7 +31,7 @@ Notes:
 Run it with:
 
 ```bash
-cargo run -p hss --release --bin hss-bench
+cargo run -p hss --release --bin hss
 ```
 
 Environment overrides:
@@ -55,11 +55,6 @@ Run it with:
 cargo bench -p hss --bench hss_divan
 ```
 
-Smoke run:
-
-```bash
-cargo bench -p hss --bench hss_divan -- --test
-```
 
 ## Latest benchmark results
 
@@ -70,12 +65,12 @@ Environment:
 - `rustc`: `1.87.0-nightly (f4a216d28 2025-03-02)`
 - `cargo`: `1.87.0-nightly (2622e844b 2025-02-28)`
 
-### `hss-bench` (`src/main.rs`)
+### `hss` (`src/main.rs`)
 
 Command:
 
 ```bash
-cargo run -p hss --release --bin hss-bench
+cargo run -p hss --release --bin hss
 ```
 
 Configuration used:
