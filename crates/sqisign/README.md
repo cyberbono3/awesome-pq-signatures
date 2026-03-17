@@ -1,6 +1,6 @@
 # SQISign
 
-Isogeny-based post-quantum signature scheme.
+**SQISign** is an **isogeny-based post-quantum digital signature scheme** built from the arithmetic of supersingular elliptic curves and hard problems around computing structured isogenies between them. Unlike stateful hash-based schemes such as LMS or HSS, SQISign is **stateless**: signatures do not consume one-time leaves or require persistent signing-key state between operations. Its main attraction is the possibility of **very small public keys and signatures** compared with many other post-quantum schemes, while the main tradeoff is a much more specialized mathematical foundation and more implementation complexity than lattice- or hash-based signatures.
 
 ## Library
 
