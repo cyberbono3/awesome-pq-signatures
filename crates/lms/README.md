@@ -9,15 +9,15 @@ Benchmark crate for LMS.
 ## Backend
 
 - Algorithm: `LMS`
-- Backend: `lms-signature`
+- Backend: `hbs-lms`
 - Parameter sets:
   - `LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4`
   - `LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4`
 - Library crate entry: `src/lib.rs`
 
 Notes:
-- LMS signing is stateful: every signature advances key index `q`.
-- This crate wraps `lms-signature` with a benchmark-oriented API.
+- LMS signing is stateful: every signature advances the secret-key state.
+- This crate wraps `hbs-lms` with a benchmark-oriented API.
 
 ## `src/main.rs` (`lms` binary)
 
@@ -56,74 +56,35 @@ Run it with:
 cargo bench -p lms --bench lms_divan
 ```
 
-## Latest benchmark results
+Observed size output from the latest `lms_divan` run:
+- `LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4`: `pk=56`, `sk=48`, `sig(32B)=2352`, `signed(32B)=2384`, `lifetime=32`
+- `LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4`: `pk=56`, `sk=48`, `sig(32B)=2512`, `signed(32B)=2544`, `lifetime=1024`
 
-Run timestamp (UTC): `2026-02-19 11:41:52 UTC`
-
-Environment:
-- OS: `Darwin 25.1.0 arm64`
-- `rustc`: `1.87.0-nightly (f4a216d28 2025-03-02)`
-- `cargo`: `1.87.0-nightly (2622e844b 2025-02-28)`
-
-### `lms` (`src/main.rs`)
-
-Command:
-
-```bash
-cargo run -p lms --release --bin lms
-```
-
-Configuration used:
-- `PARAM_SET=LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4` (default)
-- `MESSAGE_SIZE=1024` (default)
-
-Results:
-- Key generation: `1.555417 ms` (`1,555,417 ns`)
-- Signing: `37.25 µs` (`37,250 ns`)
-- Verification: `30.125 µs` (`30,125 ns`)
-- Public key size: `56 bytes`
-- Secret key size: `60 bytes`
-- Signature size: `2348 bytes`
-- Signed message size: `3372 bytes`
-- Estimated signatures remaining: `31`
-
-### `lms_divan` (`benches/lms_divan.rs`)
-
-Command:
-
-```bash
-cargo bench -p lms --bench lms_divan
-```
-
-Reported sizes:
-- `LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4`: `pk=56`, `sk=60`, `sig(32B)=2348`, `signed(32B)=2380`, `lifetime=32`
-- `LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4`: `pk=56`, `sk=60`, `sig(32B)=2508`, `signed(32B)=2540`, `lifetime=1024`
-
-Divan timing summary (median, from latest run):
+Median timings from `cargo bench -p lms --bench lms_divan` on `2026-03-17`:
 - `keygen`
-  - `LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4`: `1.526 ms`
-  - `LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4`: `48.54 ms`
+  - `LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4`: `6.683 ms`
+  - `LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4`: `211.1 ms`
 - `sign_h5w4`
-  - `32B`: `28.85 µs`
-  - `256B`: `29.52 µs`
-  - `1024B`: `29.49 µs`
-  - `4096B`: `30.64 µs`
+  - `32B`: `6.646 ms`
+  - `256B`: `6.624 ms`
+  - `1024B`: `6.647 ms`
+  - `4096B`: `6.664 ms`
 - `sign_h10w4`
-  - `32B`: `31.43 µs`
-  - `256B`: `32.04 µs`
-  - `1024B`: `32.02 µs`
-  - `4096B`: `33.49 µs`
+  - `32B`: `212.7 ms`
+  - `256B`: `213.6 ms`
+  - `1024B`: `213 ms`
+  - `4096B`: `212 ms`
 - `verify_h5w4`
-  - `32B`: `24.70 µs`
-  - `256B`: `24.29 µs`
-  - `1024B`: `23.83 µs`
-  - `4096B`: `26.66 µs`
+  - `32B`: `102.6 µs`
+  - `256B`: `103 µs`
+  - `1024B`: `102.2 µs`
+  - `4096B`: `118.9 µs`
 - `verify_h10w4`
-  - `32B`: `24.37 µs`
-  - `256B`: `23.79 µs`
-  - `1024B`: `25.49 µs`
-  - `4096B`: `28.27 µs`
+  - `32B`: `120.4 µs`
+  - `256B`: `96.45 µs`
+  - `1024B`: `117.7 µs`
+  - `4096B`: `115.4 µs`
 
 ## Library
 
-- Rust: [lms-signature](https://docs.rs/lms-signature/latest/lms_signature/)
+- Rust: [hbs-lms](https://docs.rs/hbs-lms/latest/hbs_lms/)

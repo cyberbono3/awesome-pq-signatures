@@ -1,10 +1,10 @@
-use getrandom::{rand_core::UnwrapErr, SysRng};
-use lms_signature::lms::{
-    LmsMode, LmsSha256M32H10, LmsSha256M32H5, Signature as RawSignature,
-    SigningKey as RawSigningKey, VerifyingKey as RawVerifyingKey,
+use hbs_lms::{
+    keygen,
+    signature::{SignerMut, Verifier},
+    HssParameter, LmotsAlgorithm, LmsAlgorithm, Seed, Sha256_256,
+    Signature as RawSignature, SigningKey as RawSigningKey,
+    VerifyingKey as RawVerifyingKey,
 };
-use lms_signature::ots::{LmsOtsMode, LmsOtsSha256N32W4};
-use signature::{RandomizedSignerMut, Verifier};
 use std::alloc::{GlobalAlloc, Layout};
 use std::error::Error;
 use std::fmt;
@@ -13,13 +13,15 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
-pub const DEFAULT_PARAM_SET_NAME: &str = "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4";
+pub const DEFAULT_PARAM_SET_NAME: &str =
+    "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4";
 
 const LMS_PUBLIC_KEY_BYTES: usize = 56;
-const LMS_SECRET_KEY_BYTES: usize = 60;
+const LMS_SECRET_KEY_BYTES: usize = 48;
+const SHA256_OUTPUT_BYTES: usize = 32;
+const LMOTS_W4_CHAIN_COUNT: usize = 67;
 
-type ModeH5W4 = LmsSha256M32H5<LmsOtsSha256N32W4>;
-type ModeH10W4 = LmsSha256M32H10<LmsOtsSha256N32W4>;
+type Hasher = Sha256_256;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LmsParamSet {
@@ -43,18 +45,31 @@ impl LmsParamSet {
     }
 
     pub const fn max_signatures(self) -> u32 {
-        match self {
-            Self::H5W4 => <ModeH5W4 as LmsMode>::LEAVES,
-            Self::H10W4 => <ModeH10W4 as LmsMode>::LEAVES,
-        }
+        1u32 << self.tree_height()
     }
 
     pub const fn signature_size_bytes(self) -> usize {
-        8 + LmsOtsSha256N32W4::SIG_LEN + 32 * self.tree_height()
+        16 + SHA256_OUTPUT_BYTES
+            * (1 + LMOTS_W4_CHAIN_COUNT + self.tree_height())
+    }
+
+    fn lms_algorithm(self) -> LmsAlgorithm {
+        match self {
+            Self::H5W4 => LmsAlgorithm::LmsH5,
+            Self::H10W4 => LmsAlgorithm::LmsH10,
+        }
+    }
+
+    fn parameters(self) -> [HssParameter<Hasher>; 1] {
+        [HssParameter::new(
+            LmotsAlgorithm::LmotsW4,
+            self.lms_algorithm(),
+        )]
     }
 }
 
-pub const LMS_PARAM_SETS: [LmsParamSet; 2] = [LmsParamSet::H5W4, LmsParamSet::H10W4];
+pub const LMS_PARAM_SETS: [LmsParamSet; 2] =
+    [LmsParamSet::H5W4, LmsParamSet::H10W4];
 
 pub fn param_set_by_name(name: &str) -> Option<LmsParamSet> {
     LMS_PARAM_SETS
@@ -63,52 +78,48 @@ pub fn param_set_by_name(name: &str) -> Option<LmsParamSet> {
         .find(|param_set| param_set.name() == name)
 }
 
-pub enum LmsPublicKey {
-    H5W4(RawVerifyingKey<ModeH5W4>),
-    H10W4(RawVerifyingKey<ModeH10W4>),
+pub struct LmsPublicKey {
+    params: LmsParamSet,
+    key: RawVerifyingKey<Hasher>,
 }
 
 impl LmsPublicKey {
     pub fn param_set(&self) -> LmsParamSet {
-        match self {
-            Self::H5W4(_) => LmsParamSet::H5W4,
-            Self::H10W4(_) => LmsParamSet::H10W4,
-        }
+        self.params
     }
 }
 
-pub enum LmsSecretKey {
-    H5W4(RawSigningKey<ModeH5W4>),
-    H10W4(RawSigningKey<ModeH10W4>),
+pub struct LmsSecretKey {
+    params: LmsParamSet,
+    key: RawSigningKey<Hasher>,
 }
 
 impl LmsSecretKey {
     pub fn param_set(&self) -> LmsParamSet {
-        match self {
-            Self::H5W4(_) => LmsParamSet::H5W4,
-            Self::H10W4(_) => LmsParamSet::H10W4,
-        }
+        self.params
     }
 
-    pub fn q(&self) -> u32 {
-        match self {
-            Self::H5W4(secret_key) => secret_key.q(),
-            Self::H10W4(secret_key) => secret_key.q(),
-        }
+    pub fn remaining_signatures(&self) -> Result<u32, LmsError> {
+        self.key
+            .get_lifetime()
+            .map(|value| value as u32)
+            .map_err(|_| LmsError::StateReadFailed)
+    }
+
+    pub fn used_signatures(&self) -> Result<u32, LmsError> {
+        let remaining = self.remaining_signatures()?;
+        Ok(self.param_set().max_signatures().saturating_sub(remaining))
     }
 }
 
-pub enum LmsSignature {
-    H5W4(RawSignature<ModeH5W4>),
-    H10W4(RawSignature<ModeH10W4>),
+pub struct LmsSignature {
+    params: LmsParamSet,
+    signature: RawSignature,
 }
 
 impl LmsSignature {
     pub fn param_set(&self) -> LmsParamSet {
-        match self {
-            Self::H5W4(_) => LmsParamSet::H5W4,
-            Self::H10W4(_) => LmsParamSet::H10W4,
-        }
+        self.params
     }
 }
 
@@ -130,8 +141,10 @@ impl LmsScheme {
     }
 
     pub fn from_param_set_name(name: &str) -> Result<Self, LmsError> {
-        let params = param_set_by_name(name).ok_or_else(|| LmsError::UnknownParamSet {
-            name: name.to_owned(),
+        let params = param_set_by_name(name).ok_or_else(|| {
+            LmsError::UnknownParamSet {
+                name: name.to_owned(),
+            }
         })?;
         Ok(Self::new(params))
     }
@@ -141,7 +154,7 @@ impl LmsScheme {
     }
 
     pub fn backend_name(&self) -> &'static str {
-        "lms-signature"
+        "hbs-lms"
     }
 
     pub fn param_set_name(&self) -> &'static str {
@@ -173,28 +186,24 @@ impl LmsScheme {
         &self,
         seed_value: u64,
     ) -> Result<(LmsPublicKey, LmsSecretKey), LmsError> {
-        let (id, seed) = seed_material_from_u64(seed_value);
+        let mut seed = Seed::<Hasher>::default();
+        seed.as_mut_slice()
+            .copy_from_slice(&seed_material_from_u64(seed_value));
 
-        match self.params {
-            LmsParamSet::H5W4 => {
-                let secret_key = RawSigningKey::<ModeH5W4>::new_from_seed(id, seed)
-                    .map_err(|_| LmsError::KeygenFailed)?;
-                let public_key = secret_key.public();
-                Ok((
-                    LmsPublicKey::H5W4(public_key),
-                    LmsSecretKey::H5W4(secret_key),
-                ))
-            }
-            LmsParamSet::H10W4 => {
-                let secret_key = RawSigningKey::<ModeH10W4>::new_from_seed(id, seed)
-                    .map_err(|_| LmsError::KeygenFailed)?;
-                let public_key = secret_key.public();
-                Ok((
-                    LmsPublicKey::H10W4(public_key),
-                    LmsSecretKey::H10W4(secret_key),
-                ))
-            }
-        }
+        let (secret_key, public_key) =
+            keygen::<Hasher>(&self.params.parameters(), &seed, None)
+                .map_err(|_| LmsError::KeygenFailed)?;
+
+        Ok((
+            LmsPublicKey {
+                params: self.params,
+                key: public_key,
+            },
+            LmsSecretKey {
+                params: self.params,
+                key: secret_key,
+            },
+        ))
     }
 
     pub fn sign(
@@ -203,23 +212,15 @@ impl LmsScheme {
         secret_key: &mut LmsSecretKey,
     ) -> Result<LmsSignature, LmsError> {
         self.ensure_secret_key_params(secret_key)?;
+        let signature = secret_key
+            .key
+            .try_sign(message)
+            .map_err(|_| LmsError::SignFailed)?;
 
-        match secret_key {
-            LmsSecretKey::H5W4(secret_key) => {
-                let mut rng = UnwrapErr(SysRng);
-                let signature = secret_key
-                    .try_sign_with_rng(&mut rng, message)
-                    .map_err(|_| LmsError::SignFailed)?;
-                Ok(LmsSignature::H5W4(signature))
-            }
-            LmsSecretKey::H10W4(secret_key) => {
-                let mut rng = UnwrapErr(SysRng);
-                let signature = secret_key
-                    .try_sign_with_rng(&mut rng, message)
-                    .map_err(|_| LmsError::SignFailed)?;
-                Ok(LmsSignature::H10W4(signature))
-            }
-        }
+        Ok(LmsSignature {
+            params: self.params,
+            signature,
+        })
     }
 
     pub fn verify(
@@ -230,38 +231,33 @@ impl LmsScheme {
     ) -> Result<bool, LmsError> {
         self.ensure_public_key_params(public_key)?;
         self.ensure_signature_params(signature)?;
-
-        match (signature, public_key) {
-            (LmsSignature::H5W4(signature), LmsPublicKey::H5W4(public_key)) => {
-                Ok(public_key.verify(message, signature).is_ok())
-            }
-            (LmsSignature::H10W4(signature), LmsPublicKey::H10W4(public_key)) => {
-                Ok(public_key.verify(message, signature).is_ok())
-            }
-            _ => Err(LmsError::VerifyFailed),
-        }
+        Ok(public_key.key.verify(message, &signature.signature).is_ok())
     }
 
     pub fn public_key_size(&self, public_key: &LmsPublicKey) -> usize {
-        let _ = public_key;
-        LMS_PUBLIC_KEY_BYTES
+        public_key.key.as_slice().len()
     }
 
     pub fn secret_key_size(&self, secret_key: &LmsSecretKey) -> usize {
-        let _ = secret_key;
-        LMS_SECRET_KEY_BYTES
+        secret_key.key.as_slice().len()
     }
 
     pub fn signature_size(&self, signature: &LmsSignature) -> usize {
-        signature.param_set().signature_size_bytes()
+        signature.signature.as_ref().len()
     }
 
-    pub fn remaining_signatures(&self, secret_key: &LmsSecretKey) -> Result<u32, LmsError> {
+    pub fn remaining_signatures(
+        &self,
+        secret_key: &LmsSecretKey,
+    ) -> Result<u32, LmsError> {
         self.ensure_secret_key_params(secret_key)?;
-        Ok(self.max_signatures_per_key().saturating_sub(secret_key.q()))
+        secret_key.remaining_signatures()
     }
 
-    fn ensure_secret_key_params(&self, secret_key: &LmsSecretKey) -> Result<(), LmsError> {
+    fn ensure_secret_key_params(
+        &self,
+        secret_key: &LmsSecretKey,
+    ) -> Result<(), LmsError> {
         if secret_key.param_set() != self.params {
             return Err(LmsError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -271,7 +267,10 @@ impl LmsScheme {
         Ok(())
     }
 
-    fn ensure_public_key_params(&self, public_key: &LmsPublicKey) -> Result<(), LmsError> {
+    fn ensure_public_key_params(
+        &self,
+        public_key: &LmsPublicKey,
+    ) -> Result<(), LmsError> {
         if public_key.param_set() != self.params {
             return Err(LmsError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -281,7 +280,10 @@ impl LmsScheme {
         Ok(())
     }
 
-    fn ensure_signature_params(&self, signature: &LmsSignature) -> Result<(), LmsError> {
+    fn ensure_signature_params(
+        &self,
+        signature: &LmsSignature,
+    ) -> Result<(), LmsError> {
         if signature.param_set() != self.params {
             return Err(LmsError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -304,6 +306,7 @@ pub enum LmsError {
     KeygenFailed,
     SignFailed,
     VerifyFailed,
+    StateReadFailed,
 }
 
 impl fmt::Display for LmsError {
@@ -321,6 +324,9 @@ impl fmt::Display for LmsError {
             Self::KeygenFailed => write!(f, "LMS key generation failed"),
             Self::SignFailed => write!(f, "LMS signing failed"),
             Self::VerifyFailed => write!(f, "LMS verification failed"),
+            Self::StateReadFailed => {
+                write!(f, "LMS key state could not be read")
+            }
         }
     }
 }
@@ -352,9 +358,9 @@ pub fn default_seed() -> u64 {
     now.as_nanos() as u64 ^ (pid << 32)
 }
 
-fn seed_material_from_u64(seed_value: u64) -> ([u8; 16], [u8; 32]) {
+fn seed_material_from_u64(seed_value: u64) -> [u8; 32] {
     let mut rng = XorShift64::new(seed_value);
-    let mut out = [0u8; 48];
+    let mut out = [0u8; 32];
 
     let mut offset = 0;
     while offset < out.len() {
@@ -363,14 +369,7 @@ fn seed_material_from_u64(seed_value: u64) -> ([u8; 16], [u8; 32]) {
         out[offset..offset + take].copy_from_slice(&chunk[..take]);
         offset += take;
     }
-
-    let mut id = [0u8; 16];
-    id.copy_from_slice(&out[..16]);
-
-    let mut seed = [0u8; 32];
-    seed.copy_from_slice(&out[16..48]);
-
-    (id, seed)
+    out
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -412,7 +411,9 @@ impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
     }
 }
 
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
+unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
+    for TrackingAllocator<A>
+{
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ptr = unsafe { self.inner.alloc(layout) };
         if !ptr.is_null() {
@@ -467,13 +468,14 @@ pub mod memory {
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, param_set_by_name, LmsScheme, BENCH_MESSAGE_BYTE, DEFAULT_PARAM_SET_NAME,
+        bench_message, param_set_by_name, LmsScheme, BENCH_MESSAGE_BYTE,
+        DEFAULT_PARAM_SET_NAME,
     };
 
     #[test]
     fn param_set_lookup_works() {
-        let found =
-            param_set_by_name(DEFAULT_PARAM_SET_NAME).expect("known param set should resolve");
+        let found = param_set_by_name(DEFAULT_PARAM_SET_NAME)
+            .expect("known param set should resolve");
         assert_eq!(found.name(), DEFAULT_PARAM_SET_NAME);
     }
 

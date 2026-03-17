@@ -18,10 +18,11 @@ fn parse_usize_env(name: &str, default: usize) -> usize {
 }
 
 fn main() {
-    let param_set_name =
-        env::var("PARAM_SET").unwrap_or_else(|_| DEFAULT_PARAM_SET_NAME.to_owned());
+    let param_set_name = env::var("PARAM_SET")
+        .unwrap_or_else(|_| DEFAULT_PARAM_SET_NAME.to_owned());
     let message_size = parse_usize_env("MESSAGE_SIZE", 1024);
-    let scheme = LmsScheme::from_param_set_name(&param_set_name).expect("valid LMS parameter set");
+    let scheme = LmsScheme::from_param_set_name(&param_set_name)
+        .expect("valid LMS parameter set");
     let message = bench_message(message_size);
     let seed = default_seed();
 
