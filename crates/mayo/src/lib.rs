@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
+pub const DEFAULT_CONTEXT: &[u8] = &[];
 
 static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
 static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
@@ -75,35 +76,16 @@ pub mod memory {
     }
 }
 
-pub trait SignatureScheme {
-    type Seed;
-    type KeyPair;
-    type Signature;
-    type Error;
-
-    fn algorithm_name(&self) -> &'static str;
-    fn keypair(&self, seed: &Self::Seed) -> Self::KeyPair;
-    fn sign(
-        &self,
-        keypair: &Self::KeyPair,
-        message: &[u8],
-        context: &[u8],
-    ) -> Result<Self::Signature, Self::Error>;
-    fn verify(
-        &self,
-        keypair: &Self::KeyPair,
-        message: &[u8],
-        context: &[u8],
-        signature: &Self::Signature,
-    ) -> bool;
-    fn public_key_size(&self, keypair: &Self::KeyPair) -> usize;
-    fn secret_key_size(&self, keypair: &Self::KeyPair) -> usize;
-    fn signature_size(&self, signature: &Self::Signature) -> usize;
-}
-
 pub type MayoSeed = [u8; 24];
 pub type MayoKeyPair = KeyPair<Mayo1>;
 pub type MayoSignature = RawMayoSignature<Mayo1>;
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct MayoSizes {
+    pub public_key_bytes: usize,
+    pub secret_key_bytes: usize,
+    pub signature_bytes: usize,
+}
 
 #[derive(Debug)]
 pub enum MayoError {
@@ -116,30 +98,27 @@ pub struct MayoScheme;
 
 pub const MAYO: MayoScheme = MayoScheme;
 
-impl SignatureScheme for MayoScheme {
-    type Seed = MayoSeed;
-    type KeyPair = MayoKeyPair;
-    type Signature = MayoSignature;
-    type Error = MayoError;
-
-    fn algorithm_name(&self) -> &'static str {
+impl MayoScheme {
+    pub fn algorithm_name(&self) -> &'static str {
         "MAYO"
     }
 
-    fn keypair(&self, seed: &Self::Seed) -> Self::KeyPair {
+    pub fn keypair(&self, seed: &MayoSeed) -> MayoKeyPair {
         MayoKeyPair::from_seed(seed)
             .expect("MAYO key generation from seed should succeed")
     }
 
-    fn sign(
+    pub fn benchmark_keypair(&self) -> MayoKeyPair {
+        self.keypair(&default_seed())
+    }
+
+    pub fn sign(
         &self,
-        keypair: &Self::KeyPair,
+        keypair: &MayoKeyPair,
         message: &[u8],
         context: &[u8],
-    ) -> Result<Self::Signature, Self::Error> {
-        if !context.is_empty() {
-            return Err(MayoError::UnsupportedContext);
-        }
+    ) -> Result<MayoSignature, MayoError> {
+        self.ensure_context_supported(context)?;
 
         keypair
             .signing_key()
@@ -147,30 +126,70 @@ impl SignatureScheme for MayoScheme {
             .map_err(MayoError::Crypto)
     }
 
-    fn verify(
+    pub fn sign_message(
         &self,
-        keypair: &Self::KeyPair,
+        keypair: &MayoKeyPair,
+        message: &[u8],
+    ) -> Result<MayoSignature, MayoError> {
+        self.sign(keypair, message, DEFAULT_CONTEXT)
+    }
+
+    pub fn verify(
+        &self,
+        keypair: &MayoKeyPair,
         message: &[u8],
         context: &[u8],
-        signature: &Self::Signature,
+        signature: &MayoSignature,
     ) -> bool {
-        if !context.is_empty() {
+        if self.ensure_context_supported(context).is_err() {
             return false;
         }
 
         keypair.verifying_key().verify(message, signature).is_ok()
     }
 
-    fn public_key_size(&self, keypair: &Self::KeyPair) -> usize {
+    pub fn verify_message(
+        &self,
+        keypair: &MayoKeyPair,
+        message: &[u8],
+        signature: &MayoSignature,
+    ) -> bool {
+        self.verify(keypair, message, DEFAULT_CONTEXT, signature)
+    }
+
+    pub fn public_key_size(&self, keypair: &MayoKeyPair) -> usize {
         keypair.verifying_key().as_ref().len()
     }
 
-    fn secret_key_size(&self, keypair: &Self::KeyPair) -> usize {
+    pub fn secret_key_size(&self, keypair: &MayoKeyPair) -> usize {
         keypair.signing_key().as_ref().len()
     }
 
-    fn signature_size(&self, signature: &Self::Signature) -> usize {
+    pub fn signature_size(&self, signature: &MayoSignature) -> usize {
         signature.as_ref().len()
+    }
+
+    pub fn sizes(
+        &self,
+        keypair: &MayoKeyPair,
+        signature: &MayoSignature,
+    ) -> MayoSizes {
+        MayoSizes {
+            public_key_bytes: self.public_key_size(keypair),
+            secret_key_bytes: self.secret_key_size(keypair),
+            signature_bytes: self.signature_size(signature),
+        }
+    }
+
+    fn ensure_context_supported(
+        &self,
+        context: &[u8],
+    ) -> Result<(), MayoError> {
+        if context.is_empty() {
+            Ok(())
+        } else {
+            Err(MayoError::UnsupportedContext)
+        }
     }
 }
 
@@ -198,8 +217,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, default_seed, signed_message_size, SignatureScheme,
-        BENCH_MESSAGE_BYTE, MAYO,
+        bench_message, default_seed, signed_message_size, BENCH_MESSAGE_BYTE,
+        MAYO,
     };
 
     #[test]
@@ -219,13 +238,12 @@ mod tests {
         let scheme = MAYO;
         let seed = default_seed();
         let message = b"mayo";
-        let context: &[u8] = &[];
 
         let keypair = scheme.keypair(&seed);
         let signature = scheme
-            .sign(&keypair, message, context)
+            .sign_message(&keypair, message)
             .expect("signing should succeed");
-        let verified = scheme.verify(&keypair, message, context, &signature);
+        let verified = scheme.verify_message(&keypair, message, &signature);
         assert!(verified, "signature verification should succeed");
     }
 }
