@@ -12,6 +12,8 @@ name = "mayo_divan"
 harness = false
 
 [dependencies]
+pq-mayo = "0.2.3"
+signature = "2"
 
 [dev-dependencies]
 divan = "0.1"

@@ -1,3 +1,5 @@
+use pq_mayo::{KeyPair, Mayo1, Signature as RawMayoSignature};
+use signature::{Error as SignatureError, Signer, Verifier};
 use std::alloc::{GlobalAlloc, Layout};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
@@ -99,23 +101,14 @@ pub trait SignatureScheme {
     fn signature_size(&self, signature: &Self::Signature) -> usize;
 }
 
-// Placeholder types for MAYO
-#[derive(Clone, Debug)]
-pub struct MayoSeed([u8; 32]);
-
-#[derive(Clone, Debug)]
-pub struct MayoKeyPair {
-    // TODO: Implement actual key pair structure
-}
-
-#[derive(Clone, Debug)]
-pub struct MayoSignature {
-    // TODO: Implement actual signature structure
-}
+pub type MayoSeed = [u8; 24];
+pub type MayoKeyPair = KeyPair<Mayo1>;
+pub type MayoSignature = RawMayoSignature<Mayo1>;
 
 #[derive(Debug)]
-pub struct MayoError {
-    // TODO: Implement actual error type
+pub enum MayoError {
+    UnsupportedContext,
+    Crypto(SignatureError),
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -134,51 +127,55 @@ impl SignatureScheme for MayoScheme {
     }
 
     fn keypair(&self, seed: &Self::Seed) -> Self::KeyPair {
-        // TODO: Implement actual key generation
-        // For now, just access the seed to avoid unused field warning
-        let _ = seed.0;
-        MayoKeyPair {}
+        MayoKeyPair::from_seed(seed)
+            .expect("MAYO key generation from seed should succeed")
     }
 
     fn sign(
         &self,
-        _keypair: &Self::KeyPair,
-        _message: &[u8],
-        _context: &[u8],
+        keypair: &Self::KeyPair,
+        message: &[u8],
+        context: &[u8],
     ) -> Result<Self::Signature, Self::Error> {
-        // TODO: Implement actual signing
-        Ok(MayoSignature {})
+        if !context.is_empty() {
+            return Err(MayoError::UnsupportedContext);
+        }
+
+        keypair
+            .signing_key()
+            .try_sign(message)
+            .map_err(MayoError::Crypto)
     }
 
     fn verify(
         &self,
-        _keypair: &Self::KeyPair,
-        _message: &[u8],
-        _context: &[u8],
-        _signature: &Self::Signature,
+        keypair: &Self::KeyPair,
+        message: &[u8],
+        context: &[u8],
+        signature: &Self::Signature,
     ) -> bool {
-        // TODO: Implement actual verification
-        true
+        if !context.is_empty() {
+            return false;
+        }
+
+        keypair.verifying_key().verify(message, signature).is_ok()
     }
 
-    fn public_key_size(&self, _keypair: &Self::KeyPair) -> usize {
-        // TODO: Return actual public key size
-        64
+    fn public_key_size(&self, keypair: &Self::KeyPair) -> usize {
+        keypair.verifying_key().as_ref().len()
     }
 
-    fn secret_key_size(&self, _keypair: &Self::KeyPair) -> usize {
-        // TODO: Return actual secret key size
-        64
+    fn secret_key_size(&self, keypair: &Self::KeyPair) -> usize {
+        keypair.signing_key().as_ref().len()
     }
 
-    fn signature_size(&self, _signature: &Self::Signature) -> usize {
-        // TODO: Return actual signature size
-        128
+    fn signature_size(&self, signature: &Self::Signature) -> usize {
+        signature.as_ref().len()
     }
 }
 
 pub fn default_seed() -> MayoSeed {
-    MayoSeed([7_u8; 32])
+    [7_u8; 24]
 }
 
 pub fn bench_message(size: usize) -> Vec<u8> {

@@ -1,8 +1,11 @@
 # MAYO
 
-Multivariate cryptography signature scheme.
+**MAYO** is a **multivariate post-quantum digital signature scheme** built from structured systems of multivariate quadratic equations over finite fields. Unlike stateful hash-based schemes such as LMS or HSS, MAYO is **stateless**: signing does not consume one-time leaves or require persistent key-state updates between signatures. Its design aims to offer practical post-quantum signatures from the hardness of solving structured equation systems while keeping key and signature handling straightforward for repeated signing workloads.
 
 ## Library
+
+- Rust: [pq-mayo](https://crates.io/crates/pq-mayo)
+- Default benchmark parameter set: `Mayo1`
 
 ## `src/main.rs` (`mayo` binary)
 
@@ -15,34 +18,35 @@ Multivariate cryptography signature scheme.
 Run it with:
 
 ```bash
-cargo run -p mayo --bin mayo
+cargo run -p mayo --release --bin mayo
 ```
 
-Latest run result (captured on 2026-03-15 12:00:00 UTC):
+Representative local result from `cargo run -p mayo --release --bin mayo`:
+timings below use the median of 5 local release runs; size and memory fields are from a representative release run.
 
 ```text
 === MAYO (MAYO) Benchmark ===
 
 --- Key Generation ---
-Time to generate keys: 0ns
-Time to generate keys (ns): 0
+Time to generate keys: 948.458µs
+Time to generate keys (ns): 948458
 
 --- Signing ---
-Time to sign: 83ns
-Time to sign (ns): 83
-Peak memory during signing: 0 bytes
+Time to sign: 2.2935ms
+Time to sign (ns): 2293500
+Peak memory during signing: 970287 bytes
 
 --- Verification ---
-Time to verify: 0ns
-Time to verify (ns): 0
-Peak memory during verification: 0 bytes
+Time to verify: 1.243709ms
+Time to verify (ns): 1243709
+Peak memory during verification: 803629 bytes
 Signature verification: SUCCESS
 
 --- Size Measurements ---
-Public key size: 64 bytes
-Secret key size: 64 bytes
-Signature size: 128 bytes
-Signed message size: 192 bytes
+Public key size: 1420 bytes
+Secret key size: 24 bytes
+Signature size: 454 bytes
+Signed message size: 515 bytes
 ```
 
 ## `benches/mayo_divan.rs` (Divan benchmark suite)
@@ -60,32 +64,30 @@ Run it with:
 cargo bench -p mayo --bench mayo_divan
 ```
 
-Latest run result (captured on 2026-03-15 12:00:00 UTC):
+Latest observed local run (`cargo bench -p mayo --bench mayo_divan`):
 
 ```text
 MAYO sizes:
-  Public key: 64 bytes
-  Secret key: 64 bytes
-  Signature (message 32 bytes): 128 bytes
-  Signature (message 256 bytes): 128 bytes
-  Signature (message 1024 bytes): 128 bytes
-  Signature (message 4096 bytes): 128 bytes
+  Public key: 1420 bytes
+  Secret key: 24 bytes
+  Signature (message 32 bytes): 454 bytes
+  Signature (message 256 bytes): 454 bytes
+  Signature (message 1024 bytes): 454 bytes
+  Signature (message 4096 bytes): 454 bytes
 MAYO peak heap usage:
-  Message 32 bytes: sign=0 bytes, verify=0 bytes
-  Message 256 bytes: sign=0 bytes, verify=0 bytes
-  Message 1024 bytes: sign=0 bytes, verify=0 bytes
-  Message 4096 bytes: sign=0 bytes, verify=0 bytes
-Timer precision: 41 ns
-mayo_divan  fastest       │ slowest       │ median        │ mean          │ samples │ iters
-├─ keygen      0.013 ns      │ 0.028 ns      │ 0.018 ns      │ 0.018 ns      │ 100     │ 1638400
-├─ sign                      │               │               │               │         │
-│  ├─ 32       0.349 ns      │ 0.374 ns      │ 0.354 ns      │ 0.355 ns      │ 100     │ 819200
-│  ├─ 256      0.328 ns      │ 0.364 ns      │ 0.333 ns      │ 0.336 ns      │ 100     │ 819200
-│  ├─ 1024     0.328 ns      │ 0.501 ns      │ 0.333 ns      │ 0.343 ns      │ 100     │ 819200
-│  ╰─ 4096     0.323 ns      │ 0.364 ns      │ 0.333 ns      │ 0.336 ns      │ 100     │ 819200
-╰─ verify                    │               │               │               │         │
-   ├─ 32       0.598 ns      │ 0.689 ns      │ 0.618 ns      │ 0.62 ns       │ 100     │ 819200
-   ├─ 256      0.618 ns      │ 2.261 ns      │ 0.628 ns      │ 0.671 ns      │ 100     │ 819200
-   ├─ 1024     0.593 ns      │ 1.651 ns      │ 0.623 ns      │ 0.636 ns      │ 100     │ 819200
-   ╰─ 4096     0.588 ns      │ 4.596 ns      │ 0.623 ns      │ 0.817 ns      │ 100     │ 819200
+  Message 32 bytes: sign=969951 bytes, verify=803629 bytes
+  Message 256 bytes: sign=969951 bytes, verify=803629 bytes
+  Message 1024 bytes: sign=969951 bytes, verify=803629 bytes
+  Message 4096 bytes: sign=969951 bytes, verify=803629 bytes
+
+Divan timing summary (median):
+  keygen: 844.4 µs
+  sign(32): 2.04 ms
+  sign(256): 2.042 ms
+  sign(1024): 2.045 ms
+  sign(4096): 2.052 ms
+  verify(32): 763.8 µs
+  verify(256): 761.9 µs
+  verify(1024): 762.6 µs
+  verify(4096): 765.9 µs
 ```
