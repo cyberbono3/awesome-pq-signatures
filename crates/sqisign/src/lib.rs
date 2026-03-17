@@ -77,6 +77,13 @@ pub mod memory {
 pub type SqisignKeyPair = KeyPair;
 pub type SqisignSignature = RawSqisignSignature;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SqisignSizes {
+    pub public_key: usize,
+    pub secret_key: usize,
+    pub signature: usize,
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SqisignScheme;
 
@@ -91,12 +98,24 @@ impl SqisignScheme {
         SqisignKeyPair::generate()
     }
 
+    pub fn benchmark_keypair(&self) -> Result<SqisignKeyPair, SqisignError> {
+        self.keypair()
+    }
+
     pub fn sign(
         &self,
         keypair: &SqisignKeyPair,
         message: &[u8],
     ) -> Result<SqisignSignature, SqisignError> {
         keypair.sign(message)
+    }
+
+    pub fn sign_message(
+        &self,
+        keypair: &SqisignKeyPair,
+        message: &[u8],
+    ) -> Result<SqisignSignature, SqisignError> {
+        self.sign(keypair, message)
     }
 
     pub fn verify(
@@ -106,6 +125,15 @@ impl SqisignScheme {
         signature: &SqisignSignature,
     ) -> Result<bool, SqisignError> {
         keypair.verify(message, signature)
+    }
+
+    pub fn verify_message(
+        &self,
+        keypair: &SqisignKeyPair,
+        message: &[u8],
+        signature: &SqisignSignature,
+    ) -> Result<bool, SqisignError> {
+        self.verify(keypair, message, signature)
     }
 
     pub fn public_key_size(&self, keypair: &SqisignKeyPair) -> usize {
@@ -118,6 +146,18 @@ impl SqisignScheme {
 
     pub fn signature_size(&self, signature: &SqisignSignature) -> usize {
         signature.as_bytes().len()
+    }
+
+    pub fn sizes(
+        &self,
+        keypair: &SqisignKeyPair,
+        signature: &SqisignSignature,
+    ) -> SqisignSizes {
+        SqisignSizes {
+            public_key: self.public_key_size(keypair),
+            secret_key: self.secret_key_size(keypair),
+            signature: self.signature_size(signature),
+        }
     }
 }
 
@@ -162,13 +202,20 @@ mod tests {
         let message = b"sqisign";
 
         let keypair =
-            scheme.keypair().expect("keypair generation should succeed");
+            scheme
+                .benchmark_keypair()
+                .expect("keypair generation should succeed");
         let signature = scheme
-            .sign(&keypair, message)
+            .sign_message(&keypair, message)
             .expect("signing should succeed");
         let verified = scheme
-            .verify(&keypair, message, &signature)
+            .verify_message(&keypair, message, &signature)
             .expect("verification should succeed");
         assert!(verified, "signature verification should succeed");
+
+        let sizes = scheme.sizes(&keypair, &signature);
+        assert!(sizes.public_key > 0);
+        assert!(sizes.secret_key > 0);
+        assert!(sizes.signature > 0);
     }
 }
