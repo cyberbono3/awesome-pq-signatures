@@ -5,10 +5,16 @@ members = [
     "crates/lamport_ots",
     "crates/winternitz_ots",
     "crates/lms",
+    "crates/mayo",
     "crates/hss",
     "crates/xmss",
     "crates/xmssmt",
     "crates/sphincs_plus",
+    "crates/sphincs",
+    "crates/hors",
+    "crates/horst",
+    "crates/fors",
+    "crates/sqisign",
     "crates/leansig",
 ]
 resolver = "2"
@@ -17,4 +23,3 @@ resolver = "2"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.92"
-
