@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use xmssmt_bench::{measure_time, XmssmtParamSet, XmssmtScheme};
+use xmssmt_bench::default_benchmark_scheme;
 
 const MESSAGE: &[u8] = b"This is a test message for XMSS^MT benchmarking";
 
@@ -9,77 +9,56 @@ fn print_timing(label: &str, duration: Duration) {
     println!("Time to {label} (ns): {}", duration.as_nanos());
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let scheme = XmssmtScheme::new(XmssmtParamSet::Sha2_20_2_256);
-    let algorithm_name = format!(
-        "{} ({})",
-        scheme.param_set().as_str(),
-        scheme.backend_name()
-    );
+fn main() {
+    let scheme = default_benchmark_scheme();
+    let report = scheme
+        .benchmark_report(MESSAGE)
+        .expect("xmssmt benchmark report must succeed");
 
     println!("╔══════════════════════════════════════════════════╗");
     println!("║              XMSS^MT Benchmark                   ║");
     println!("║  NIST SP 800-208 Multi-Tree Signature Scheme     ║");
     println!("╚══════════════════════════════════════════════════╝\n");
 
-    println!("=== {} Benchmark ===\n", algorithm_name);
-
-    // --- Key Generation ---
+    println!("=== {} Benchmark ===\n", report.display_name);
     println!("--- Key Generation ---");
-    let (mut kp, keygen_duration) =
-        measure_time(|| scheme.keypair().expect("keypair must succeed"));
-    print_timing("generate keys", keygen_duration);
-
-    let sizes = scheme.sizes()?;
-
-    // --- Signing ---
+    print_timing("generate keys", report.keygen_duration);
     println!("\n--- Signing ---");
-    let (signature, sign_duration) = measure_time(|| kp.sign(MESSAGE).expect("sign must succeed"));
-    print_timing("sign", sign_duration);
-
-    // --- Verification ---
+    print_timing("sign", report.sign_duration);
     println!("\n--- Verification ---");
-    let (is_valid, verify_duration) = measure_time(|| {
-        kp.verify(MESSAGE, &signature)
-            .expect("verify call must succeed")
-    });
-    print_timing("verify", verify_duration);
+    print_timing("verify", report.verify_duration);
 
-    if is_valid {
+    if report.verified {
         println!("Signature verification: SUCCESS");
     } else {
         println!("Signature verification: FAILED");
     }
 
-    // --- Size Measurements ---
     println!("\n--- Size Measurements ---");
-    println!("Public key size: {} bytes", sizes.public_key_bytes);
-    println!("Secret key size: {} bytes", sizes.secret_key_bytes);
-    println!("Signature size:  {} bytes", signature.len());
+    println!("Public key size: {} bytes", report.public_key_size);
+    println!("Secret key size: {} bytes", report.secret_key_size);
+    println!("Signature size:  {} bytes", report.signature_size);
 
-    // --- Summary ---
     println!("\n=== Summary ===");
-    println!("Algorithm: {}", scheme.param_set().as_str());
+    println!("Algorithm: {}", report.param_set.as_str());
     println!("\nTiming:");
     println!(
         "  Key Generation: {:?} ({} ns)",
-        keygen_duration,
-        keygen_duration.as_nanos()
+        report.keygen_duration,
+        report.keygen_duration.as_nanos()
     );
     println!(
         "  Signing:        {:?} ({} ns)",
-        sign_duration,
-        sign_duration.as_nanos()
+        report.sign_duration,
+        report.sign_duration.as_nanos()
     );
     println!(
         "  Verification:   {:?} ({} ns)",
-        verify_duration,
-        verify_duration.as_nanos()
+        report.verify_duration,
+        report.verify_duration.as_nanos()
     );
     println!("\nSizes:");
-    println!("  Public Key:  {} bytes", sizes.public_key_bytes);
-    println!("  Secret Key:  {} bytes", sizes.secret_key_bytes);
-    println!("  Signature:   {} bytes", signature.len());
-
-    Ok(())
+    println!("  Public Key:  {} bytes", report.public_key_size);
+    println!("  Secret Key:  {} bytes", report.secret_key_size);
+    println!("  Signature:   {} bytes", report.signature_size);
 }
