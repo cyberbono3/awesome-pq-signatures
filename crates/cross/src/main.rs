@@ -1,4 +1,4 @@
-use mayo::{measure_time, memory, signed_message_size, TrackingAllocator, MAYO};
+use cross::{measure_time, memory, signed_message_size, TrackingAllocator, CROSS};
 use std::alloc::System;
 use std::time::Duration;
 
@@ -7,18 +7,23 @@ static SYSTEM_ALLOC: System = System;
 #[global_allocator]
 static GLOBAL: TrackingAllocator<System> = TrackingAllocator::new(&SYSTEM_ALLOC);
 
-const MESSAGE: &[u8] = b"This is a test message for MAYO signature scheme benchmarking";
+const MESSAGE: &[u8] = b"This is a test message for CROSS signature scheme benchmarking";
+
 fn print_timing(label: &str, duration: Duration) {
     println!("Time to {label}: {duration:?}");
     println!("Time to {label} (ns): {}", duration.as_nanos());
 }
 
 fn main() {
-    let scheme = MAYO;
-    println!("=== MAYO ({}) Benchmark ===\n", scheme.algorithm_name());
+    let scheme = CROSS;
+    println!("=== CROSS ({}) Benchmark ===\n", scheme.algorithm_name());
 
     println!("--- Key Generation ---");
-    let (keypair, keygen_duration) = measure_time(|| scheme.benchmark_keypair());
+    let (keypair, keygen_duration) = measure_time(|| {
+        scheme
+            .benchmark_keypair()
+            .expect("key generation should succeed")
+    });
     print_timing("generate keys", keygen_duration);
 
     println!("\n--- Signing ---");
@@ -34,8 +39,11 @@ fn main() {
 
     println!("\n--- Verification ---");
     memory::reset_peak();
-    let (verified, verify_duration) =
-        measure_time(|| scheme.verify_message(&keypair, MESSAGE, &signature));
+    let (verified, verify_duration) = measure_time(|| {
+        scheme
+            .verify_message(&keypair, MESSAGE, &signature)
+            .expect("verification should succeed")
+    });
     print_timing("verify", verify_duration);
     let verify_peak_mem = memory::peak_bytes();
     println!("Peak memory during verification: {verify_peak_mem} bytes");
@@ -49,12 +57,12 @@ fn main() {
     let sizes = scheme.sizes(&keypair, &signature);
 
     println!("\n--- Size Measurements ---");
-    println!("Public key size: {} bytes", sizes.public_key_bytes);
-    println!("Secret key size: {} bytes", sizes.secret_key_bytes);
-    println!("Signature size: {} bytes", sizes.signature_bytes);
+    println!("Public key size: {} bytes", sizes.public_key);
+    println!("Secret key size: {} bytes", sizes.secret_key);
+    println!("Signature size: {} bytes", sizes.signature);
     println!(
         "Signed message size: {} bytes",
-        signed_message_size(MESSAGE.len(), sizes.signature_bytes)
+        signed_message_size(MESSAGE.len(), sizes.signature)
     );
 
     println!("\n=== Summary ===");
@@ -76,9 +84,9 @@ fn main() {
         verify_duration.as_nanos()
     );
     println!("\nSizes:");
-    println!("  Public Key:  {} bytes", sizes.public_key_bytes);
-    println!("  Secret Key:  {} bytes", sizes.secret_key_bytes);
-    println!("  Signature:   {} bytes", sizes.signature_bytes);
+    println!("  Public Key:  {} bytes", sizes.public_key);
+    println!("  Secret Key:  {} bytes", sizes.secret_key);
+    println!("  Signature:   {} bytes", sizes.signature);
     println!("\nMemory Usage (heap allocations):");
     println!("  Signing:      {sign_peak_mem} bytes");
     println!("  Verification: {verify_peak_mem} bytes");
