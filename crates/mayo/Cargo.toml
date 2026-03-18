@@ -1,19 +1,19 @@
 [package]
-name = "falcon"
+name = "mayo"
 version.workspace = true
 edition.workspace = true
 
 [[bin]]
-name = "falcon-bench"
+name = "mayo"
 path = "src/main.rs"
 
 [[bench]]
-name = "falcon_divan"
+name = "mayo_divan"
 harness = false
 
 [dependencies]
-pqcrypto-falcon = "0.4.1"
-pqcrypto-traits = "0.3"
+pq-mayo = "0.2.3"
+signature = "2"
 
 [dev-dependencies]
 divan = "0.1"

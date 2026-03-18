@@ -25,7 +25,7 @@ Notes:
 ## Run
 
 ```bash
-cargo run -p xmss-bench --release --bin xmss
+cargo run --release --bin xmss
 ```
 
 Environment overrides:
@@ -33,17 +33,3 @@ Environment overrides:
 - `XMSS_PARAM_SET` (default `XMSS-SHA2_10_256`)
 - `XMSS_MESSAGE_SIZE` (default `1024`)
 - `XMSS_ITERATIONS` (default `100`)
-
-## Divan benchmark
-
-Quick smoke run:
-
-```bash
-cargo bench -p xmss-bench --bench xmss_divan -- --test
-```
-
-Regular benchmark run:
-
-```bash
-cargo bench -p xmss-bench --bench xmss_divan
-```

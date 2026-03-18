@@ -1,19 +1,18 @@
 [package]
-name = "falcon"
+name = "sqisign"
 version.workspace = true
 edition.workspace = true
 
 [[bin]]
-name = "falcon-bench"
+name = "sqisign"
 path = "src/main.rs"
 
 [[bench]]
-name = "falcon_divan"
+name = "sqisign_divan"
 harness = false
 
 [dependencies]
-pqcrypto-falcon = "0.4.1"
-pqcrypto-traits = "0.3"
+sqisign-lvl1 = "0.1.1"
 
 [dev-dependencies]
 divan = "0.1"
