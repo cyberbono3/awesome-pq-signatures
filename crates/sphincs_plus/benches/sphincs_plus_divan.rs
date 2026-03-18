@@ -1,14 +1,15 @@
 use divan::{black_box, AllocProfiler, Bencher};
 use pqcrypto_traits::sign::{PublicKey, SecretKey};
 use sphincs_plus::{
-    bench_message, memory, signature_size, SignatureScheme, TrackingAllocator, BENCH_MESSAGE_SIZES,
-    SPHINCS_PLUS_SHAKE_128F_SIMPLE,
+    bench_message, memory, signature_size, SignatureScheme, TrackingAllocator,
+    BENCH_MESSAGE_SIZES, SPHINCS_PLUS_SHAKE_128F_SIMPLE,
 };
 
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
 
 #[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> = TrackingAllocator::new(&DIVAN_ALLOC);
+static ALLOC: TrackingAllocator<AllocProfiler> =
+    TrackingAllocator::new(&DIVAN_ALLOC);
 
 #[divan::bench]
 fn keygen(bencher: Bencher) {
@@ -25,7 +26,9 @@ fn sign(bencher: Bencher, message_size: usize) {
     let (_, secret_key) = scheme.keypair();
 
     bencher.bench(|| {
-        black_box(scheme.sign(black_box(message.as_slice()), black_box(&secret_key)));
+        black_box(
+            scheme.sign(black_box(message.as_slice()), black_box(&secret_key)),
+        );
     });
 }
 
