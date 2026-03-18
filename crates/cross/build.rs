@@ -29,6 +29,7 @@ fn main() {
         .define("BALANCED", "1")
         .define("RSDPG", "1")
         .flag_if_supported("-std=c11")
+        .flag_if_supported("-Wno-unused-function")
         .compile("cross_reference");
 
     println!("cargo:rustc-link-lib=m");

@@ -1,6 +1,23 @@
 [package]
-name = "xmssmt"
+name = "xmssmt-bench"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
+rustcrypto_xmss = { package = "xmss", version = "0.1.0-pre.0" }
+rand = "0.10"
+
+[dev-dependencies]
+divan = "0.1"
+
+[[bin]]
+name = "xmssmt"
+path = "src/main.rs"
+
+[[bin]]
+name = "xmssmt_bench"
+path = "src/bin/xmssmt_bench.rs"
+
+[[bench]]
+name = "xmssmt_divan"
+harness = false
