@@ -3,7 +3,10 @@ use std::fmt;
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 
-use xmss::{KeyPair, XmssMtSha2_20_2_256, XmssMtSha2_20_4_256, XmssMtSha2_40_2_256, XmssParameter};
+use rustcrypto_xmss::{
+    KeyPair, XmssMtSha2_20_2_256, XmssMtSha2_20_4_256, XmssMtSha2_40_2_256,
+    XmssParameter,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum XmssmtParamSet {
@@ -165,7 +168,7 @@ fn verify_detached<P: XmssParameter>(
     message: &[u8],
     sig_bytes: &[u8],
 ) -> Result<bool, XmssmtError> {
-    let sig = xmss::DetachedSignature::<P>::try_from(sig_bytes)
+    let sig = rustcrypto_xmss::DetachedSignature::<P>::try_from(sig_bytes)
         .map_err(|e| XmssmtError::DeserializationFailed(e.to_string()))?;
     match kp.verifying_key().verify_detached(&sig, message) {
         Ok(()) => Ok(true),
@@ -336,6 +339,7 @@ impl Error for XmssmtError {}
 #[cfg(test)]
 mod tests {
     use super::{XmssmtParamSet, XmssmtScheme};
+    use rustcrypto_xmss::{XmssMtSha2_20_2_256, XmssSha2_20_256, XmssParameter};
 
     #[test]
     fn sign_and_verify_roundtrip() {
@@ -364,5 +368,15 @@ mod tests {
             .expect("verify call must succeed");
 
         assert!(!is_valid, "signature must fail for a different message");
+    }
+
+    #[test]
+    fn default_signature_matches_xmssmt_parameter_type() {
+        let scheme = XmssmtScheme::new(XmssmtParamSet::Sha2_20_2_256);
+        let mut kp = scheme.keypair().expect("keypair must succeed");
+        let signature = kp.sign(b"xmssmt-signature-type").expect("sign must succeed");
+
+        assert_eq!(signature.len(), XmssMtSha2_20_2_256::SIG_LEN);
+        assert_ne!(signature.len(), XmssSha2_20_256::SIG_LEN);
     }
 }

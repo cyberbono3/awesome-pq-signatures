@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-xmss = "0.1.0-pre.0"
+rustcrypto_xmss = { package = "xmss", version = "0.1.0-pre.0" }
 rand = "0.10"
 
 [dev-dependencies]
