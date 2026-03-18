@@ -1,0 +1,33 @@
+[package]
+name = "bench_runner"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "bench_runner"
+path = "src/main.rs"
+
+[dependencies]
+pq_bench = { path = "../pq_bench" }
+
+# Pure-Rust DSA crates (no C FFI)
+dilithium = { path = "../dilithium" }
+falcon = { path = "../falcon" }
+sphincs_plus = { path = "../sphincs_plus" }
+mayo = { path = "../mayo" }
+lamport_ots = { path = "../lamport_ots" }
+winternitz_ots = { path = "../winternitz_ots" }
+lms = { path = "../lms" }
+hss = { path = "../hss" }
+xmss-bench = { path = "../xmss" }
+xmssmt-bench = { path = "../xmssmt" }
+leansig-bench = { path = "../leansig" }
+
+# External crates needed by adapters
+pqcrypto-traits = "0.3"
+leansig = { git = "https://github.com/leanEthereum/leanSig.git", rev = "16c660e" }
+rand = "0.9"
+
+# NOTE: cross, sqisign, and less are NOT linked here.
+# They use C FFI with global state that conflicts when loaded together.
+# Instead, the runner invokes their standalone binaries as subprocesses.

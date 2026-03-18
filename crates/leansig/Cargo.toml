@@ -7,7 +7,14 @@ edition.workspace = true
 name = "leansig"
 path = "src/main.rs"
 
+[[bench]]
+name = "leansig_divan"
+harness = false
+
 [dependencies]
 leansig = { git = "https://github.com/leanEthereum/leanSig.git", rev = "16c660e" }
 rand = "0.9"
-pq_config = { path = "../pq_config" }
+pq_bench = { path = "../pq_bench" }
+
+[dev-dependencies]
+divan = "0.1"

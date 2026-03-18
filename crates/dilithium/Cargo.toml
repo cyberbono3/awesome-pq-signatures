@@ -13,7 +13,7 @@ harness = false
 
 [dependencies]
 ml-dsa = "0.0.4"
-pq_config = { path = "../pq_config" }
+pq_bench = { path = "../pq_bench" }
 
 [dev-dependencies]
 divan = "0.1"

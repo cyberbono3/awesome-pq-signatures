@@ -5,7 +5,7 @@ use leansig::MESSAGE_LENGTH;
 use std::time::{Duration, Instant};
 
 /// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_config::BENCH_MESSAGE;
+pub use pq_bench::BENCH_MESSAGE;
 
 /// Measure wall-clock time of a closure.
 pub fn measure_time<T, F>(operation: F) -> (T, Duration)

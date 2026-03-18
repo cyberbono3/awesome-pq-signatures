@@ -14,7 +14,7 @@ harness = false
 [dependencies]
 pqcrypto-falcon = "0.4.1"
 pqcrypto-traits = "0.3"
-pq_config = { path = "../pq_config" }
+pq_bench = { path = "../pq_bench" }
 
 [dev-dependencies]
 divan = "0.1"

@@ -4,7 +4,7 @@ use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_config::BENCH_MESSAGE;
+pub use pq_bench::BENCH_MESSAGE;
 
 pub const HASH_SIZE: usize = 32;
 pub const BITS: usize = HASH_SIZE * 8;

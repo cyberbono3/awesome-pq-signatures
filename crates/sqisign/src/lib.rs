@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 /// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_config::BENCH_MESSAGE;
+pub use pq_bench::BENCH_MESSAGE;
 
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;

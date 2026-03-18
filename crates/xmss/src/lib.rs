@@ -9,7 +9,7 @@ use xmss::{
 };
 
 /// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_config::BENCH_MESSAGE;
+pub use pq_bench::BENCH_MESSAGE;
 
 pub const DEFAULT_XMSS_PARAM_SET: XmssParamSet = XmssParamSet::XmssSha2_10_256;
 pub const DIVAN_BENCH_MESSAGE_SIZES: [usize; 2] = [32, 1024];

@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "crates/pq_config",
+    "crates/pq_bench",
     "crates/falcon",
     "crates/dilithium",
     "crates/lamport_ots",
@@ -15,6 +15,7 @@ members = [
     "crates/sqisign",
     "crates/leansig",
     "crates/less",
+    "crates/bench_runner",
 ]
 resolver = "2"
 

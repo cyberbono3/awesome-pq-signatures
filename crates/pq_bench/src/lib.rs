@@ -8,7 +8,7 @@
 //! # Usage
 //!
 //! ```rust,ignore
-//! use pq_config::BENCH_MESSAGE;
+//! use pq_bench::BENCH_MESSAGE;
 //!
 //! // 32-byte SHA-256 digest — pass this to sign / verify.
 //! assert_eq!(BENCH_MESSAGE.len(), 32);
