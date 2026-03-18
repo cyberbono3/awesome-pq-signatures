@@ -1,5 +1,7 @@
 use divan::Bencher;
-use xmss_bench::{XmssParamSet, XmssScheme};
+use xmss_bench::{
+    benchmark_message, default_benchmark_scheme, DIVAN_BENCH_MESSAGE_SIZES,
+};
 
 fn main() {
     divan::main();
@@ -7,7 +9,7 @@ fn main() {
 
 #[divan::bench]
 fn keygen(bencher: Bencher) {
-    let scheme = XmssScheme::new(XmssParamSet::XmssSha2_10_256);
+    let scheme = default_benchmark_scheme();
 
     bencher.bench(|| {
         let keypair = scheme.keypair().expect("xmss keypair must succeed");
@@ -15,10 +17,10 @@ fn keygen(bencher: Bencher) {
     });
 }
 
-#[divan::bench(args = [32_usize, 1024_usize])]
+#[divan::bench(args = DIVAN_BENCH_MESSAGE_SIZES)]
 fn sign(bencher: Bencher, message_size: usize) {
-    let scheme = XmssScheme::new(XmssParamSet::XmssSha2_10_256);
-    let message = vec![0x3C; message_size];
+    let scheme = default_benchmark_scheme();
+    let message = benchmark_message(message_size, 0x3C);
 
     bencher.bench(|| {
         let (_, mut secret_key) = scheme.keypair().expect("xmss keypair must succeed");
@@ -29,10 +31,10 @@ fn sign(bencher: Bencher, message_size: usize) {
     });
 }
 
-#[divan::bench(args = [32_usize, 1024_usize])]
+#[divan::bench(args = DIVAN_BENCH_MESSAGE_SIZES)]
 fn verify(bencher: Bencher, message_size: usize) {
-    let scheme = XmssScheme::new(XmssParamSet::XmssSha2_10_256);
-    let message = vec![0x3C; message_size];
+    let scheme = default_benchmark_scheme();
+    let message = benchmark_message(message_size, 0x3C);
     let (public_key, mut secret_key) = scheme.keypair().expect("xmss keypair must succeed");
     let signature = scheme
         .sign(&message, &mut secret_key)

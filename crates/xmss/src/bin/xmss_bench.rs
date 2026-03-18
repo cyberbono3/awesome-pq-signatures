@@ -1,7 +1,7 @@
 use std::env;
 use std::time::Instant;
 
-use xmss_bench::{XmssParamSet, XmssScheme};
+use xmss_bench::{benchmark_message, XmssParamSet, XmssScheme};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let operation = env::var("OPERATION").unwrap_or_else(|_| "keygen".to_owned());
@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let iterations = parse_usize_env("ITERATIONS", 100)?;
 
     let scheme = XmssScheme::new(param_set);
-    let message = vec![0xA5; message_size];
+    let message = benchmark_message(message_size, 0xA5);
 
     let total = match operation.as_str() {
         "keygen" => bench_keygen(scheme, iterations)?,
@@ -47,7 +47,7 @@ fn bench_sign(
     message: &[u8],
     iterations: usize,
 ) -> Result<std::time::Duration, Box<dyn std::error::Error>> {
-    let max_signatures = scheme.max_signatures_per_key()? as usize;
+    let max_signatures = usize::try_from(scheme.max_signatures_per_key()?)?;
     let key_count = iterations.max(1).div_ceil(max_signatures.max(1));
 
     let mut secret_keys = Vec::with_capacity(key_count);
