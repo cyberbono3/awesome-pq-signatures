@@ -1,13 +1,14 @@
 use cross::{
-    bench_message, memory, CrossKeyPair, CrossSignature, TrackingAllocator, BENCH_MESSAGE_SIZES,
-    CROSS,
+    bench_message, memory, CrossKeyPair, CrossSignature, TrackingAllocator,
+    BENCH_MESSAGE_SIZES, CROSS,
 };
 use divan::{black_box, AllocProfiler, Bencher};
 
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
 
 #[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> = TrackingAllocator::new(&DIVAN_ALLOC);
+static ALLOC: TrackingAllocator<AllocProfiler> =
+    TrackingAllocator::new(&DIVAN_ALLOC);
 
 fn benchmark_keypair() -> CrossKeyPair {
     CROSS
@@ -15,7 +16,9 @@ fn benchmark_keypair() -> CrossKeyPair {
         .expect("key generation should succeed")
 }
 
-fn signed_fixture(message_size: usize) -> (CrossKeyPair, Vec<u8>, CrossSignature) {
+fn signed_fixture(
+    message_size: usize,
+) -> (CrossKeyPair, Vec<u8>, CrossSignature) {
     let keypair = benchmark_keypair();
     let message = bench_message(message_size);
     let signature = CROSS

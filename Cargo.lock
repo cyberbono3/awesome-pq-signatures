@@ -775,7 +775,7 @@ dependencies = [
  "digest 0.10.7",
  "elliptic-curve",
  "rfc6979",
- "signature",
+ "signature 2.2.0",
  "spki",
 ]
 
@@ -1061,6 +1061,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "hbs-lms"
+version = "0.2.0-alpha.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "024739dc43a6da5138b8392d4d373af06b4273a7ff2e91002c1555d1b2c0905a"
+dependencies = [
+ "digest 0.10.7",
+ "sha2",
+ "sha3",
+ "signature 1.6.4",
+ "subtle",
+ "tinyvec",
+ "zeroize",
+]
+
+[[package]]
 name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1084,6 +1099,10 @@ dependencies = [
 [[package]]
 name = "hss"
 version = "0.1.0"
+dependencies = [
+ "divan",
+ "hbs-lms",
+]
 
 [[package]]
 name = "hybrid-array"
@@ -1309,6 +1328,10 @@ checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 [[package]]
 name = "lms"
 version = "0.1.0"
+dependencies = [
+ "divan",
+ "hbs-lms",
+]
 
 [[package]]
 name = "lock_api"
@@ -1331,7 +1354,7 @@ version = "0.1.0"
 dependencies = [
  "divan",
  "pq-mayo",
- "signature",
+ "signature 2.2.0",
 ]
 
 [[package]]
@@ -1358,7 +1381,7 @@ dependencies = [
  "pkcs8",
  "rand_core 0.6.4",
  "sha3",
- "signature",
+ "signature 2.2.0",
 ]
 
 [[package]]
@@ -1669,7 +1692,7 @@ dependencies = [
  "hybrid-array 0.4.8",
  "rand 0.10.0",
  "sha3",
- "signature",
+ "signature 2.2.0",
  "subtle",
  "thiserror",
  "zeroize",
@@ -2221,6 +2244,12 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "signature"
+version = "1.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74233d3b3b2f6d4b006dc19dee745e73e2a6bfb6f93607cd3b02bd5b00797d7c"
+
+[[package]]
+name = "signature"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77549399552de45a898a580c1b41d445bf730df867cc44e6c0233bbc4b8329de"
@@ -2394,6 +2423,12 @@ dependencies = [
  "quote",
  "syn 2.0.117",
 ]
+
+[[package]]
+name = "tinyvec"
+version = "1.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e61e67053d25a4e82c844e8424039d9745781b3fc4f32b8d55ed50f5f667ef3"
 
 [[package]]
 name = "toml_datetime"
@@ -2891,7 +2926,7 @@ dependencies = [
  "rand 0.10.0",
  "sha2",
  "sha3",
- "signature",
+ "signature 2.2.0",
  "subtle",
  "thiserror",
  "zeroize",
