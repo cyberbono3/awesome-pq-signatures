@@ -71,3 +71,29 @@ Run it with:
 ```bash
 cargo bench -p less --bench less_divan
 ```
+
+Observed size output from the latest `less_divan` run:
+- `LESS-252-45`: `pk=97484`, `sk=32`
+- `sig(32B)=1329`
+- `sig(256B)=1329`
+- `sig(1024B)=1329`
+- `sig(4096B)=1329`
+
+Observed peak heap usage from the latest `less_divan` run:
+- `32B`: `sign=2642`, `verify=1345`
+- `256B`: `sign=2898`, `verify=1825`
+- `1024B`: `sign=3650`, `verify=3345`
+- `4096B`: `sign=6722`, `verify=9489`
+
+Median timings from `cargo bench -p less --bench less_divan` on `2026-03-18 11:24:28 UTC`:
+- `keygen`: `2.072 ms`
+- `sign`
+  - `32B`: `19.06 ms`
+  - `256B`: `19.07 ms`
+  - `1024B`: `19.06 ms`
+  - `4096B`: `19.03 ms`
+- `verify`
+  - `32B`: `18.69 ms`
+  - `256B`: `18.58 ms`
+  - `1024B`: `18.81 ms`
+  - `4096B`: `18.24 ms`
