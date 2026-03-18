@@ -1,7 +1,8 @@
 use divan::{black_box, AllocProfiler, Bencher};
 use std::sync::atomic::{AtomicU64, Ordering};
 use winternitz_ots::{
-    bench_message, memory, SignatureScheme, TrackingAllocator, BENCH_MESSAGE_SIZES, WINTERNITZ_OTS,
+    bench_message, memory, SignatureScheme, TrackingAllocator,
+    BENCH_MESSAGE_SIZES, WINTERNITZ_OTS,
 };
 
 const EXPECTED_ALGORITHM: &str = "Winternitz OTS (W-OTS)";
@@ -11,7 +12,8 @@ const EXPECTED_PARAM_SET: &str = "w=16,n=32,hash=blake2b";
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
 
 #[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> = TrackingAllocator::new(&DIVAN_ALLOC);
+static ALLOC: TrackingAllocator<AllocProfiler> =
+    TrackingAllocator::new(&DIVAN_ALLOC);
 
 #[divan::bench]
 fn keygen(bencher: Bencher) {
