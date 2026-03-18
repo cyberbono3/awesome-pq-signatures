@@ -1,0 +1,18 @@
+[package]
+name = "sqisign"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "sqisign"
+path = "src/main.rs"
+
+[[bench]]
+name = "sqisign_divan"
+harness = false
+
+[dependencies]
+sqisign-lvl1 = "0.1.1"
+
+[dev-dependencies]
+divan = "0.1"
