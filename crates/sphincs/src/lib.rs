@@ -1,1 +1,0 @@
-// SPHINCS (original) scheme placeholder.
