@@ -2919,19 +2919,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "xmss-rs"
-version = "0.1.0"
-source = "git+https://github.com/thomwiggers/xmss-rs.git?rev=9f627f45e87c19156288d805c5348199912e3a7d#9f627f45e87c19156288d805c5348199912e3a7d"
-dependencies = [
- "cc",
-]
-
-[[package]]
-name = "xmssmt"
+name = "xmssmt-bench"
 version = "0.1.0"
 dependencies = [
  "divan",
- "xmss-rs",
+ "rand 0.10.0",
+ "xmss",
 ]
 
 [[package]]

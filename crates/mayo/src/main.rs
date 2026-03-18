@@ -1,17 +1,13 @@
-use mayo::{
-    measure_time, memory, signed_message_size, TrackingAllocator, MAYO,
-};
+use mayo::{measure_time, memory, signed_message_size, TrackingAllocator, MAYO};
 use std::alloc::System;
 use std::time::Duration;
 
 static SYSTEM_ALLOC: System = System;
 
 #[global_allocator]
-static GLOBAL: TrackingAllocator<System> =
-    TrackingAllocator::new(&SYSTEM_ALLOC);
+static GLOBAL: TrackingAllocator<System> = TrackingAllocator::new(&SYSTEM_ALLOC);
 
-const MESSAGE: &[u8] =
-    b"This is a test message for MAYO signature scheme benchmarking";
+const MESSAGE: &[u8] = b"This is a test message for MAYO signature scheme benchmarking";
 fn print_timing(label: &str, duration: Duration) {
     println!("Time to {label}: {duration:?}");
     println!("Time to {label} (ns): {}", duration.as_nanos());
@@ -22,8 +18,7 @@ fn main() {
     println!("=== MAYO ({}) Benchmark ===\n", scheme.algorithm_name());
 
     println!("--- Key Generation ---");
-    let (keypair, keygen_duration) =
-        measure_time(|| scheme.benchmark_keypair());
+    let (keypair, keygen_duration) = measure_time(|| scheme.benchmark_keypair());
     print_timing("generate keys", keygen_duration);
 
     println!("\n--- Signing ---");

@@ -1,84 +1,182 @@
-use std::alloc::{GlobalAlloc, Layout};
 use std::error::Error;
 use std::fmt;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::str::FromStr;
 use std::time::{Duration, Instant};
 
-pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
-pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
-pub const XMSSMT_L1_NAME: &str = "XMSSMT-L1";
-pub const XMSSMT_L3_NAME: &str = "XMSSMT-L3";
-pub const XMSSMT_L5_NAME: &str = "XMSSMT-L5";
-pub const DEFAULT_PARAM_SET_NAME: &str = XMSSMT_L1_NAME;
+use xmss::{KeyPair, XmssMtSha2_20_2_256, XmssMtSha2_20_4_256, XmssMtSha2_40_2_256, XmssParameter};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum XmssmtParamSet {
-    Level1,
-    Level3,
-    Level5,
+    Sha2_20_2_256,
+    Sha2_20_4_256,
+    Sha2_40_2_256,
 }
 
 impl XmssmtParamSet {
-    pub const fn name(self) -> &'static str {
+    pub const fn as_str(self) -> &'static str {
         match self {
-            Self::Level1 => XMSSMT_L1_NAME,
-            Self::Level3 => XMSSMT_L3_NAME,
-            Self::Level5 => XMSSMT_L5_NAME,
+            Self::Sha2_20_2_256 => "XMSSMT-SHA2_20/2_256",
+            Self::Sha2_20_4_256 => "XMSSMT-SHA2_20/4_256",
+            Self::Sha2_40_2_256 => "XMSSMT-SHA2_40/2_256",
+        }
+    }
+
+    pub const fn oid(self) -> u32 {
+        match self {
+            Self::Sha2_20_2_256 => 0x0001_0001,
+            Self::Sha2_20_4_256 => 0x0001_0002,
+            Self::Sha2_40_2_256 => 0x0001_0003,
+        }
+    }
+
+    pub const fn total_tree_height(self) -> u32 {
+        match self {
+            Self::Sha2_20_2_256 => 20,
+            Self::Sha2_20_4_256 => 20,
+            Self::Sha2_40_2_256 => 40,
+        }
+    }
+
+    pub const fn depth(self) -> u32 {
+        match self {
+            Self::Sha2_20_2_256 => 2,
+            Self::Sha2_20_4_256 => 4,
+            Self::Sha2_40_2_256 => 2,
+        }
+    }
+
+    pub const fn all() -> &'static [Self] {
+        &[
+            Self::Sha2_20_2_256,
+            Self::Sha2_20_4_256,
+            Self::Sha2_40_2_256,
+        ]
+    }
+}
+
+impl FromStr for XmssmtParamSet {
+    type Err = XmssmtError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "XMSSMT-SHA2_20/2_256" => Ok(Self::Sha2_20_2_256),
+            "XMSSMT-SHA2_20/4_256" => Ok(Self::Sha2_20_4_256),
+            "XMSSMT-SHA2_40/2_256" => Ok(Self::Sha2_40_2_256),
+            _ => Err(XmssmtError::UnsupportedParamSet(value.to_owned())),
         }
     }
 }
 
-pub const XMSSMT_PARAM_SETS: [XmssmtParamSet; 3] = [
-    XmssmtParamSet::Level1,
-    XmssmtParamSet::Level3,
-    XmssmtParamSet::Level5,
-];
+/// Opaque wrapper around an XMSS^MT key pair.
+///
+/// We keep the `KeyPair` object alive rather than serializing/deserializing
+/// because the upstream `xmss` crate has an OID collision between XMSS and
+/// XMSS^MT raw OIDs that prevents correct round-tripping through bytes.
+pub struct XmssmtKeyPair {
+    inner: XmssmtKeyPairInner,
+    param_set: XmssmtParamSet,
+}
 
-pub fn param_set_by_name(name: &str) -> Option<XmssmtParamSet> {
-    match name {
-        XMSSMT_L1_NAME => Some(XmssmtParamSet::Level1),
-        XMSSMT_L3_NAME => Some(XmssmtParamSet::Level3),
-        XMSSMT_L5_NAME => Some(XmssmtParamSet::Level5),
-        _ => None,
+enum XmssmtKeyPairInner {
+    Sha2_20_2(KeyPair<XmssMtSha2_20_2_256>),
+    Sha2_20_4(KeyPair<XmssMtSha2_20_4_256>),
+    Sha2_40_2(KeyPair<XmssMtSha2_40_2_256>),
+}
+
+impl XmssmtKeyPair {
+    pub fn param_set(&self) -> XmssmtParamSet {
+        self.param_set
+    }
+
+    pub fn public_key_len(&self) -> usize {
+        match &self.inner {
+            XmssmtKeyPairInner::Sha2_20_2(kp) => kp.verifying_key().as_ref().len(),
+            XmssmtKeyPairInner::Sha2_20_4(kp) => kp.verifying_key().as_ref().len(),
+            XmssmtKeyPairInner::Sha2_40_2(kp) => kp.verifying_key().as_ref().len(),
+        }
+    }
+
+    pub fn secret_key_len(&mut self) -> usize {
+        match &mut self.inner {
+            XmssmtKeyPairInner::Sha2_20_2(kp) => kp.signing_key().as_ref().len(),
+            XmssmtKeyPairInner::Sha2_20_4(kp) => kp.signing_key().as_ref().len(),
+            XmssmtKeyPairInner::Sha2_40_2(kp) => kp.signing_key().as_ref().len(),
+        }
+    }
+
+    /// Sign a message, returning the detached signature bytes.
+    /// XMSS^MT is stateful: the signing key is mutated.
+    pub fn sign(&mut self, message: &[u8]) -> Result<XmssmtSignature, XmssmtError> {
+        let sig_bytes = match &mut self.inner {
+            XmssmtKeyPairInner::Sha2_20_2(kp) => {
+                let sig = kp
+                    .signing_key()
+                    .sign_detached(message)
+                    .map_err(|e| XmssmtError::SignFailed(e.to_string()))?;
+                sig.as_ref().to_vec()
+            }
+            XmssmtKeyPairInner::Sha2_20_4(kp) => {
+                let sig = kp
+                    .signing_key()
+                    .sign_detached(message)
+                    .map_err(|e| XmssmtError::SignFailed(e.to_string()))?;
+                sig.as_ref().to_vec()
+            }
+            XmssmtKeyPairInner::Sha2_40_2(kp) => {
+                let sig = kp
+                    .signing_key()
+                    .sign_detached(message)
+                    .map_err(|e| XmssmtError::SignFailed(e.to_string()))?;
+                sig.as_ref().to_vec()
+            }
+        };
+
+        Ok(XmssmtSignature {
+            bytes: sig_bytes,
+            param_set: self.param_set,
+        })
+    }
+
+    /// Verify a detached signature against a message.
+    pub fn verify(&self, message: &[u8], signature: &XmssmtSignature) -> Result<bool, XmssmtError> {
+        if signature.param_set != self.param_set {
+            return Err(XmssmtError::MismatchedParamSet {
+                expected: self.param_set,
+                got: signature.param_set,
+            });
+        }
+
+        match &self.inner {
+            XmssmtKeyPairInner::Sha2_20_2(kp) => {
+                verify_detached::<XmssMtSha2_20_2_256>(kp, message, &signature.bytes)
+            }
+            XmssmtKeyPairInner::Sha2_20_4(kp) => {
+                verify_detached::<XmssMtSha2_20_4_256>(kp, message, &signature.bytes)
+            }
+            XmssmtKeyPairInner::Sha2_40_2(kp) => {
+                verify_detached::<XmssMtSha2_40_2_256>(kp, message, &signature.bytes)
+            }
+        }
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct XmssmtPublicKey {
-    bytes: Vec<u8>,
-    params: XmssmtParamSet,
-}
-
-impl XmssmtPublicKey {
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-
-    pub fn byte_len(&self) -> usize {
-        self.bytes.len()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct XmssmtSecretKey {
-    bytes: Vec<u8>,
-    params: XmssmtParamSet,
-}
-
-impl XmssmtSecretKey {
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-
-    pub fn byte_len(&self) -> usize {
-        self.bytes.len()
+fn verify_detached<P: XmssParameter>(
+    kp: &KeyPair<P>,
+    message: &[u8],
+    sig_bytes: &[u8],
+) -> Result<bool, XmssmtError> {
+    let sig = xmss::DetachedSignature::<P>::try_from(sig_bytes)
+        .map_err(|e| XmssmtError::DeserializationFailed(e.to_string()))?;
+    match kp.verifying_key().verify_detached(&sig, message) {
+        Ok(()) => Ok(true),
+        Err(_) => Ok(false),
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct XmssmtSignature {
     bytes: Vec<u8>,
-    params: XmssmtParamSet,
+    param_set: XmssmtParamSet,
 }
 
 impl XmssmtSignature {
@@ -86,12 +184,16 @@ impl XmssmtSignature {
         &self.bytes
     }
 
-    pub fn byte_len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.bytes.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.bytes.is_empty()
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug)]
 pub struct XmssmtSizes {
     pub public_key_bytes: usize,
     pub secret_key_bytes: usize,
@@ -100,245 +202,87 @@ pub struct XmssmtSizes {
 
 #[derive(Clone, Copy, Debug)]
 pub struct XmssmtScheme {
-    params: XmssmtParamSet,
+    param_set: XmssmtParamSet,
+}
+
+impl Default for XmssmtScheme {
+    fn default() -> Self {
+        Self::new(XmssmtParamSet::Sha2_20_2_256)
+    }
 }
 
 impl XmssmtScheme {
-    pub fn new(params: XmssmtParamSet) -> Self {
-        Self { params }
+    pub const fn new(param_set: XmssmtParamSet) -> Self {
+        Self { param_set }
     }
 
-    pub fn from_param_set_name(name: &str) -> Result<Self, XmssmtError> {
-        let params = param_set_by_name(name).ok_or_else(|| {
-            XmssmtError::UnknownParamSet {
-                name: name.to_owned(),
-            }
-        })?;
-        Ok(Self::new(params))
+    pub const fn param_set(self) -> XmssmtParamSet {
+        self.param_set
     }
 
-    pub fn algorithm_name(&self) -> &'static str {
-        "XMSSMT"
+    pub const fn algorithm_name(self) -> &'static str {
+        "XMSS^MT"
     }
 
-    pub fn backend_name(&self) -> &'static str {
-        "thomwiggers/xmss-rs"
+    pub const fn backend_name(self) -> &'static str {
+        "RustCrypto xmss (pure Rust)"
     }
 
-    pub fn param_set_name(&self) -> &'static str {
-        self.params.name()
-    }
-
-    pub fn signatures_per_key(&self) -> u64 {
-        1_u64 << 24
-    }
-
-    pub fn sizes(&self) -> XmssmtSizes {
-        XmssmtSizes {
-            public_key_bytes: public_key_bytes(self.params),
-            secret_key_bytes: secret_key_bytes(self.params),
-            signature_bytes: signature_bytes(self.params),
+    pub fn sizes(self) -> Result<XmssmtSizes, XmssmtError> {
+        match self.param_set {
+            XmssmtParamSet::Sha2_20_2_256 => Ok(XmssmtSizes {
+                public_key_bytes: XmssMtSha2_20_2_256::VK_LEN,
+                secret_key_bytes: XmssMtSha2_20_2_256::SK_LEN,
+                signature_bytes: XmssMtSha2_20_2_256::SIG_LEN,
+            }),
+            XmssmtParamSet::Sha2_20_4_256 => Ok(XmssmtSizes {
+                public_key_bytes: XmssMtSha2_20_4_256::VK_LEN,
+                secret_key_bytes: XmssMtSha2_20_4_256::SK_LEN,
+                signature_bytes: XmssMtSha2_20_4_256::SIG_LEN,
+            }),
+            XmssmtParamSet::Sha2_40_2_256 => Ok(XmssmtSizes {
+                public_key_bytes: XmssMtSha2_40_2_256::VK_LEN,
+                secret_key_bytes: XmssMtSha2_40_2_256::SK_LEN,
+                signature_bytes: XmssMtSha2_40_2_256::SIG_LEN,
+            }),
         }
     }
 
-    pub fn keypair(&self) -> (XmssmtPublicKey, XmssmtSecretKey) {
-        let (public_key, secret_key) = keypair(self.params);
-        (
-            XmssmtPublicKey {
-                bytes: public_key,
-                params: self.params,
-            },
-            XmssmtSecretKey {
-                bytes: secret_key,
-                params: self.params,
-            },
-        )
+    pub fn max_signatures_per_key(self) -> Result<u64, XmssmtError> {
+        let height = self.param_set.total_tree_height();
+        1u64.checked_shl(height)
+            .ok_or(XmssmtError::InvalidHeight(height))
     }
 
-    pub fn sign(
-        &self,
-        message: &[u8],
-        secret_key: &mut XmssmtSecretKey,
-    ) -> Result<XmssmtSignature, XmssmtError> {
-        self.ensure_secret_key_params(secret_key)?;
-        self.ensure_secret_key_len(secret_key)?;
+    pub fn keypair(self) -> Result<XmssmtKeyPair, XmssmtError> {
+        let mut rng = rand::rng();
 
-        let signature = sign(self.params, &mut secret_key.bytes, message);
-        self.ensure_signature_len(signature.len())?;
+        let inner = match self.param_set {
+            XmssmtParamSet::Sha2_20_2_256 => {
+                let kp = KeyPair::<XmssMtSha2_20_2_256>::generate(&mut rng)
+                    .map_err(|e| XmssmtError::KeygenFailed(e.to_string()))?;
+                XmssmtKeyPairInner::Sha2_20_2(kp)
+            }
+            XmssmtParamSet::Sha2_20_4_256 => {
+                let kp = KeyPair::<XmssMtSha2_20_4_256>::generate(&mut rng)
+                    .map_err(|e| XmssmtError::KeygenFailed(e.to_string()))?;
+                XmssmtKeyPairInner::Sha2_20_4(kp)
+            }
+            XmssmtParamSet::Sha2_40_2_256 => {
+                let kp = KeyPair::<XmssMtSha2_40_2_256>::generate(&mut rng)
+                    .map_err(|e| XmssmtError::KeygenFailed(e.to_string()))?;
+                XmssmtKeyPairInner::Sha2_40_2(kp)
+            }
+        };
 
-        Ok(XmssmtSignature {
-            bytes: signature,
-            params: self.params,
+        Ok(XmssmtKeyPair {
+            inner,
+            param_set: self.param_set,
         })
     }
-
-    pub fn verify(
-        &self,
-        message: &[u8],
-        signature: &XmssmtSignature,
-        public_key: &XmssmtPublicKey,
-    ) -> Result<bool, XmssmtError> {
-        self.ensure_public_key_params(public_key)?;
-        self.ensure_signature_params(signature)?;
-        self.ensure_public_key_len(public_key)?;
-        self.ensure_signature_len(signature.bytes.len())?;
-
-        Ok(verify(
-            self.params,
-            message,
-            &signature.bytes,
-            &public_key.bytes,
-        ))
-    }
-
-    pub fn public_key_size(&self, public_key: &XmssmtPublicKey) -> usize {
-        public_key.byte_len()
-    }
-
-    pub fn secret_key_size(&self, secret_key: &XmssmtSecretKey) -> usize {
-        secret_key.byte_len()
-    }
-
-    pub fn signature_size(&self, signature: &XmssmtSignature) -> usize {
-        signature.byte_len()
-    }
-
-    fn ensure_secret_key_params(
-        &self,
-        secret_key: &XmssmtSecretKey,
-    ) -> Result<(), XmssmtError> {
-        if secret_key.params != self.params {
-            return Err(XmssmtError::ParamSetMismatch {
-                expected: self.param_set_name(),
-                actual: secret_key.params.name(),
-            });
-        }
-        Ok(())
-    }
-
-    fn ensure_public_key_params(
-        &self,
-        public_key: &XmssmtPublicKey,
-    ) -> Result<(), XmssmtError> {
-        if public_key.params != self.params {
-            return Err(XmssmtError::ParamSetMismatch {
-                expected: self.param_set_name(),
-                actual: public_key.params.name(),
-            });
-        }
-        Ok(())
-    }
-
-    fn ensure_signature_params(
-        &self,
-        signature: &XmssmtSignature,
-    ) -> Result<(), XmssmtError> {
-        if signature.params != self.params {
-            return Err(XmssmtError::ParamSetMismatch {
-                expected: self.param_set_name(),
-                actual: signature.params.name(),
-            });
-        }
-        Ok(())
-    }
-
-    fn ensure_public_key_len(
-        &self,
-        public_key: &XmssmtPublicKey,
-    ) -> Result<(), XmssmtError> {
-        let expected = public_key_bytes(self.params);
-        let actual = public_key.bytes.len();
-        if actual != expected {
-            return Err(XmssmtError::InvalidPublicKeyLength {
-                expected,
-                actual,
-            });
-        }
-        Ok(())
-    }
-
-    fn ensure_secret_key_len(
-        &self,
-        secret_key: &XmssmtSecretKey,
-    ) -> Result<(), XmssmtError> {
-        let expected = secret_key_bytes(self.params);
-        let actual = secret_key.bytes.len();
-        if actual != expected {
-            return Err(XmssmtError::InvalidSecretKeyLength {
-                expected,
-                actual,
-            });
-        }
-        Ok(())
-    }
-
-    fn ensure_signature_len(&self, actual: usize) -> Result<(), XmssmtError> {
-        let expected = signature_bytes(self.params);
-        if actual != expected {
-            return Err(XmssmtError::InvalidSignatureLength {
-                expected,
-                actual,
-            });
-        }
-        Ok(())
-    }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum XmssmtError {
-    UnknownParamSet {
-        name: String,
-    },
-    ParamSetMismatch {
-        expected: &'static str,
-        actual: &'static str,
-    },
-    InvalidPublicKeyLength {
-        expected: usize,
-        actual: usize,
-    },
-    InvalidSecretKeyLength {
-        expected: usize,
-        actual: usize,
-    },
-    InvalidSignatureLength {
-        expected: usize,
-        actual: usize,
-    },
-}
-
-impl fmt::Display for XmssmtError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::UnknownParamSet { name } => {
-                write!(f, "unknown XMSSMT param set: {name}")
-            }
-            Self::ParamSetMismatch { expected, actual } => write!(
-                f,
-                "parameter set mismatch: expected {expected}, got {actual}"
-            ),
-            Self::InvalidPublicKeyLength { expected, actual } => write!(
-                f,
-                "invalid XMSSMT public key length: expected {expected}, got {actual}"
-            ),
-            Self::InvalidSecretKeyLength { expected, actual } => write!(
-                f,
-                "invalid XMSSMT secret key length: expected {expected}, got {actual}"
-            ),
-            Self::InvalidSignatureLength { expected, actual } => write!(
-                f,
-                "invalid XMSSMT signature length: expected {expected}, got {actual}"
-            ),
-        }
-    }
-}
-
-impl Error for XmssmtError {}
-
-pub fn bench_message(size: usize) -> Vec<u8> {
-    vec![BENCH_MESSAGE_BYTE; size]
-}
-
+/// Measure wall-clock time of a closure.
 pub fn measure_time<T, F>(operation: F) -> (T, Duration)
 where
     F: FnOnce() -> T,
@@ -348,200 +292,77 @@ where
     (value, start.elapsed())
 }
 
-fn keypair(params: XmssmtParamSet) -> (Vec<u8>, Vec<u8>) {
-    match params {
-        XmssmtParamSet::Level1 => xmss_rs::level1::keypair(),
-        XmssmtParamSet::Level3 => xmss_rs::level3::keypair(),
-        XmssmtParamSet::Level5 => xmss_rs::level5::keypair(),
-    }
+#[derive(Debug)]
+pub enum XmssmtError {
+    UnsupportedParamSet(String),
+    InvalidHeight(u32),
+    MismatchedParamSet {
+        expected: XmssmtParamSet,
+        got: XmssmtParamSet,
+    },
+    KeygenFailed(String),
+    SignFailed(String),
+    DeserializationFailed(String),
 }
 
-fn sign(params: XmssmtParamSet, secret_key: &mut [u8], msg: &[u8]) -> Vec<u8> {
-    match params {
-        XmssmtParamSet::Level1 => xmss_rs::level1::sign(secret_key, msg),
-        XmssmtParamSet::Level3 => xmss_rs::level3::sign(secret_key, msg),
-        XmssmtParamSet::Level5 => xmss_rs::level5::sign(secret_key, msg),
-    }
-}
-
-fn verify(
-    params: XmssmtParamSet,
-    msg: &[u8],
-    signature: &[u8],
-    public_key: &[u8],
-) -> bool {
-    match params {
-        XmssmtParamSet::Level1 => {
-            xmss_rs::level1::verify(msg, signature, public_key)
-        }
-        XmssmtParamSet::Level3 => {
-            xmss_rs::level3::verify(msg, signature, public_key)
-        }
-        XmssmtParamSet::Level5 => {
-            xmss_rs::level5::verify(msg, signature, public_key)
-        }
-    }
-}
-
-fn public_key_bytes(params: XmssmtParamSet) -> usize {
-    match params {
-        XmssmtParamSet::Level1 => xmss_rs::level1::pk_bytes(),
-        XmssmtParamSet::Level3 => xmss_rs::level3::pk_bytes(),
-        XmssmtParamSet::Level5 => xmss_rs::level5::pk_bytes(),
-    }
-}
-
-fn secret_key_bytes(params: XmssmtParamSet) -> usize {
-    match params {
-        XmssmtParamSet::Level1 => xmss_rs::level1::sk_bytes(),
-        XmssmtParamSet::Level3 => xmss_rs::level3::sk_bytes(),
-        XmssmtParamSet::Level5 => xmss_rs::level5::sk_bytes(),
-    }
-}
-
-fn signature_bytes(params: XmssmtParamSet) -> usize {
-    match params {
-        XmssmtParamSet::Level1 => xmss_rs::level1::sig_bytes(),
-        XmssmtParamSet::Level3 => xmss_rs::level3::sig_bytes(),
-        XmssmtParamSet::Level5 => xmss_rs::level5::sig_bytes(),
-    }
-}
-
-static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static BASELINE: AtomicUsize = AtomicUsize::new(0);
-
-pub struct TrackingAllocator<A: GlobalAlloc + Sync + 'static> {
-    inner: &'static A,
-}
-
-impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
-    pub const fn new(inner: &'static A) -> Self {
-        Self { inner }
-    }
-}
-
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
-    for TrackingAllocator<A>
-{
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { self.inner.alloc(layout) };
-        if !ptr.is_null() {
-            track_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        unsafe { self.inner.dealloc(ptr, layout) };
-        track_dealloc(layout.size());
-    }
-}
-
-fn track_alloc(size: usize) {
-    let current = ALLOCATED.fetch_add(size, Ordering::SeqCst) + size;
-    let baseline = BASELINE.load(Ordering::SeqCst);
-    let relative_current = current.saturating_sub(baseline);
-    let mut peak = PEAK_ALLOCATED.load(Ordering::SeqCst);
-
-    while relative_current > peak {
-        match PEAK_ALLOCATED.compare_exchange_weak(
-            peak,
-            relative_current,
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-        ) {
-            Ok(_) => break,
-            Err(observed) => peak = observed,
+impl fmt::Display for XmssmtError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnsupportedParamSet(param_set) => {
+                write!(f, "unsupported XMSS^MT parameter set: {param_set}")
+            }
+            Self::InvalidHeight(height) => {
+                write!(f, "invalid XMSS^MT total tree height: {height}")
+            }
+            Self::MismatchedParamSet { expected, got } => {
+                write!(
+                    f,
+                    "mismatched XMSS^MT parameter set: expected {}, got {}",
+                    expected.as_str(),
+                    got.as_str()
+                )
+            }
+            Self::KeygenFailed(msg) => write!(f, "XMSS^MT key generation failed: {msg}"),
+            Self::SignFailed(msg) => write!(f, "XMSS^MT signing failed: {msg}"),
+            Self::DeserializationFailed(msg) => {
+                write!(f, "XMSS^MT deserialization failed: {msg}")
+            }
         }
     }
 }
 
-fn track_dealloc(size: usize) {
-    ALLOCATED.fetch_sub(size, Ordering::SeqCst);
-}
-
-pub mod memory {
-    use super::{Ordering, ALLOCATED, BASELINE, PEAK_ALLOCATED};
-
-    pub fn reset_peak() {
-        let current = ALLOCATED.load(Ordering::SeqCst);
-        BASELINE.store(current, Ordering::SeqCst);
-        PEAK_ALLOCATED.store(0, Ordering::SeqCst);
-    }
-
-    pub fn peak_bytes() -> usize {
-        PEAK_ALLOCATED.load(Ordering::SeqCst)
-    }
-}
+impl Error for XmssmtError {}
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        bench_message, param_set_by_name, XmssmtScheme, BENCH_MESSAGE_BYTE,
-        XMSSMT_L1_NAME,
-    };
+    use super::{XmssmtParamSet, XmssmtScheme};
 
     #[test]
-    fn param_set_lookup_works() {
-        let found = param_set_by_name(XMSSMT_L1_NAME)
-            .expect("known param set resolves");
-        assert_eq!(found.name(), XMSSMT_L1_NAME);
+    fn sign_and_verify_roundtrip() {
+        let scheme = XmssmtScheme::new(XmssmtParamSet::Sha2_20_2_256);
+        let message = b"xmssmt-roundtrip-test";
+
+        let mut kp = scheme.keypair().expect("keypair must succeed");
+        let signature = kp.sign(message).expect("sign must succeed");
+
+        let is_valid = kp
+            .verify(message, &signature)
+            .expect("verify call must succeed");
+
+        assert!(is_valid, "signature must verify");
     }
 
     #[test]
-    fn sign_verify_roundtrip() {
-        let scheme = XmssmtScheme::from_param_set_name(XMSSMT_L1_NAME)
-            .expect("param set should resolve");
-        let message = b"xmssmt-sign-verify-roundtrip";
-        let (public_key, mut secret_key) = scheme.keypair();
+    fn wrong_message_fails_verification() {
+        let scheme = XmssmtScheme::new(XmssmtParamSet::Sha2_20_2_256);
 
-        let signature = scheme
-            .sign(message, &mut secret_key)
-            .expect("sign should succeed");
-        let verified = scheme
-            .verify(message, &signature, &public_key)
-            .expect("verify should succeed");
-        assert!(verified, "signature should verify");
-    }
+        let mut kp = scheme.keypair().expect("keypair must succeed");
+        let signature = kp.sign(b"message-a").expect("sign must succeed");
 
-    #[test]
-    fn verify_fails_for_other_message() {
-        let scheme = XmssmtScheme::from_param_set_name(XMSSMT_L1_NAME)
-            .expect("param set should resolve");
-        let (public_key, mut secret_key) = scheme.keypair();
+        let is_valid = kp
+            .verify(b"message-b", &signature)
+            .expect("verify call must succeed");
 
-        let signature = scheme
-            .sign(b"message-a", &mut secret_key)
-            .expect("sign should succeed");
-        let verified = scheme
-            .verify(b"message-b", &signature, &public_key)
-            .expect("verify should succeed");
-        assert!(!verified, "different message should fail verification");
-    }
-
-    #[test]
-    fn sign_updates_secret_key_state() {
-        let scheme = XmssmtScheme::from_param_set_name(XMSSMT_L1_NAME)
-            .expect("param set should resolve");
-        let (_, mut secret_key) = scheme.keypair();
-        let before = secret_key.as_bytes().to_vec();
-
-        let _signature = scheme
-            .sign(b"stateful-signing", &mut secret_key)
-            .expect("sign should succeed");
-
-        assert_ne!(
-            before,
-            secret_key.as_bytes(),
-            "xmss-rs secret key should update after signing"
-        );
-    }
-
-    #[test]
-    fn bench_message_uses_expected_fill_byte() {
-        let msg = bench_message(16);
-        assert_eq!(msg.len(), 16);
-        assert!(msg.iter().all(|b| *b == BENCH_MESSAGE_BYTE));
+        assert!(!is_valid, "signature must fail for a different message");
     }
 }

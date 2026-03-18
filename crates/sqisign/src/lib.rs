@@ -20,9 +20,7 @@ impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
     }
 }
 
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
-    for TrackingAllocator<A>
-{
+unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ptr = unsafe { self.inner.alloc(layout) };
         if !ptr.is_null() {
@@ -148,11 +146,7 @@ impl SqisignScheme {
         signature.as_bytes().len()
     }
 
-    pub fn sizes(
-        &self,
-        keypair: &SqisignKeyPair,
-        signature: &SqisignSignature,
-    ) -> SqisignSizes {
+    pub fn sizes(&self, keypair: &SqisignKeyPair, signature: &SqisignSignature) -> SqisignSizes {
         SqisignSizes {
             public_key: self.public_key_size(keypair),
             secret_key: self.secret_key_size(keypair),
@@ -180,9 +174,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        bench_message, signed_message_size, BENCH_MESSAGE_BYTE, SQISIGN,
-    };
+    use super::{bench_message, signed_message_size, BENCH_MESSAGE_BYTE, SQISIGN};
 
     #[test]
     fn bench_message_uses_expected_fill_byte() {
@@ -201,10 +193,9 @@ mod tests {
         let scheme = SQISIGN;
         let message = b"sqisign";
 
-        let keypair =
-            scheme
-                .benchmark_keypair()
-                .expect("keypair generation should succeed");
+        let keypair = scheme
+            .benchmark_keypair()
+            .expect("keypair generation should succeed");
         let signature = scheme
             .sign_message(&keypair, message)
             .expect("signing should succeed");
