@@ -13,6 +13,7 @@ members = [
     "crates/cross",
     "crates/sqisign",
     "crates/leansig",
+    "crates/less",
 ]
 resolver = "2"
 
