@@ -93,7 +93,7 @@ Run it with:
 cargo bench -p cross --bench cross_divan
 ```
 
-Latest run result (captured on 2026-03-18 09:34:25 UTC):
+Median result (captured on 2026-03-18 09:34:25 UTC):
 
 ```text
 CROSS-RSDPG-192-BALANCED sizes:
