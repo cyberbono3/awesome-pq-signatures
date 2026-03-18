@@ -1,0 +1,20 @@
+[package]
+name = "less"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "less"
+path = "src/main.rs"
+
+[[bench]]
+name = "less_divan"
+harness = false
+
+[dependencies]
+
+[build-dependencies]
+cc = "1"
+
+[dev-dependencies]
+divan = "0.1"

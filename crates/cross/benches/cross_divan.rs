@@ -1,6 +1,6 @@
 use cross::{
-    bench_message, memory, CrossKeyPair, CrossSignature, TrackingAllocator,
-    BENCH_MESSAGE_SIZES, CROSS,
+    bench_message, memory, CrossKeyPair, CrossSignature, TrackingAllocator, BENCH_MESSAGE_SIZES,
+    CROSS,
 };
 use divan::{black_box, AllocProfiler, Bencher};
 

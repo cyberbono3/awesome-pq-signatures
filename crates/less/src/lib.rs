@@ -6,22 +6,22 @@ use std::time::{Duration, Instant};
 
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
-pub const CROSS_VARIANT: &str = "CROSS-RSDPG-192-BALANCED";
+pub const LESS_VARIANT: &str = "LESS-252-45";
 
-const CROSS_SEED_BYTES: usize = 16;
+const LESS_SEED_BYTES: usize = 16;
 const KEYGEN_PROFILE: DeterministicRngProfile = DeterministicRngProfile {
-    seed: *b"cross-keygenseed",
+    seed: *b"less--keygenseed",
     domain_separator: 0,
 };
 const SIGN_PROFILE: DeterministicRngProfile = DeterministicRngProfile {
-    seed: *b"cross-signing-se",
+    seed: *b"less--signing-se",
     domain_separator: 1,
 };
 
 static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
 static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
 static BASELINE: AtomicUsize = AtomicUsize::new(0);
-static CROSS_FFI_LOCK: Mutex<()> = Mutex::new(());
+static LESS_FFI_LOCK: Mutex<()> = Mutex::new(());
 
 pub struct TrackingAllocator<A: GlobalAlloc + Sync + 'static> {
     inner: &'static A,
@@ -85,30 +85,30 @@ pub mod memory {
     }
 }
 
-type CrossSeed = [u8; 16];
+type LessSeed = [u8; 16];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct DeterministicRngProfile {
-    seed: CrossSeed,
+    seed: LessSeed,
     domain_separator: u16,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-struct CrossDimensions {
+struct LessDimensions {
     public_key: usize,
     secret_key: usize,
     signature: usize,
 }
 
-struct NativeCross;
+struct NativeLess;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct CrossKeyPair {
+pub struct LessKeyPair {
     public_key: Vec<u8>,
     secret_key: Vec<u8>,
 }
 
-impl CrossKeyPair {
+impl LessKeyPair {
     #[must_use]
     pub fn public_key(&self) -> &[u8] {
         &self.public_key
@@ -121,9 +121,9 @@ impl CrossKeyPair {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct CrossSignature(Vec<u8>);
+pub struct LessSignature(Vec<u8>);
 
-impl CrossSignature {
+impl LessSignature {
     #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
@@ -131,14 +131,14 @@ impl CrossSignature {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct CrossSizes {
+pub struct LessSizes {
     pub public_key: usize,
     pub secret_key: usize,
     pub signature: usize,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum CrossError {
+pub enum LessError {
     FfiLockPoisoned,
     KeygenFailed(i32),
     SignFailed(i32),
@@ -148,54 +148,50 @@ pub enum CrossError {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct CrossScheme;
+pub struct LessScheme;
 
-pub const CROSS: CrossScheme = CrossScheme;
+pub const LESS: LessScheme = LessScheme;
 
-impl CrossScheme {
+impl LessScheme {
     #[must_use]
     pub fn algorithm_name(&self) -> &'static str {
-        CROSS_VARIANT
+        LESS_VARIANT
     }
 
     /// # Errors
     ///
-    /// Returns an error if the native CROSS key generation call fails or if
+    /// Returns an error if the native LESS key generation call fails or if
     /// the native runtime lock is poisoned.
-    pub fn keypair(&self) -> Result<CrossKeyPair, CrossError> {
+    pub fn keypair(&self) -> Result<LessKeyPair, LessError> {
         self.keypair_with_seed(KEYGEN_PROFILE.seed)
     }
 
     /// # Errors
     ///
-    /// Returns an error if the native CROSS key generation call fails or if
+    /// Returns an error if the native LESS key generation call fails or if
     /// the native runtime lock is poisoned.
-    pub fn benchmark_keypair(&self) -> Result<CrossKeyPair, CrossError> {
+    pub fn benchmark_keypair(&self) -> Result<LessKeyPair, LessError> {
         self.keypair()
     }
 
     /// # Errors
     ///
-    /// Returns an error if the native CROSS key generation call fails or if
+    /// Returns an error if the native LESS key generation call fails or if
     /// the native runtime lock is poisoned.
-    pub fn keypair_with_seed(&self, seed: CrossSeed) -> Result<CrossKeyPair, CrossError> {
+    pub fn keypair_with_seed(&self, seed: LessSeed) -> Result<LessKeyPair, LessError> {
         let profile = DeterministicRngProfile {
             seed,
             domain_separator: KEYGEN_PROFILE.domain_separator,
         };
-        NativeCross::with_rng(profile, |_| NativeCross::keypair())
+        NativeLess::with_rng(profile, |_| NativeLess::keypair())
     }
 
     /// # Errors
     ///
     /// Returns an error if signing fails, the message length exceeds the native
     /// API width, or if the native runtime lock is poisoned.
-    pub fn sign(
-        &self,
-        keypair: &CrossKeyPair,
-        message: &[u8],
-    ) -> Result<CrossSignature, CrossError> {
-        NativeCross::with_rng(SIGN_PROFILE, |_| NativeCross::sign(keypair, message))
+    pub fn sign(&self, keypair: &LessKeyPair, message: &[u8]) -> Result<LessSignature, LessError> {
+        NativeLess::with_rng(SIGN_PROFILE, |_| NativeLess::sign(keypair, message))
     }
 
     /// # Errors
@@ -204,9 +200,9 @@ impl CrossScheme {
     /// API width, or if the native runtime lock is poisoned.
     pub fn sign_message(
         &self,
-        keypair: &CrossKeyPair,
+        keypair: &LessKeyPair,
         message: &[u8],
-    ) -> Result<CrossSignature, CrossError> {
+    ) -> Result<LessSignature, LessError> {
         self.sign(keypair, message)
     }
 
@@ -216,11 +212,11 @@ impl CrossScheme {
     /// exceeds the native API width, or if the native runtime lock is poisoned.
     pub fn verify(
         &self,
-        keypair: &CrossKeyPair,
+        keypair: &LessKeyPair,
         message: &[u8],
-        signature: &CrossSignature,
-    ) -> Result<bool, CrossError> {
-        NativeCross::verify(keypair, message, signature)
+        signature: &LessSignature,
+    ) -> Result<bool, LessError> {
+        NativeLess::verify(keypair, message, signature)
     }
 
     /// # Errors
@@ -229,31 +225,31 @@ impl CrossScheme {
     /// exceeds the native API width, or if the native runtime lock is poisoned.
     pub fn verify_message(
         &self,
-        keypair: &CrossKeyPair,
+        keypair: &LessKeyPair,
         message: &[u8],
-        signature: &CrossSignature,
-    ) -> Result<bool, CrossError> {
+        signature: &LessSignature,
+    ) -> Result<bool, LessError> {
         self.verify(keypair, message, signature)
     }
 
     #[must_use]
-    pub fn public_key_size(&self, _keypair: &CrossKeyPair) -> usize {
-        NativeCross::dimensions().public_key
+    pub fn public_key_size(&self, _keypair: &LessKeyPair) -> usize {
+        NativeLess::dimensions().public_key
     }
 
     #[must_use]
-    pub fn secret_key_size(&self, _keypair: &CrossKeyPair) -> usize {
-        NativeCross::dimensions().secret_key
+    pub fn secret_key_size(&self, _keypair: &LessKeyPair) -> usize {
+        NativeLess::dimensions().secret_key
     }
 
     #[must_use]
-    pub fn signature_size(&self, _signature: &CrossSignature) -> usize {
-        NativeCross::dimensions().signature
+    pub fn signature_size(&self, _signature: &LessSignature) -> usize {
+        NativeLess::dimensions().signature
     }
 
     #[must_use]
-    pub fn sizes(&self, keypair: &CrossKeyPair, signature: &CrossSignature) -> CrossSizes {
-        CrossSizes {
+    pub fn sizes(&self, keypair: &LessKeyPair, signature: &LessSignature) -> LessSizes {
+        LessSizes {
             public_key: self.public_key_size(keypair),
             secret_key: self.secret_key_size(keypair),
             signature: self.signature_size(signature),
@@ -261,43 +257,43 @@ impl CrossScheme {
     }
 }
 
-impl NativeCross {
-    fn dimensions() -> CrossDimensions {
-        CrossDimensions {
-            public_key: unsafe { cross_rs_public_key_bytes() },
-            secret_key: unsafe { cross_rs_secret_key_bytes() },
-            signature: unsafe { cross_rs_signature_bytes() },
+impl NativeLess {
+    fn dimensions() -> LessDimensions {
+        LessDimensions {
+            public_key: unsafe { less_rs_public_key_bytes() },
+            secret_key: unsafe { less_rs_secret_key_bytes() },
+            signature: unsafe { less_rs_signature_bytes() },
         }
     }
 
-    fn with_rng<T, F>(profile: DeterministicRngProfile, operation: F) -> Result<T, CrossError>
+    fn with_rng<T, F>(profile: DeterministicRngProfile, operation: F) -> Result<T, LessError>
     where
-        F: FnOnce(&Self) -> Result<T, CrossError>,
+        F: FnOnce(&Self) -> Result<T, LessError>,
     {
-        let _guard = CROSS_FFI_LOCK
+        let _guard = LESS_FFI_LOCK
             .lock()
-            .map_err(|_| CrossError::FfiLockPoisoned)?;
+            .map_err(|_| LessError::FfiLockPoisoned)?;
         init_rng(&profile);
         operation(&Self)
     }
 
-    fn keypair() -> Result<CrossKeyPair, CrossError> {
+    fn keypair() -> Result<LessKeyPair, LessError> {
         let dimensions = Self::dimensions();
         let mut public_key = vec![0_u8; dimensions.public_key];
         let mut secret_key = vec![0_u8; dimensions.secret_key];
         let rc = unsafe { crypto_sign_keypair(public_key.as_mut_ptr(), secret_key.as_mut_ptr()) };
 
         if rc == 0 {
-            Ok(CrossKeyPair {
+            Ok(LessKeyPair {
                 public_key,
                 secret_key,
             })
         } else {
-            Err(CrossError::KeygenFailed(rc))
+            Err(LessError::KeygenFailed(rc))
         }
     }
 
-    fn sign(keypair: &CrossKeyPair, message: &[u8]) -> Result<CrossSignature, CrossError> {
+    fn sign(keypair: &LessKeyPair, message: &[u8]) -> Result<LessSignature, LessError> {
         let dimensions = Self::dimensions();
         let message_len = ulonglong_len(message.len())?;
         let mut signed_message =
@@ -315,7 +311,7 @@ impl NativeCross {
         };
 
         if rc != 0 {
-            return Err(CrossError::SignFailed(rc));
+            return Err(LessError::SignFailed(rc));
         }
 
         let signed_message_len = usize_len(signed_message_len)?;
@@ -323,13 +319,13 @@ impl NativeCross {
     }
 
     fn verify(
-        keypair: &CrossKeyPair,
+        keypair: &LessKeyPair,
         message: &[u8],
-        signature: &CrossSignature,
-    ) -> Result<bool, CrossError> {
-        let _guard = CROSS_FFI_LOCK
+        signature: &LessSignature,
+    ) -> Result<bool, LessError> {
+        let _guard = LESS_FFI_LOCK
             .lock()
-            .map_err(|_| CrossError::FfiLockPoisoned)?;
+            .map_err(|_| LessError::FfiLockPoisoned)?;
 
         let signed_message = combine_signed_message(message, signature);
         let signed_message_len = ulonglong_len(signed_message.len())?;
@@ -356,7 +352,7 @@ impl NativeCross {
                 ))
             }
             -1 => Ok(false),
-            _ => Err(CrossError::VerifyFailed(rc)),
+            _ => Err(LessError::VerifyFailed(rc)),
         }
     }
 }
@@ -381,32 +377,32 @@ where
 }
 
 fn init_rng(profile: &DeterministicRngProfile) {
-    let seed_len = u32::try_from(CROSS_SEED_BYTES).expect("cross seed length fits in u32");
+    let seed_len = u32::try_from(LESS_SEED_BYTES).expect("less seed length fits in u32");
     unsafe {
-        cross_rs_init_rng(profile.seed.as_ptr(), seed_len, profile.domain_separator);
+        less_rs_init_rng(profile.seed.as_ptr(), seed_len, profile.domain_separator);
     }
 }
 
-fn ulonglong_len(value: usize) -> Result<c_ulonglong, CrossError> {
-    c_ulonglong::try_from(value).map_err(|_| CrossError::LengthOverflow)
+fn ulonglong_len(value: usize) -> Result<c_ulonglong, LessError> {
+    c_ulonglong::try_from(value).map_err(|_| LessError::LengthOverflow)
 }
 
-fn usize_len(value: c_ulonglong) -> Result<usize, CrossError> {
-    usize::try_from(value).map_err(|_| CrossError::LengthOverflow)
+fn usize_len(value: c_ulonglong) -> Result<usize, LessError> {
+    usize::try_from(value).map_err(|_| LessError::LengthOverflow)
 }
 
 fn extract_signature(
     message_len: usize,
     signed_message: &[u8],
     signed_message_len: usize,
-) -> Result<CrossSignature, CrossError> {
+) -> Result<LessSignature, LessError> {
     signed_message
         .get(message_len..signed_message_len)
-        .map(|bytes| CrossSignature(bytes.to_vec()))
-        .ok_or(CrossError::InvalidSignedMessage)
+        .map(|bytes| LessSignature(bytes.to_vec()))
+        .ok_or(LessError::InvalidSignedMessage)
 }
 
-fn combine_signed_message(message: &[u8], signature: &CrossSignature) -> Vec<u8> {
+fn combine_signed_message(message: &[u8], signature: &LessSignature) -> Vec<u8> {
     let mut signed_message =
         Vec::with_capacity(signed_message_size(message.len(), signature.0.len()));
     signed_message.extend_from_slice(message);
@@ -441,15 +437,15 @@ unsafe extern "C" {
         smlen: c_ulonglong,
         pk: *const c_uchar,
     ) -> c_int;
-    fn cross_rs_init_rng(seed: *const c_uchar, seed_len: u32, dsc: u16);
-    fn cross_rs_public_key_bytes() -> usize;
-    fn cross_rs_secret_key_bytes() -> usize;
-    fn cross_rs_signature_bytes() -> usize;
+    fn less_rs_init_rng(seed: *const c_uchar, seed_len: u32, dsc: u16);
+    fn less_rs_public_key_bytes() -> usize;
+    fn less_rs_secret_key_bytes() -> usize;
+    fn less_rs_signature_bytes() -> usize;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{bench_message, signed_message_size, BENCH_MESSAGE_BYTE, CROSS};
+    use super::{bench_message, signed_message_size, BENCH_MESSAGE_BYTE, LESS};
 
     #[test]
     fn bench_message_uses_expected_fill_byte() {
@@ -464,9 +460,9 @@ mod tests {
     }
 
     #[test]
-    fn cross_sign_verify_roundtrip() {
-        let scheme = CROSS;
-        let message = b"cross";
+    fn less_sign_verify_roundtrip() {
+        let scheme = LESS;
+        let message = b"less";
 
         let keypair = scheme
             .benchmark_keypair()
