@@ -2,8 +2,10 @@ use leansig::serialization::Serializable;
 use leansig::signature::SignatureScheme;
 use leansig::signature::SignatureSchemeSecretKey;
 use leansig::MESSAGE_LENGTH;
-use rand::Rng as _;
 use std::time::{Duration, Instant};
+
+/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
+pub use pq_config::BENCH_MESSAGE;
 
 /// Measure wall-clock time of a closure.
 pub fn measure_time<T, F>(operation: F) -> (T, Duration)
@@ -17,9 +19,14 @@ where
 
 /// Advance secret-key preparation until `epoch` is inside the prepared
 /// interval.
-pub fn prepare_sk_for_epoch<SK: SignatureSchemeSecretKey>(sk: &mut SK, epoch: u32) {
+pub fn prepare_sk_for_epoch<SK: SignatureSchemeSecretKey>(
+    sk: &mut SK,
+    epoch: u32,
+) {
     let mut iterations = 0u32;
-    while !sk.get_prepared_interval().contains(&(epoch as u64)) && iterations < epoch {
+    while !sk.get_prepared_interval().contains(&(epoch as u64))
+        && iterations < epoch
+    {
         sk.advance_preparation();
         iterations += 1;
     }
@@ -45,25 +52,32 @@ pub fn run_and_print<S: SignatureScheme>(name: &str) {
 
     // --- Key Generation ---
     println!("--- Key Generation ---");
-    let ((pk, mut sk), keygen_duration) =
-        measure_time(|| S::key_gen(&mut rng, activation_epoch, num_active_epochs));
+    let ((pk, mut sk), keygen_duration) = measure_time(|| {
+        S::key_gen(&mut rng, activation_epoch, num_active_epochs)
+    });
     print_timing("generate keys", keygen_duration);
 
     // Pick a low epoch so preparation is fast
     let epoch: u32 = 1;
     prepare_sk_for_epoch(&mut sk, epoch);
 
-    let message: [u8; MESSAGE_LENGTH] = rng.random();
+    // Use the canonical BENCH_MESSAGE (32 bytes = SHA-256 digest).
+    // If MESSAGE_LENGTH differs from 32, we pad/truncate to fit.
+    let mut message = [0u8; MESSAGE_LENGTH];
+    let copy_len = BENCH_MESSAGE.len().min(MESSAGE_LENGTH);
+    message[..copy_len].copy_from_slice(&BENCH_MESSAGE[..copy_len]);
 
     // --- Signing ---
     println!("\n--- Signing ---");
-    let (sig_result, sign_duration) = measure_time(|| S::sign(&sk, epoch, &message));
+    let (sig_result, sign_duration) =
+        measure_time(|| S::sign(&sk, epoch, &message));
     print_timing("sign", sign_duration);
     let sig = sig_result.expect("signing should succeed");
 
     // --- Verification ---
     println!("\n--- Verification ---");
-    let (is_valid, verify_duration) = measure_time(|| S::verify(&pk, epoch, &message, &sig));
+    let (is_valid, verify_duration) =
+        measure_time(|| S::verify(&pk, epoch, &message, &sig));
     print_timing("verify", verify_duration);
 
     if is_valid {

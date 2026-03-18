@@ -1,4 +1,7 @@
-use falcon::{measure_time, memory, signature_size, SignatureScheme, TrackingAllocator, FALCON512};
+use falcon::{
+    measure_time, memory, signature_size, SignatureScheme, TrackingAllocator,
+    BENCH_MESSAGE, FALCON512,
+};
 use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
 use std::alloc::System;
 use std::time::Duration;
@@ -6,9 +9,10 @@ use std::time::Duration;
 static SYSTEM_ALLOC: System = System;
 
 #[global_allocator]
-static GLOBAL: TrackingAllocator<System> = TrackingAllocator::new(&SYSTEM_ALLOC);
+static GLOBAL: TrackingAllocator<System> =
+    TrackingAllocator::new(&SYSTEM_ALLOC);
 
-const MESSAGE: &[u8] = b"This is a test message for Falcon signature scheme benchmarking";
+const MESSAGE: &[u8] = &BENCH_MESSAGE;
 
 fn print_timing(label: &str, duration: Duration) {
     println!("Time to {label}: {duration:?}");
@@ -20,12 +24,14 @@ fn main() {
     println!("=== {} Benchmark ===\n", scheme.algorithm_name());
 
     println!("--- Key Generation ---");
-    let ((public_key, secret_key), keygen_duration) = measure_time(|| scheme.keypair());
+    let ((public_key, secret_key), keygen_duration) =
+        measure_time(|| scheme.keypair());
     print_timing("generate keys", keygen_duration);
 
     println!("\n--- Signing ---");
     memory::reset_peak();
-    let (signed_message, sign_duration) = measure_time(|| scheme.sign(MESSAGE, &secret_key));
+    let (signed_message, sign_duration) =
+        measure_time(|| scheme.sign(MESSAGE, &secret_key));
     print_timing("sign", sign_duration);
     let sign_peak_mem = memory::peak_bytes();
     println!("Peak memory during signing: {sign_peak_mem} bytes");

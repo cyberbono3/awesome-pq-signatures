@@ -1,18 +1,18 @@
 use std::env;
 use std::time::Instant;
 
-use xmss_bench::{benchmark_message, XmssParamSet, XmssScheme};
+use xmss_bench::{XmssParamSet, XmssScheme, BENCH_MESSAGE};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let operation = env::var("OPERATION").unwrap_or_else(|_| "keygen".to_owned());
+    let operation =
+        env::var("OPERATION").unwrap_or_else(|_| "keygen".to_owned());
     let param_set = env::var("PARAM_SET")
         .unwrap_or_else(|_| "XMSS-SHA2_10_256".to_owned())
         .parse::<XmssParamSet>()?;
-    let message_size = parse_usize_env("MSG_SIZE", 32)?;
     let iterations = parse_usize_env("ITERATIONS", 100)?;
 
     let scheme = XmssScheme::new(param_set);
-    let message = benchmark_message(message_size, 0xA5);
+    let message: &[u8] = &BENCH_MESSAGE;
 
     let total = match operation.as_str() {
         "keygen" => bench_keygen(scheme, iterations)?,
@@ -84,7 +84,10 @@ fn bench_verify(
     Ok(start.elapsed())
 }
 
-fn parse_usize_env(name: &str, default: usize) -> Result<usize, Box<dyn std::error::Error>> {
+fn parse_usize_env(
+    name: &str,
+    default: usize,
+) -> Result<usize, Box<dyn std::error::Error>> {
     match env::var(name) {
         Ok(value) => Ok(value.parse::<usize>()?),
         Err(_) => Ok(default),

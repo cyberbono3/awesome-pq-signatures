@@ -13,6 +13,7 @@ harness = false
 
 [dependencies]
 sqisign-lvl1 = "0.1.1"
+pq_config = { path = "../pq_config" }
 
 [dev-dependencies]
 divan = "0.1"

@@ -1,13 +1,17 @@
-use sqisign::{measure_time, memory, signed_message_size, TrackingAllocator, SQISIGN};
+use sqisign::{
+    measure_time, memory, signed_message_size, TrackingAllocator,
+    BENCH_MESSAGE, SQISIGN,
+};
 use std::alloc::System;
 use std::time::Duration;
 
 static SYSTEM_ALLOC: System = System;
 
 #[global_allocator]
-static GLOBAL: TrackingAllocator<System> = TrackingAllocator::new(&SYSTEM_ALLOC);
+static GLOBAL: TrackingAllocator<System> =
+    TrackingAllocator::new(&SYSTEM_ALLOC);
 
-const MESSAGE: &[u8] = b"This is a test message for SQISign signature scheme benchmarking";
+const MESSAGE: &[u8] = &BENCH_MESSAGE;
 
 fn print_timing(label: &str, duration: Duration) {
     println!("Time to {label}: {duration:?}");

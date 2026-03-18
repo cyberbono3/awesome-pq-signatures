@@ -8,7 +8,11 @@ use rustcrypto_xmss::{
     XmssMtSha2_40_2_256, XmssParameter,
 };
 
-pub const DEFAULT_XMSSMT_PARAM_SET: XmssmtParamSet = XmssmtParamSet::Sha2_20_2_256;
+/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
+pub use pq_config::BENCH_MESSAGE;
+
+pub const DEFAULT_XMSSMT_PARAM_SET: XmssmtParamSet =
+    XmssmtParamSet::Sha2_20_2_256;
 pub const DIVAN_BENCH_MESSAGE_SIZES: [usize; 2] = [32, 1024];
 
 macro_rules! dispatch_param_set {
@@ -128,11 +132,20 @@ impl XmssmtKeyPairInner {
         }
     }
 
-    fn sign_detached(&mut self, message: &[u8]) -> Result<Vec<u8>, XmssmtError> {
+    fn sign_detached(
+        &mut self,
+        message: &[u8],
+    ) -> Result<Vec<u8>, XmssmtError> {
         match self {
-            Self::Sha2_20_2(keypair) => sign_detached_with_keypair(keypair, message),
-            Self::Sha2_20_4(keypair) => sign_detached_with_keypair(keypair, message),
-            Self::Sha2_40_2(keypair) => sign_detached_with_keypair(keypair, message),
+            Self::Sha2_20_2(keypair) => {
+                sign_detached_with_keypair(keypair, message)
+            }
+            Self::Sha2_20_4(keypair) => {
+                sign_detached_with_keypair(keypair, message)
+            }
+            Self::Sha2_40_2(keypair) => {
+                sign_detached_with_keypair(keypair, message)
+            }
         }
     }
 
@@ -177,7 +190,10 @@ impl XmssmtKeyPair {
     /// # Errors
     ///
     /// Returns an error if the underlying XMSS^MT signing operation fails.
-    pub fn sign(&mut self, message: &[u8]) -> Result<XmssmtSignature, XmssmtError> {
+    pub fn sign(
+        &mut self,
+        message: &[u8],
+    ) -> Result<XmssmtSignature, XmssmtError> {
         let sig_bytes = self.inner.sign_detached(message)?;
 
         Ok(XmssmtSignature {
@@ -343,18 +359,27 @@ impl XmssmtScheme {
 
         let inner = match self.param_set {
             XmssmtParamSet::Sha2_20_2_256 => {
-                let keypair = KeyPair::<XmssMtSha2_20_2_256>::generate(&mut rng)
-                    .map_err(|e| XmssmtError::KeygenFailed(e.to_string()))?;
+                let keypair =
+                    KeyPair::<XmssMtSha2_20_2_256>::generate(&mut rng)
+                        .map_err(|e| {
+                            XmssmtError::KeygenFailed(e.to_string())
+                        })?;
                 XmssmtKeyPairInner::Sha2_20_2(keypair)
             }
             XmssmtParamSet::Sha2_20_4_256 => {
-                let keypair = KeyPair::<XmssMtSha2_20_4_256>::generate(&mut rng)
-                    .map_err(|e| XmssmtError::KeygenFailed(e.to_string()))?;
+                let keypair =
+                    KeyPair::<XmssMtSha2_20_4_256>::generate(&mut rng)
+                        .map_err(|e| {
+                            XmssmtError::KeygenFailed(e.to_string())
+                        })?;
                 XmssmtKeyPairInner::Sha2_20_4(keypair)
             }
             XmssmtParamSet::Sha2_40_2_256 => {
-                let keypair = KeyPair::<XmssMtSha2_40_2_256>::generate(&mut rng)
-                    .map_err(|e| XmssmtError::KeygenFailed(e.to_string()))?;
+                let keypair =
+                    KeyPair::<XmssMtSha2_40_2_256>::generate(&mut rng)
+                        .map_err(|e| {
+                            XmssmtError::KeygenFailed(e.to_string())
+                        })?;
                 XmssmtKeyPairInner::Sha2_40_2(keypair)
             }
         };
@@ -379,7 +404,8 @@ impl XmssmtScheme {
         let public_key_size = keypair.public_key_len();
         let secret_key_size = keypair.secret_key_len();
 
-        let (signature_result, sign_duration) = measure_time(|| keypair.sign(message));
+        let (signature_result, sign_duration) =
+            measure_time(|| keypair.sign(message));
         let signature = signature_result?;
 
         let (verified_result, verify_duration) =
@@ -450,7 +476,9 @@ impl fmt::Display for XmssmtError {
                     got.as_str()
                 )
             }
-            Self::KeygenFailed(msg) => write!(f, "XMSS^MT key generation failed: {msg}"),
+            Self::KeygenFailed(msg) => {
+                write!(f, "XMSS^MT key generation failed: {msg}")
+            }
             Self::SignFailed(msg) => write!(f, "XMSS^MT signing failed: {msg}"),
             Self::DeserializationFailed(msg) => {
                 write!(f, "XMSS^MT deserialization failed: {msg}")
@@ -464,7 +492,9 @@ impl Error for XmssmtError {}
 #[cfg(test)]
 mod tests {
     use super::{XmssmtParamSet, XmssmtScheme};
-    use rustcrypto_xmss::{XmssMtSha2_20_2_256, XmssSha2_20_256, XmssParameter};
+    use rustcrypto_xmss::{
+        XmssMtSha2_20_2_256, XmssParameter, XmssSha2_20_256,
+    };
 
     #[test]
     fn sign_and_verify_roundtrip() {

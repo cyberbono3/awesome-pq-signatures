@@ -1,19 +1,16 @@
-use lamport_ots::{seed_from_str, LamportOtsScheme, XorShift64};
+use lamport_ots::{seed_from_str, LamportOtsScheme, XorShift64, BENCH_MESSAGE};
 use std::env;
 use std::time::Instant;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let operation = env::var("OPERATION").unwrap_or_else(|_| "keygen".to_owned());
+    let operation =
+        env::var("OPERATION").unwrap_or_else(|_| "keygen".to_owned());
     let iterations = parse_usize_env("ITERATIONS", 100)?;
-    let message_size = parse_usize_env("MSG_SIZE", 32)?;
     let deterministic = parse_bool_env("DETERMINISTIC_RNG", true);
 
     let scheme = LamportOtsScheme;
-    let mut message = vec![0_u8; message_size];
-    for (i, byte) in message.iter_mut().enumerate() {
-        *byte = (i % 251) as u8;
-    }
+    let message: &[u8] = &BENCH_MESSAGE;
 
     let total = match operation.as_str() {
         "keygen" => bench_keygen(scheme, iterations, deterministic)?,
@@ -104,7 +101,10 @@ fn random_seed(label: &str) -> u64 {
     mix ^ seed_from_str(label)
 }
 
-fn parse_usize_env(name: &str, default: usize) -> Result<usize, Box<dyn std::error::Error>> {
+fn parse_usize_env(
+    name: &str,
+    default: usize,
+) -> Result<usize, Box<dyn std::error::Error>> {
     match env::var(name) {
         Ok(value) => Ok(value.parse::<usize>()?),
         Err(_) => Ok(default),

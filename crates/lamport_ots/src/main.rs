@@ -1,15 +1,15 @@
-use lamport_ots::{seed_from_str, LamportOtsScheme, XorShift64};
+use lamport_ots::{seed_from_str, LamportOtsScheme, XorShift64, BENCH_MESSAGE};
 use std::env;
 use std::time::Instant;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let message_size = parse_usize_env("LAMPORT_MESSAGE_SIZE", 1024)?;
     let iterations = parse_usize_env("LAMPORT_ITERATIONS", 100)?;
     let deterministic = parse_bool_env("LAMPORT_DETERMINISTIC", true);
 
     let scheme = LamportOtsScheme;
     let sizes = scheme.sizes();
+    let message: &[u8] = &BENCH_MESSAGE;
 
     println!("algorithm: {}", scheme.algorithm_name());
     println!("backend: {}", scheme.backend_name());
@@ -17,14 +17,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("public_key_bytes: {}", sizes.public_key_bytes);
     println!("secret_key_bytes: {}", sizes.secret_key_bytes);
     println!("signature_bytes: {}", sizes.signature_bytes);
-    println!("message_size: {}", message_size);
+    println!("message_size: {}", message.len());
     println!("iterations: {}", iterations);
     println!("deterministic_rng: {}", deterministic);
-
-    let mut message = vec![0_u8; message_size];
-    for (i, byte) in message.iter_mut().enumerate() {
-        *byte = (i % 251) as u8;
-    }
 
     let keygen_elapsed = bench_keygen(scheme, iterations, deterministic)?;
     print_stats("keygen", iterations, keygen_elapsed.as_nanos());
@@ -32,7 +27,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sign_elapsed = bench_sign(scheme, &message, iterations, deterministic)?;
     print_stats("sign", iterations, sign_elapsed.as_nanos());
 
-    let verify_elapsed = bench_verify(scheme, &message, iterations, deterministic)?;
+    let verify_elapsed =
+        bench_verify(scheme, &message, iterations, deterministic)?;
     print_stats("verify", iterations, verify_elapsed.as_nanos());
 
     Ok(())
@@ -129,7 +125,10 @@ fn random_seed(label: &str) -> u64 {
     mix ^ seed_from_str(label)
 }
 
-fn parse_usize_env(name: &str, default: usize) -> Result<usize, Box<dyn std::error::Error>> {
+fn parse_usize_env(
+    name: &str,
+    default: usize,
+) -> Result<usize, Box<dyn std::error::Error>> {
     match env::var(name) {
         Ok(value) => Ok(value.parse::<usize>()?),
         Err(_) => Ok(default),

@@ -4,6 +4,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
+pub use pq_config::BENCH_MESSAGE;
+
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
 pub const LESS_VARIANT: &str = "LESS-252-45";
@@ -33,7 +36,9 @@ impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
     }
 }
 
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
+unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
+    for TrackingAllocator<A>
+{
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ptr = unsafe { self.inner.alloc(layout) };
         if !ptr.is_null() {
@@ -178,7 +183,10 @@ impl LessScheme {
     ///
     /// Returns an error if the native LESS key generation call fails or if
     /// the native runtime lock is poisoned.
-    pub fn keypair_with_seed(&self, seed: LessSeed) -> Result<LessKeyPair, LessError> {
+    pub fn keypair_with_seed(
+        &self,
+        seed: LessSeed,
+    ) -> Result<LessKeyPair, LessError> {
         let profile = DeterministicRngProfile {
             seed,
             domain_separator: KEYGEN_PROFILE.domain_separator,
@@ -190,8 +198,14 @@ impl LessScheme {
     ///
     /// Returns an error if signing fails, the message length exceeds the native
     /// API width, or if the native runtime lock is poisoned.
-    pub fn sign(&self, keypair: &LessKeyPair, message: &[u8]) -> Result<LessSignature, LessError> {
-        NativeLess::with_rng(SIGN_PROFILE, |_| NativeLess::sign(keypair, message))
+    pub fn sign(
+        &self,
+        keypair: &LessKeyPair,
+        message: &[u8],
+    ) -> Result<LessSignature, LessError> {
+        NativeLess::with_rng(SIGN_PROFILE, |_| {
+            NativeLess::sign(keypair, message)
+        })
     }
 
     /// # Errors
@@ -248,7 +262,11 @@ impl LessScheme {
     }
 
     #[must_use]
-    pub fn sizes(&self, keypair: &LessKeyPair, signature: &LessSignature) -> LessSizes {
+    pub fn sizes(
+        &self,
+        keypair: &LessKeyPair,
+        signature: &LessSignature,
+    ) -> LessSizes {
         LessSizes {
             public_key: self.public_key_size(keypair),
             secret_key: self.secret_key_size(keypair),
@@ -266,7 +284,10 @@ impl NativeLess {
         }
     }
 
-    fn with_rng<T, F>(profile: DeterministicRngProfile, operation: F) -> Result<T, LessError>
+    fn with_rng<T, F>(
+        profile: DeterministicRngProfile,
+        operation: F,
+    ) -> Result<T, LessError>
     where
         F: FnOnce(&Self) -> Result<T, LessError>,
     {
@@ -281,7 +302,12 @@ impl NativeLess {
         let dimensions = Self::dimensions();
         let mut public_key = vec![0_u8; dimensions.public_key];
         let mut secret_key = vec![0_u8; dimensions.secret_key];
-        let rc = unsafe { crypto_sign_keypair(public_key.as_mut_ptr(), secret_key.as_mut_ptr()) };
+        let rc = unsafe {
+            crypto_sign_keypair(
+                public_key.as_mut_ptr(),
+                secret_key.as_mut_ptr(),
+            )
+        };
 
         if rc == 0 {
             Ok(LessKeyPair {
@@ -293,11 +319,17 @@ impl NativeLess {
         }
     }
 
-    fn sign(keypair: &LessKeyPair, message: &[u8]) -> Result<LessSignature, LessError> {
+    fn sign(
+        keypair: &LessKeyPair,
+        message: &[u8],
+    ) -> Result<LessSignature, LessError> {
         let dimensions = Self::dimensions();
         let message_len = ulonglong_len(message.len())?;
         let mut signed_message =
-            vec![0_u8; signed_message_size(message.len(), dimensions.signature)];
+            vec![
+                0_u8;
+                signed_message_size(message.len(), dimensions.signature)
+            ];
         let mut signed_message_len = 0_u64;
 
         let rc = unsafe {
@@ -377,9 +409,14 @@ where
 }
 
 fn init_rng(profile: &DeterministicRngProfile) {
-    let seed_len = u32::try_from(LESS_SEED_BYTES).expect("less seed length fits in u32");
+    let seed_len =
+        u32::try_from(LESS_SEED_BYTES).expect("less seed length fits in u32");
     unsafe {
-        less_rs_init_rng(profile.seed.as_ptr(), seed_len, profile.domain_separator);
+        less_rs_init_rng(
+            profile.seed.as_ptr(),
+            seed_len,
+            profile.domain_separator,
+        );
     }
 }
 
@@ -402,9 +439,14 @@ fn extract_signature(
         .ok_or(LessError::InvalidSignedMessage)
 }
 
-fn combine_signed_message(message: &[u8], signature: &LessSignature) -> Vec<u8> {
-    let mut signed_message =
-        Vec::with_capacity(signed_message_size(message.len(), signature.0.len()));
+fn combine_signed_message(
+    message: &[u8],
+    signature: &LessSignature,
+) -> Vec<u8> {
+    let mut signed_message = Vec::with_capacity(signed_message_size(
+        message.len(),
+        signature.0.len(),
+    ));
     signed_message.extend_from_slice(message);
     signed_message.extend_from_slice(signature.as_bytes());
     signed_message

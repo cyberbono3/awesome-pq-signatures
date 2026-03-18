@@ -1,18 +1,18 @@
 use std::env;
 use std::time::Instant;
 
-use xmssmt_bench::{benchmark_message, XmssmtParamSet, XmssmtScheme};
+use xmssmt_bench::{XmssmtParamSet, XmssmtScheme, BENCH_MESSAGE};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let operation = env::var("OPERATION").unwrap_or_else(|_| "keygen".to_owned());
+    let operation =
+        env::var("OPERATION").unwrap_or_else(|_| "keygen".to_owned());
     let param_set = env::var("PARAM_SET")
         .unwrap_or_else(|_| "XMSSMT-SHA2_20/2_256".to_owned())
         .parse::<XmssmtParamSet>()?;
-    let message_size = parse_usize_env("MSG_SIZE", 32)?;
     let iterations = parse_usize_env("ITERATIONS", 100)?;
 
     let scheme = XmssmtScheme::new(param_set);
-    let message = benchmark_message(message_size, 0xA5);
+    let message: &[u8] = &BENCH_MESSAGE;
 
     let total = match operation.as_str() {
         "keygen" => bench_keygen(scheme, iterations)?,
@@ -76,14 +76,19 @@ fn bench_verify(
     for _ in 0..iterations {
         let is_valid = kp.verify(message, &signature)?;
         if !is_valid {
-            return Err("xmssmt verification failed during benchmark loop".into());
+            return Err(
+                "xmssmt verification failed during benchmark loop".into()
+            );
         }
         std::hint::black_box(is_valid);
     }
     Ok(start.elapsed())
 }
 
-fn parse_usize_env(name: &str, default: usize) -> Result<usize, Box<dyn std::error::Error>> {
+fn parse_usize_env(
+    name: &str,
+    default: usize,
+) -> Result<usize, Box<dyn std::error::Error>> {
     match env::var(name) {
         Ok(value) => Ok(value.parse::<usize>()?),
         Err(_) => Ok(default),

@@ -14,6 +14,7 @@ harness = false
 [dependencies]
 pq-mayo = "0.2.3"
 signature = "2"
+pq_config = { path = "../pq_config" }
 
 [dev-dependencies]
 divan = "0.1"

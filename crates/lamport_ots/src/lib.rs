@@ -3,6 +3,9 @@ use std::error::Error;
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
+pub use pq_config::BENCH_MESSAGE;
+
 pub const HASH_SIZE: usize = 32;
 pub const BITS: usize = HASH_SIZE * 8;
 pub const SECRET_ELEMENTS: usize = BITS * 2;
@@ -112,12 +115,18 @@ impl LamportOtsScheme {
         self.keypair_with_rng(&mut rng)
     }
 
-    pub fn keypair_with_seed(&self, seed: u64) -> (LamportPublicKey, LamportSecretKey) {
+    pub fn keypair_with_seed(
+        &self,
+        seed: u64,
+    ) -> (LamportPublicKey, LamportSecretKey) {
         let mut rng = XorShift64::new(seed);
         self.keypair_with_rng(&mut rng)
     }
 
-    pub fn keypair_with_rng(&self, rng: &mut XorShift64) -> (LamportPublicKey, LamportSecretKey) {
+    pub fn keypair_with_rng(
+        &self,
+        rng: &mut XorShift64,
+    ) -> (LamportPublicKey, LamportSecretKey) {
         let mut secret_elements = Vec::with_capacity(SECRET_ELEMENTS);
         let mut public_elements = Vec::with_capacity(SECRET_ELEMENTS);
 
