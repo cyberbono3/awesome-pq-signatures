@@ -1,18 +1,22 @@
 use divan::{black_box, AllocProfiler, Bencher};
 use mayo::{
-    bench_message, memory, signed_message_size, TrackingAllocator, BENCH_MESSAGE_SIZES, MAYO,
+    bench_message, memory, signed_message_size, TrackingAllocator,
+    BENCH_MESSAGE_SIZES, MAYO,
 };
 
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
 
 #[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> = TrackingAllocator::new(&DIVAN_ALLOC);
+static ALLOC: TrackingAllocator<AllocProfiler> =
+    TrackingAllocator::new(&DIVAN_ALLOC);
 
 fn benchmark_keypair() -> mayo::MayoKeyPair {
     MAYO.benchmark_keypair()
 }
 
-fn signed_fixture(message_size: usize) -> (mayo::MayoKeyPair, Vec<u8>, mayo::MayoSignature) {
+fn signed_fixture(
+    message_size: usize,
+) -> (mayo::MayoKeyPair, Vec<u8>, mayo::MayoSignature) {
     let scheme = MAYO;
     let keypair = benchmark_keypair();
     let message = bench_message(message_size);
@@ -78,7 +82,10 @@ fn print_sizes() {
         println!(
             "  Signed message size (message {} bytes): {} bytes",
             message_size,
-            signed_message_size(message_size, scheme.signature_size(&signature))
+            signed_message_size(
+                message_size,
+                scheme.signature_size(&signature)
+            )
         );
     }
 }
