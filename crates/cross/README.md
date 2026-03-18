@@ -93,6 +93,35 @@ Run it with:
 cargo bench -p cross --bench cross_divan
 ```
 
+Latest run result (captured on 2026-03-18 09:34:25 UTC):
+
+```text
+CROSS-RSDPG-192-BALANCED sizes:
+  Public key: 83 bytes
+  Secret key: 48 bytes
+  Signature (message 32 bytes): 22464 bytes
+  Signature (message 256 bytes): 22464 bytes
+  Signature (message 1024 bytes): 22464 bytes
+  Signature (message 4096 bytes): 22464 bytes
+
+CROSS-RSDPG-192-BALANCED peak heap usage:
+  Message 32 bytes: sign=44960 bytes, verify=22528 bytes
+  Message 256 bytes: sign=45184 bytes, verify=22976 bytes
+  Message 1024 bytes: sign=45952 bytes, verify=24512 bytes
+  Message 4096 bytes: sign=49024 bytes, verify=30656 bytes
+
+Divan timing summary (median):
+  keygen: 12.44 us
+  sign(32): 1.371 ms
+  sign(256): 1.41 ms
+  sign(1024): 1.377 ms
+  sign(4096): 1.404 ms
+  verify(32): 786.8 us
+  verify(256): 794.5 us
+  verify(1024): 795.7 us
+  verify(4096): 806.2 us
+```
+
 ## Files
 
 - `src/lib.rs`: Rust wrapper around the vendored C reference implementation
