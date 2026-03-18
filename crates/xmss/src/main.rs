@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use xmss_bench::default_benchmark_scheme;
+use xmss_bench::{default_benchmark_scheme, BENCH_MESSAGE};
 
-const MESSAGE: &[u8] = b"This is a test message for XMSS benchmarking";
+const MESSAGE: &[u8] = &BENCH_MESSAGE;
 
 fn print_timing(label: &str, duration: Duration) {
     println!("Time to {label}: {duration:?}");

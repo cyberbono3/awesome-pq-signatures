@@ -1,0 +1,10 @@
+[package]
+name = "pq_config"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Shared benchmark configuration for awesome-pq-signatures"
+
+[build-dependencies]
+sha2 = "0.10"
+toml = "0.8"

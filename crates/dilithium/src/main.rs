@@ -1,6 +1,6 @@
 use dilithium::{
     default_seed, measure_time, memory, signed_message_size, SignatureScheme, TrackingAllocator,
-    ML_DSA_65,
+    BENCH_MESSAGE, ML_DSA_65,
 };
 use std::alloc::System;
 use std::time::Duration;
@@ -10,7 +10,7 @@ static SYSTEM_ALLOC: System = System;
 #[global_allocator]
 static GLOBAL: TrackingAllocator<System> = TrackingAllocator::new(&SYSTEM_ALLOC);
 
-const MESSAGE: &[u8] = b"This is a test message for Dilithium signature scheme benchmarking";
+const MESSAGE: &[u8] = &BENCH_MESSAGE;
 const CONTEXT: &[u8] = &[];
 
 fn print_timing(label: &str, duration: Duration) {

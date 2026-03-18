@@ -1,5 +1,5 @@
 use hss::{
-    bench_message, default_seed, measure_time, signed_message_size, HssScheme,
+    default_seed, measure_time, signed_message_size, HssScheme, BENCH_MESSAGE,
     DEFAULT_PARAM_SET_NAME,
 };
 use std::env;
@@ -10,19 +10,11 @@ fn print_timing(label: &str, duration: Duration) {
     println!("Time to {label} (ns): {}", duration.as_nanos());
 }
 
-fn parse_usize_env(name: &str, default: usize) -> usize {
-    env::var(name)
-        .ok()
-        .and_then(|value| value.parse::<usize>().ok())
-        .unwrap_or(default)
-}
-
 fn main() {
     let param_set_name =
         env::var("PARAM_SET").unwrap_or_else(|_| DEFAULT_PARAM_SET_NAME.to_owned());
-    let message_size = parse_usize_env("MESSAGE_SIZE", 1024);
     let scheme = HssScheme::from_param_set_name(&param_set_name).expect("valid HSS parameter set");
-    let message = bench_message(message_size);
+    let message: &[u8] = &BENCH_MESSAGE;
     let seed = default_seed();
 
     println!("=== HSS ({}) Benchmark ===\n", scheme.param_set_name());

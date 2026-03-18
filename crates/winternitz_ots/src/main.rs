@@ -1,13 +1,15 @@
 use std::alloc::System;
 use std::time::Duration;
-use winternitz_ots::{measure_time, memory, SignatureScheme, TrackingAllocator, WINTERNITZ_OTS};
+use winternitz_ots::{
+    measure_time, memory, SignatureScheme, TrackingAllocator, BENCH_MESSAGE, WINTERNITZ_OTS,
+};
 
 static SYSTEM_ALLOC: System = System;
 
 #[global_allocator]
 static GLOBAL: TrackingAllocator<System> = TrackingAllocator::new(&SYSTEM_ALLOC);
 
-const MESSAGE: &[u8] = b"This is a test message for Winternitz OTS signature scheme benchmarking";
+const MESSAGE: &[u8] = &BENCH_MESSAGE;
 
 fn print_timing(label: &str, duration: Duration) {
     println!("Time to {label}: {duration:?}");

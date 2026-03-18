@@ -2,8 +2,10 @@ use leansig::serialization::Serializable;
 use leansig::signature::SignatureScheme;
 use leansig::signature::SignatureSchemeSecretKey;
 use leansig::MESSAGE_LENGTH;
-use rand::Rng as _;
 use std::time::{Duration, Instant};
+
+/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
+pub use pq_config::BENCH_MESSAGE;
 
 /// Measure wall-clock time of a closure.
 pub fn measure_time<T, F>(operation: F) -> (T, Duration)
@@ -53,7 +55,11 @@ pub fn run_and_print<S: SignatureScheme>(name: &str) {
     let epoch: u32 = 1;
     prepare_sk_for_epoch(&mut sk, epoch);
 
-    let message: [u8; MESSAGE_LENGTH] = rng.random();
+    // Use the canonical BENCH_MESSAGE (32 bytes = SHA-256 digest).
+    // If MESSAGE_LENGTH differs from 32, we pad/truncate to fit.
+    let mut message = [0u8; MESSAGE_LENGTH];
+    let copy_len = BENCH_MESSAGE.len().min(MESSAGE_LENGTH);
+    message[..copy_len].copy_from_slice(&BENCH_MESSAGE[..copy_len]);
 
     // --- Signing ---
     println!("\n--- Signing ---");

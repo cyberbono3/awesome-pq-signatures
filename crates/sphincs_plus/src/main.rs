@@ -1,6 +1,6 @@
 use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
 use sphincs_plus::{
-    measure_time, memory, signature_size, SignatureScheme, TrackingAllocator,
+    measure_time, memory, signature_size, SignatureScheme, TrackingAllocator, BENCH_MESSAGE,
     SPHINCS_PLUS_SHAKE_128F_SIMPLE,
 };
 use std::alloc::System;
@@ -11,7 +11,7 @@ static SYSTEM_ALLOC: System = System;
 #[global_allocator]
 static GLOBAL: TrackingAllocator<System> = TrackingAllocator::new(&SYSTEM_ALLOC);
 
-const MESSAGE: &[u8] = b"This is a test message for SPHINCS+ signature scheme benchmarking";
+const MESSAGE: &[u8] = &BENCH_MESSAGE;
 
 fn print_timing(label: &str, duration: Duration) {
     println!("Time to {label}: {duration:?}");

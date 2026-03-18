@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/pq_config",
     "crates/falcon",
     "crates/dilithium",
     "crates/lamport_ots",

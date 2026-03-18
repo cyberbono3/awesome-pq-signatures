@@ -4,9 +4,12 @@ use std::str::FromStr;
 use std::time::{Duration, Instant};
 
 use rustcrypto_xmss::{
-    DetachedSignature, KeyPair, XmssMtSha2_20_2_256, XmssMtSha2_20_4_256,
-    XmssMtSha2_40_2_256, XmssParameter,
+    DetachedSignature, KeyPair, XmssMtSha2_20_2_256, XmssMtSha2_20_4_256, XmssMtSha2_40_2_256,
+    XmssParameter,
 };
+
+/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
+pub use pq_config::BENCH_MESSAGE;
 
 pub const DEFAULT_XMSSMT_PARAM_SET: XmssmtParamSet = XmssmtParamSet::Sha2_20_2_256;
 pub const DIVAN_BENCH_MESSAGE_SIZES: [usize; 2] = [32, 1024];
@@ -136,21 +139,11 @@ impl XmssmtKeyPairInner {
         }
     }
 
-    fn verify_detached(
-        &self,
-        message: &[u8],
-        signature: &[u8],
-    ) -> Result<bool, XmssmtError> {
+    fn verify_detached(&self, message: &[u8], signature: &[u8]) -> Result<bool, XmssmtError> {
         match self {
-            Self::Sha2_20_2(keypair) => {
-                verify_detached_with_keypair(keypair, message, signature)
-            }
-            Self::Sha2_20_4(keypair) => {
-                verify_detached_with_keypair(keypair, message, signature)
-            }
-            Self::Sha2_40_2(keypair) => {
-                verify_detached_with_keypair(keypair, message, signature)
-            }
+            Self::Sha2_20_2(keypair) => verify_detached_with_keypair(keypair, message, signature),
+            Self::Sha2_20_4(keypair) => verify_detached_with_keypair(keypair, message, signature),
+            Self::Sha2_40_2(keypair) => verify_detached_with_keypair(keypair, message, signature),
         }
     }
 }
@@ -192,11 +185,7 @@ impl XmssmtKeyPair {
     ///
     /// Returns an error if the signature belongs to a different parameter set
     /// or detached signature decoding fails.
-    pub fn verify(
-        &self,
-        message: &[u8],
-        signature: &XmssmtSignature,
-    ) -> Result<bool, XmssmtError> {
+    pub fn verify(&self, message: &[u8], signature: &XmssmtSignature) -> Result<bool, XmssmtError> {
         if signature.param_set != self.param_set {
             return Err(XmssmtError::MismatchedParamSet {
                 expected: self.param_set,
@@ -369,10 +358,7 @@ impl XmssmtScheme {
     ///
     /// Returns an error if any step of the key generation, signing, or
     /// verification flow fails.
-    pub fn benchmark_report(
-        self,
-        message: &[u8],
-    ) -> Result<XmssmtBenchmarkReport, XmssmtError> {
+    pub fn benchmark_report(self, message: &[u8]) -> Result<XmssmtBenchmarkReport, XmssmtError> {
         let display_name = self.display_name();
         let (keypair_result, keygen_duration) = measure_time(|| self.keypair());
         let mut keypair = keypair_result?;
@@ -464,7 +450,7 @@ impl Error for XmssmtError {}
 #[cfg(test)]
 mod tests {
     use super::{XmssmtParamSet, XmssmtScheme};
-    use rustcrypto_xmss::{XmssMtSha2_20_2_256, XmssSha2_20_256, XmssParameter};
+    use rustcrypto_xmss::{XmssMtSha2_20_2_256, XmssParameter, XmssSha2_20_256};
 
     #[test]
     fn sign_and_verify_roundtrip() {

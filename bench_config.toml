@@ -1,0 +1,9 @@
+# Global benchmark configuration for all post-quantum signature crates.
+#
+# Every DSA crate in this workspace signs the same message so that
+# benchmark results are directly comparable.  The raw string below is
+# SHA-256-hashed at build time to produce a fixed 32-byte message
+# digest that is used as the canonical signing input.
+
+[bench]
+message = "awesome-pq-signatures benchmark message"
