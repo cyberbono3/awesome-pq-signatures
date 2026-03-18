@@ -1,17 +1,17 @@
 use std::env;
 use std::time::Instant;
 
-use xmss_bench::{benchmark_message, XmssParamSet, XmssScheme};
+use xmssmt_bench::{benchmark_message, XmssmtParamSet, XmssmtScheme};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let operation = env::var("OPERATION").unwrap_or_else(|_| "keygen".to_owned());
     let param_set = env::var("PARAM_SET")
-        .unwrap_or_else(|_| "XMSS-SHA2_10_256".to_owned())
-        .parse::<XmssParamSet>()?;
+        .unwrap_or_else(|_| "XMSSMT-SHA2_20/2_256".to_owned())
+        .parse::<XmssmtParamSet>()?;
     let message_size = parse_usize_env("MSG_SIZE", 32)?;
     let iterations = parse_usize_env("ITERATIONS", 100)?;
 
-    let scheme = XmssScheme::new(param_set);
+    let scheme = XmssmtScheme::new(param_set);
     let message = benchmark_message(message_size, 0xA5);
 
     let total = match operation.as_str() {
@@ -31,53 +31,52 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn bench_keygen(
-    scheme: XmssScheme,
+    scheme: XmssmtScheme,
     iterations: usize,
 ) -> Result<std::time::Duration, Box<dyn std::error::Error>> {
     let start = Instant::now();
     for _ in 0..iterations {
-        let keypair = scheme.keypair()?;
-        std::hint::black_box(keypair);
+        let kp = scheme.keypair()?;
+        std::hint::black_box(kp);
     }
     Ok(start.elapsed())
 }
 
 fn bench_sign(
-    scheme: XmssScheme,
+    scheme: XmssmtScheme,
     message: &[u8],
     iterations: usize,
 ) -> Result<std::time::Duration, Box<dyn std::error::Error>> {
     let max_signatures = usize::try_from(scheme.max_signatures_per_key()?)?;
     let key_count = iterations.max(1).div_ceil(max_signatures.max(1));
 
-    let mut secret_keys = Vec::with_capacity(key_count);
+    let mut keypairs = Vec::with_capacity(key_count);
     for _ in 0..key_count {
-        let (_, secret_key) = scheme.keypair()?;
-        secret_keys.push(secret_key);
+        keypairs.push(scheme.keypair()?);
     }
 
     let start = Instant::now();
     for i in 0..iterations {
         let key_index = i / max_signatures.max(1);
-        let signature = scheme.sign(message, &mut secret_keys[key_index])?;
+        let signature = keypairs[key_index].sign(message)?;
         std::hint::black_box(signature);
     }
     Ok(start.elapsed())
 }
 
 fn bench_verify(
-    scheme: XmssScheme,
+    scheme: XmssmtScheme,
     message: &[u8],
     iterations: usize,
 ) -> Result<std::time::Duration, Box<dyn std::error::Error>> {
-    let (public_key, mut secret_key) = scheme.keypair()?;
-    let signature = scheme.sign(message, &mut secret_key)?;
+    let mut kp = scheme.keypair()?;
+    let signature = kp.sign(message)?;
 
     let start = Instant::now();
     for _ in 0..iterations {
-        let is_valid = scheme.verify(message, &signature, &public_key)?;
+        let is_valid = kp.verify(message, &signature)?;
         if !is_valid {
-            return Err("xmss verification failed during benchmark loop".into());
+            return Err("xmssmt verification failed during benchmark loop".into());
         }
         std::hint::black_box(is_valid);
     }

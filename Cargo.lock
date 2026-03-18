@@ -2907,8 +2907,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "xmssmt"
+name = "xmssmt-bench"
 version = "0.1.0"
+dependencies = [
+ "divan",
+ "rand 0.10.0",
+ "xmss",
+]
 
 [[package]]
 name = "zerocopy"
