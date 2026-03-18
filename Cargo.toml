@@ -10,11 +10,6 @@ members = [
     "crates/xmss",
     "crates/xmssmt",
     "crates/sphincs_plus",
-    "crates/sphincs",
-    "crates/hors",
-    "crates/horst",
-    "crates/fors",
-    "crates/cross",
     "crates/sqisign",
     "crates/leansig",
 ]
