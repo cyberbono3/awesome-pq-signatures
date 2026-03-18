@@ -33,9 +33,7 @@ impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
     }
 }
 
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
-    for TrackingAllocator<A>
-{
+unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ptr = unsafe { self.inner.alloc(layout) };
         if !ptr.is_null() {
@@ -74,7 +72,7 @@ fn track_dealloc(size: usize) {
 }
 
 pub mod memory {
-    use super::{ALLOCATED, BASELINE, Ordering, PEAK_ALLOCATED};
+    use super::{Ordering, ALLOCATED, BASELINE, PEAK_ALLOCATED};
 
     pub fn reset_peak() {
         let current = ALLOCATED.load(Ordering::SeqCst);
@@ -180,10 +178,7 @@ impl CrossScheme {
     ///
     /// Returns an error if the native CROSS key generation call fails or if
     /// the native runtime lock is poisoned.
-    pub fn keypair_with_seed(
-        &self,
-        seed: CrossSeed,
-    ) -> Result<CrossKeyPair, CrossError> {
+    pub fn keypair_with_seed(&self, seed: CrossSeed) -> Result<CrossKeyPair, CrossError> {
         let profile = DeterministicRngProfile {
             seed,
             domain_separator: KEYGEN_PROFILE.domain_separator,
@@ -257,11 +252,7 @@ impl CrossScheme {
     }
 
     #[must_use]
-    pub fn sizes(
-        &self,
-        keypair: &CrossKeyPair,
-        signature: &CrossSignature,
-    ) -> CrossSizes {
+    pub fn sizes(&self, keypair: &CrossKeyPair, signature: &CrossSignature) -> CrossSizes {
         CrossSizes {
             public_key: self.public_key_size(keypair),
             secret_key: self.secret_key_size(keypair),
@@ -279,10 +270,7 @@ impl NativeCross {
         }
     }
 
-    fn with_rng<T, F>(
-        profile: DeterministicRngProfile,
-        operation: F,
-    ) -> Result<T, CrossError>
+    fn with_rng<T, F>(profile: DeterministicRngProfile, operation: F) -> Result<T, CrossError>
     where
         F: FnOnce(&Self) -> Result<T, CrossError>,
     {
@@ -297,9 +285,7 @@ impl NativeCross {
         let dimensions = Self::dimensions();
         let mut public_key = vec![0_u8; dimensions.public_key];
         let mut secret_key = vec![0_u8; dimensions.secret_key];
-        let rc = unsafe {
-            crypto_sign_keypair(public_key.as_mut_ptr(), secret_key.as_mut_ptr())
-        };
+        let rc = unsafe { crypto_sign_keypair(public_key.as_mut_ptr(), secret_key.as_mut_ptr()) };
 
         if rc == 0 {
             Ok(CrossKeyPair {
@@ -311,10 +297,7 @@ impl NativeCross {
         }
     }
 
-    fn sign(
-        keypair: &CrossKeyPair,
-        message: &[u8],
-    ) -> Result<CrossSignature, CrossError> {
+    fn sign(keypair: &CrossKeyPair, message: &[u8]) -> Result<CrossSignature, CrossError> {
         let dimensions = Self::dimensions();
         let message_len = ulonglong_len(message.len())?;
         let mut signed_message =
@@ -400,11 +383,7 @@ where
 fn init_rng(profile: &DeterministicRngProfile) {
     let seed_len = u32::try_from(CROSS_SEED_BYTES).expect("cross seed length fits in u32");
     unsafe {
-        cross_rs_init_rng(
-            profile.seed.as_ptr(),
-            seed_len,
-            profile.domain_separator,
-        );
+        cross_rs_init_rng(profile.seed.as_ptr(), seed_len, profile.domain_separator);
     }
 }
 
@@ -427,10 +406,7 @@ fn extract_signature(
         .ok_or(CrossError::InvalidSignedMessage)
 }
 
-fn combine_signed_message(
-    message: &[u8],
-    signature: &CrossSignature,
-) -> Vec<u8> {
+fn combine_signed_message(message: &[u8], signature: &CrossSignature) -> Vec<u8> {
     let mut signed_message =
         Vec::with_capacity(signed_message_size(message.len(), signature.0.len()));
     signed_message.extend_from_slice(message);
@@ -473,9 +449,7 @@ unsafe extern "C" {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        bench_message, signed_message_size, BENCH_MESSAGE_BYTE, CROSS,
-    };
+    use super::{bench_message, signed_message_size, BENCH_MESSAGE_BYTE, CROSS};
 
     #[test]
     fn bench_message_uses_expected_fill_byte() {
@@ -494,10 +468,9 @@ mod tests {
         let scheme = CROSS;
         let message = b"cross";
 
-        let keypair =
-            scheme
-                .benchmark_keypair()
-                .expect("keypair generation should succeed");
+        let keypair = scheme
+            .benchmark_keypair()
+            .expect("keypair generation should succeed");
         let signature = scheme
             .sign_message(&keypair, message)
             .expect("signing should succeed");
