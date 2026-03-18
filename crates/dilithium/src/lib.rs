@@ -23,7 +23,9 @@ impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
     }
 }
 
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
+unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
+    for TrackingAllocator<A>
+{
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ptr = unsafe { self.inner.alloc(layout) };
         if !ptr.is_null() {
@@ -178,8 +180,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, default_seed, signed_message_size, SignatureScheme, BENCH_MESSAGE_BYTE,
-        ML_DSA_65,
+        bench_message, default_seed, signed_message_size, SignatureScheme,
+        BENCH_MESSAGE_BYTE, ML_DSA_65,
     };
 
     #[test]

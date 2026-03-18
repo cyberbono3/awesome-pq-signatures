@@ -4,7 +4,8 @@ use std::time::Instant;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let operation = env::var("OPERATION").unwrap_or_else(|_| "keygen".to_owned());
+    let operation =
+        env::var("OPERATION").unwrap_or_else(|_| "keygen".to_owned());
     let iterations = parse_usize_env("ITERATIONS", 100)?;
     let deterministic = parse_bool_env("DETERMINISTIC_RNG", true);
 
@@ -100,7 +101,10 @@ fn random_seed(label: &str) -> u64 {
     mix ^ seed_from_str(label)
 }
 
-fn parse_usize_env(name: &str, default: usize) -> Result<usize, Box<dyn std::error::Error>> {
+fn parse_usize_env(
+    name: &str,
+    default: usize,
+) -> Result<usize, Box<dyn std::error::Error>> {
     match env::var(name) {
         Ok(value) => Ok(value.parse::<usize>()?),
         Err(_) => Ok(default),

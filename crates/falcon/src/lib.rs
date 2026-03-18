@@ -24,7 +24,9 @@ impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
     }
 }
 
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
+unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
+    for TrackingAllocator<A>
+{
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ptr = unsafe { self.inner.alloc(layout) };
         if !ptr.is_null() {
@@ -83,7 +85,11 @@ pub trait SignatureScheme {
 
     fn algorithm_name(&self) -> &'static str;
     fn keypair(&self) -> (Self::PublicKey, Self::SecretKey);
-    fn sign(&self, message: &[u8], secret_key: &Self::SecretKey) -> Self::SignedMessage;
+    fn sign(
+        &self,
+        message: &[u8],
+        secret_key: &Self::SecretKey,
+    ) -> Self::SignedMessage;
     fn open(
         &self,
         signed_message: &Self::SignedMessage,
@@ -109,7 +115,11 @@ impl SignatureScheme for Falcon512Scheme {
         falcon512::keypair()
     }
 
-    fn sign(&self, message: &[u8], secret_key: &Self::SecretKey) -> Self::SignedMessage {
+    fn sign(
+        &self,
+        message: &[u8],
+        secret_key: &Self::SecretKey,
+    ) -> Self::SignedMessage {
         falcon512::sign(message, secret_key)
     }
 
@@ -126,7 +136,10 @@ pub fn bench_message(size: usize) -> Vec<u8> {
     vec![BENCH_MESSAGE_BYTE; size]
 }
 
-pub fn signature_size<S: SignedMessage>(signed_message: &S, message_len: usize) -> usize {
+pub fn signature_size<S: SignedMessage>(
+    signed_message: &S,
+    message_len: usize,
+) -> usize {
     signed_message.as_bytes().len().saturating_sub(message_len)
 }
 
@@ -154,7 +167,9 @@ mod tests {
     fn signature_size_subtracts_message_length() {
         struct FakeSigned(Vec<u8>);
         impl pqcrypto_traits::sign::SignedMessage for FakeSigned {
-            fn from_bytes(bytes: &[u8]) -> Result<Self, pqcrypto_traits::Error> {
+            fn from_bytes(
+                bytes: &[u8],
+            ) -> Result<Self, pqcrypto_traits::Error> {
                 Ok(Self(bytes.to_vec()))
             }
 

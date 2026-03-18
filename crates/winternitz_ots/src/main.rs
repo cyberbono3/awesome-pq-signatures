@@ -1,13 +1,15 @@
 use std::alloc::System;
 use std::time::Duration;
 use winternitz_ots::{
-    measure_time, memory, SignatureScheme, TrackingAllocator, BENCH_MESSAGE, WINTERNITZ_OTS,
+    measure_time, memory, SignatureScheme, TrackingAllocator, BENCH_MESSAGE,
+    WINTERNITZ_OTS,
 };
 
 static SYSTEM_ALLOC: System = System;
 
 #[global_allocator]
-static GLOBAL: TrackingAllocator<System> = TrackingAllocator::new(&SYSTEM_ALLOC);
+static GLOBAL: TrackingAllocator<System> =
+    TrackingAllocator::new(&SYSTEM_ALLOC);
 
 const MESSAGE: &[u8] = &BENCH_MESSAGE;
 
@@ -28,14 +30,16 @@ fn main() {
 
     println!("\n--- Signing ---");
     memory::reset_peak();
-    let (signature, sign_duration) = measure_time(|| scheme.sign(&keypair, MESSAGE));
+    let (signature, sign_duration) =
+        measure_time(|| scheme.sign(&keypair, MESSAGE));
     print_timing("sign", sign_duration);
     let sign_peak_mem = memory::peak_bytes();
     println!("Peak memory during signing: {sign_peak_mem} bytes");
 
     println!("\n--- Verification ---");
     memory::reset_peak();
-    let (verified, verify_duration) = measure_time(|| scheme.verify(&signature));
+    let (verified, verify_duration) =
+        measure_time(|| scheme.verify(&signature));
     print_timing("verify", verify_duration);
     let verify_peak_mem = memory::peak_bytes();
     println!("Peak memory during verification: {verify_peak_mem} bytes");
