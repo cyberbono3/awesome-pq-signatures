@@ -4,8 +4,8 @@ use std::str::FromStr;
 use std::time::{Duration, Instant};
 
 use xmss::{
-    DetachedSignature, KeyPair, SigningKey, VerifyingKey, XmssParameter, XmssSha2_10_256,
-    XmssSha2_16_256, XmssSha2_20_256,
+    DetachedSignature, KeyPair, SigningKey, VerifyingKey, XmssParameter,
+    XmssSha2_10_256, XmssSha2_16_256, XmssSha2_20_256,
 };
 
 pub const DEFAULT_XMSS_PARAM_SET: XmssParamSet = XmssParamSet::XmssSha2_10_256;
@@ -313,15 +313,13 @@ impl XmssScheme {
         let display_name = self.display_name();
         let (keypair, keygen_duration) = measure_time(|| self.keypair());
         let (public_key, mut secret_key) = keypair?;
-        let (signature_result, sign_duration) = measure_time(|| {
-            self.sign(message, &mut secret_key)
-        });
+        let (signature_result, sign_duration) =
+            measure_time(|| self.sign(message, &mut secret_key));
         let signature = signature_result?;
 
         let secret_key = secret_key;
-        let (verified_result, verify_duration) = measure_time(|| {
-            self.verify(message, &signature, &public_key)
-        });
+        let (verified_result, verify_duration) =
+            measure_time(|| self.verify(message, &signature, &public_key));
         let verified = verified_result?;
 
         Ok(XmssBenchmarkReport {
@@ -445,7 +443,9 @@ impl fmt::Display for XmssError {
                     got.as_str()
                 )
             }
-            Self::KeygenFailed(msg) => write!(f, "XMSS key generation failed: {msg}"),
+            Self::KeygenFailed(msg) => {
+                write!(f, "XMSS key generation failed: {msg}")
+            }
             Self::SignFailed(msg) => write!(f, "XMSS signing failed: {msg}"),
             Self::DeserializationFailed(msg) => {
                 write!(f, "XMSS deserialization failed: {msg}")
@@ -465,7 +465,8 @@ mod tests {
         let scheme = XmssScheme::new(XmssParamSet::XmssSha2_10_256);
         let message = b"xmss-roundtrip-test";
 
-        let (public_key, mut secret_key) = scheme.keypair().expect("keypair must succeed");
+        let (public_key, mut secret_key) =
+            scheme.keypair().expect("keypair must succeed");
         let signature = scheme
             .sign(message, &mut secret_key)
             .expect("sign must succeed");
@@ -481,7 +482,8 @@ mod tests {
     fn wrong_message_fails_verification() {
         let scheme = XmssScheme::new(XmssParamSet::XmssSha2_10_256);
 
-        let (public_key, mut secret_key) = scheme.keypair().expect("keypair must succeed");
+        let (public_key, mut secret_key) =
+            scheme.keypair().expect("keypair must succeed");
         let signature = scheme
             .sign(b"message-a", &mut secret_key)
             .expect("sign must succeed");
