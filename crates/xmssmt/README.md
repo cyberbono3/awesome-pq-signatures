@@ -1,60 +1,35 @@
-# XMSSMT
+# XMSS^MT
 
-XMSSMT benchmark workspace wired to the upstream
-[`thomwiggers/xmss-rs`](https://github.com/thomwiggers/xmss-rs) implementation.
+Multi-tree hash-based signature scheme (RFC 8391), using the [RustCrypto `xmss`](https://crates.io/crates/xmss) pure Rust implementation.
 
 ## Backend
 
-- Algorithm: `XMSSMT`
-- Backend: `thomwiggers/xmss-rs` (C reference backend via FFI)
-- Parameter sets:
-  - `XMSSMT-L1` (`xmss_rs::level1`)
-  - `XMSSMT-L3` (`xmss_rs::level3`)
-  - `XMSSMT-L5` (`xmss_rs::level5`)
-- Library crate entry: `src/lib.rs`
+- Library backend: [`xmss`](https://crates.io/crates/xmss) (pure Rust, RustCrypto)
+- Rust wrapper: `src/lib.rs`
+- Current supported parameter sets:
+  - `XMSSMT-SHA2_20/2_256`
+  - `XMSSMT-SHA2_20/4_256`
+  - `XMSSMT-SHA2_40/2_256`
 
 Notes:
-- Signing is stateful: secret keys are mutated by `sign`.
-- The first build fetches `xmss-rs` from GitHub and compiles its C backend.
-- `libcrypto` must be available on the system linker path.
+- XMSS^MT is stateful; each signature updates the secret key state.
+- No C dependencies or OpenSSL required — pure Rust implementation.
 
 ## Project layout
 
-- `src/lib.rs`: reusable scheme model + timing/allocation helpers
-- `src/main.rs`: one-shot benchmark report binary (`xmssmt-bench`)
-- `benches/xmssmt_divan.rs`: Divan microbench suite
+- `src/lib.rs`: safe Rust wrapper (`XmssmtScheme`, keypair/sign/verify, sizes, parameter parsing)
+- `src/main.rs`: executable benchmark summary for keygen/sign/verify
+- `src/bin/xmssmt_bench.rs`: bench command used by `bench/run.sh`
+- `benches/xmssmt_divan.rs`: `divan` benchmark suite
 
-## Run (`src/main.rs`)
+## Run
 
 ```bash
-cargo run -p xmssmt --release --bin xmssmt-bench
+cargo run --release --bin xmssmt
 ```
 
 Environment overrides:
 
-- `PARAM_SET` (default `XMSSMT-L1`)
-- `MESSAGE_SIZE` (default `1024`)
-
-## Divan benchmark
-
-Smoke run:
-
-```bash
-cargo bench -p xmssmt --bench xmssmt_divan -- --test
-```
-
-Full run:
-
-```bash
-cargo bench -p xmssmt --bench xmssmt_divan
-```
-
-## Strategy (same pattern as Dilithium/Falcon)
-
-- Use `src/main.rs` for a human-readable single-run benchmark report.
-- Use Divan for stable microbench trends on `keygen`, `sign`, and `verify`.
-- Record param set, message size, and environment metadata with each benchmark capture.
-
-## Upstream reference
-
-[xmss-rs](https://github.com/thomwiggers/xmss-rs)
+- `XMSSMT_PARAM_SET` (default `XMSSMT-SHA2_20/2_256`)
+- `XMSSMT_MESSAGE_SIZE` (default `1024`)
+- `XMSSMT_ITERATIONS` (default `100`)
