@@ -19,9 +19,14 @@ where
 
 /// Advance secret-key preparation until `epoch` is inside the prepared
 /// interval.
-pub fn prepare_sk_for_epoch<SK: SignatureSchemeSecretKey>(sk: &mut SK, epoch: u32) {
+pub fn prepare_sk_for_epoch<SK: SignatureSchemeSecretKey>(
+    sk: &mut SK,
+    epoch: u32,
+) {
     let mut iterations = 0u32;
-    while !sk.get_prepared_interval().contains(&(epoch as u64)) && iterations < epoch {
+    while !sk.get_prepared_interval().contains(&(epoch as u64))
+        && iterations < epoch
+    {
         sk.advance_preparation();
         iterations += 1;
     }
@@ -47,8 +52,9 @@ pub fn run_and_print<S: SignatureScheme>(name: &str) {
 
     // --- Key Generation ---
     println!("--- Key Generation ---");
-    let ((pk, mut sk), keygen_duration) =
-        measure_time(|| S::key_gen(&mut rng, activation_epoch, num_active_epochs));
+    let ((pk, mut sk), keygen_duration) = measure_time(|| {
+        S::key_gen(&mut rng, activation_epoch, num_active_epochs)
+    });
     print_timing("generate keys", keygen_duration);
 
     // Pick a low epoch so preparation is fast
@@ -63,13 +69,15 @@ pub fn run_and_print<S: SignatureScheme>(name: &str) {
 
     // --- Signing ---
     println!("\n--- Signing ---");
-    let (sig_result, sign_duration) = measure_time(|| S::sign(&sk, epoch, &message));
+    let (sig_result, sign_duration) =
+        measure_time(|| S::sign(&sk, epoch, &message));
     print_timing("sign", sign_duration);
     let sig = sig_result.expect("signing should succeed");
 
     // --- Verification ---
     println!("\n--- Verification ---");
-    let (is_valid, verify_duration) = measure_time(|| S::verify(&pk, epoch, &message, &sig));
+    let (is_valid, verify_duration) =
+        measure_time(|| S::verify(&pk, epoch, &message, &sig));
     print_timing("verify", verify_duration);
 
     if is_valid {

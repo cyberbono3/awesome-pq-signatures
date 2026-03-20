@@ -1,13 +1,14 @@
 use dilithium::{
-    bench_message, default_seed, memory, SignatureScheme, TrackingAllocator, BENCH_MESSAGE_SIZES,
-    ML_DSA_65,
+    bench_message, default_seed, memory, SignatureScheme, TrackingAllocator,
+    BENCH_MESSAGE_SIZES, ML_DSA_65,
 };
 use divan::{black_box, AllocProfiler, Bencher};
 
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
 
 #[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> = TrackingAllocator::new(&DIVAN_ALLOC);
+static ALLOC: TrackingAllocator<AllocProfiler> =
+    TrackingAllocator::new(&DIVAN_ALLOC);
 
 const CONTEXT: &[u8] = &[];
 
@@ -31,8 +32,14 @@ fn sign(bencher: Bencher, message_size: usize) {
     bencher.bench(|| {
         black_box(
             scheme
-                .sign(black_box(&keypair), black_box(&message), black_box(CONTEXT))
-                .expect("dilithium sign benchmark input should always be valid"),
+                .sign(
+                    black_box(&keypair),
+                    black_box(&message),
+                    black_box(CONTEXT),
+                )
+                .expect(
+                    "dilithium sign benchmark input should always be valid",
+                ),
         );
     });
 }

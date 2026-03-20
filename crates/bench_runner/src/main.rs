@@ -12,9 +12,8 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
-use std::time::{Duration, Instant};
 
-use pq_bench::BENCH_MESSAGE;
+use pq_bench::{format_ns, measure_time, median, BENCH_MESSAGE};
 
 // ---------------------------------------------------------------------------
 // Common types
@@ -47,33 +46,6 @@ trait DsaBenchmark {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-fn median(values: &mut [u128]) -> u128 {
-    values.sort_unstable();
-    let n = values.len();
-    if n == 0 {
-        return 0;
-    }
-    if n % 2 == 1 {
-        values[n / 2]
-    } else {
-        (values[n / 2 - 1] + values[n / 2]) / 2
-    }
-}
-
-fn format_ns(ns: u128) -> String {
-    format!("{:.3}ms", ns as f64 / 1e6)
-}
-
-fn time_op<T, F: FnOnce() -> T>(f: F) -> (T, Duration) {
-    let start = Instant::now();
-    let val = f();
-    (val, start.elapsed())
-}
-
-// ---------------------------------------------------------------------------
 // In-process adapters (pure Rust)
 // ---------------------------------------------------------------------------
 
@@ -88,9 +60,10 @@ impl DsaBenchmark for DilithiumAdapter {
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         use dilithium::{default_seed, SignatureScheme as _, ML_DSA_65};
         let seed = default_seed();
-        let (kp, kg) = time_op(|| ML_DSA_65.keypair(&seed));
-        let (sig, s) = time_op(|| ML_DSA_65.sign(&kp, message, &[]).expect("sign"));
-        let (_, v) = time_op(|| ML_DSA_65.verify(&kp, message, &[], &sig));
+        let (kp, kg) = measure_time(|| ML_DSA_65.keypair(&seed));
+        let (sig, s) =
+            measure_time(|| ML_DSA_65.sign(&kp, message, &[]).expect("sign"));
+        let (_, v) = measure_time(|| ML_DSA_65.verify(&kp, message, &[], &sig));
         Ok(BenchRun {
             keygen_ns: kg.as_nanos(),
             sign_ns: s.as_nanos(),
@@ -113,9 +86,9 @@ impl DsaBenchmark for FalconAdapter {
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         use falcon::{signature_size, SignatureScheme as _, FALCON512};
         use pqcrypto_traits::sign::{PublicKey, SecretKey};
-        let ((pk, sk), kg) = time_op(|| FALCON512.keypair());
-        let (sm, s) = time_op(|| FALCON512.sign(message, &sk));
-        let (_, v) = time_op(|| FALCON512.open(&sm, &pk));
+        let ((pk, sk), kg) = measure_time(|| FALCON512.keypair());
+        let (sm, s) = measure_time(|| FALCON512.sign(message, &sk));
+        let (_, v) = measure_time(|| FALCON512.open(&sm, &pk));
         Ok(BenchRun {
             keygen_ns: kg.as_nanos(),
             sign_ns: s.as_nanos(),
@@ -137,10 +110,16 @@ impl DsaBenchmark for SphincsPlusAdapter {
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         use pqcrypto_traits::sign::{PublicKey, SecretKey};
-        use sphincs_plus::{signature_size, SignatureScheme as _, SPHINCS_PLUS_SHAKE_128F_SIMPLE};
-        let ((pk, sk), kg) = time_op(|| SPHINCS_PLUS_SHAKE_128F_SIMPLE.keypair());
-        let (sm, s) = time_op(|| SPHINCS_PLUS_SHAKE_128F_SIMPLE.sign(message, &sk));
-        let (_, v) = time_op(|| SPHINCS_PLUS_SHAKE_128F_SIMPLE.open(&sm, &pk));
+        use sphincs_plus::{
+            signature_size, SignatureScheme as _,
+            SPHINCS_PLUS_SHAKE_128F_SIMPLE,
+        };
+        let ((pk, sk), kg) =
+            measure_time(|| SPHINCS_PLUS_SHAKE_128F_SIMPLE.keypair());
+        let (sm, s) =
+            measure_time(|| SPHINCS_PLUS_SHAKE_128F_SIMPLE.sign(message, &sk));
+        let (_, v) =
+            measure_time(|| SPHINCS_PLUS_SHAKE_128F_SIMPLE.open(&sm, &pk));
         Ok(BenchRun {
             keygen_ns: kg.as_nanos(),
             sign_ns: s.as_nanos(),
@@ -162,9 +141,10 @@ impl DsaBenchmark for MayoAdapter {
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         use mayo::MAYO;
-        let (kp, kg) = time_op(|| MAYO.benchmark_keypair());
-        let (sig, s) = time_op(|| MAYO.sign_message(&kp, message).expect("sign"));
-        let (_, v) = time_op(|| MAYO.verify_message(&kp, message, &sig));
+        let (kp, kg) = measure_time(|| MAYO.benchmark_keypair());
+        let (sig, s) =
+            measure_time(|| MAYO.sign_message(&kp, message).expect("sign"));
+        let (_, v) = measure_time(|| MAYO.verify_message(&kp, message, &sig));
         let sz = MAYO.sizes(&kp, &sig);
         Ok(BenchRun {
             keygen_ns: kg.as_nanos(),
@@ -187,11 +167,15 @@ impl DsaBenchmark for LmsAdapter {
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         use lms::{default_seed, LmsScheme, DEFAULT_PARAM_SET_NAME};
-        let scheme =
-            LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME).map_err(|e| format!("{e:?}"))?;
-        let ((pk, mut sk), kg) = time_op(|| scheme.keypair_with_seed(default_seed()).expect("kg"));
-        let (sig, s) = time_op(|| scheme.sign(message, &mut sk).expect("sign"));
-        let (_, v) = time_op(|| scheme.verify(message, &sig, &pk).expect("verify"));
+        let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+            .map_err(|e| format!("{e:?}"))?;
+        let ((pk, mut sk), kg) = measure_time(|| {
+            scheme.keypair_with_seed(default_seed()).expect("kg")
+        });
+        let (sig, s) =
+            measure_time(|| scheme.sign(message, &mut sk).expect("sign"));
+        let (_, v) =
+            measure_time(|| scheme.verify(message, &sig, &pk).expect("verify"));
         Ok(BenchRun {
             keygen_ns: kg.as_nanos(),
             sign_ns: s.as_nanos(),
@@ -213,11 +197,15 @@ impl DsaBenchmark for HssAdapter {
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         use hss::{default_seed, HssScheme, DEFAULT_PARAM_SET_NAME};
-        let scheme =
-            HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME).map_err(|e| format!("{e:?}"))?;
-        let ((pk, mut sk), kg) = time_op(|| scheme.keypair_with_seed(default_seed()).expect("kg"));
-        let (sig, s) = time_op(|| scheme.sign(message, &mut sk).expect("sign"));
-        let (_, v) = time_op(|| scheme.verify(message, &sig, &pk).expect("verify"));
+        let scheme = HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+            .map_err(|e| format!("{e:?}"))?;
+        let ((pk, mut sk), kg) = measure_time(|| {
+            scheme.keypair_with_seed(default_seed()).expect("kg")
+        });
+        let (sig, s) =
+            measure_time(|| scheme.sign(message, &mut sk).expect("sign"));
+        let (_, v) =
+            measure_time(|| scheme.verify(message, &sig, &pk).expect("verify"));
         Ok(BenchRun {
             keygen_ns: kg.as_nanos(),
             sign_ns: s.as_nanos(),
@@ -239,9 +227,11 @@ impl DsaBenchmark for XmssAdapter {
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         let scheme = xmss_bench::default_benchmark_scheme();
-        let ((pk, mut sk), kg) = time_op(|| scheme.keypair().expect("kg"));
-        let (sig, s) = time_op(|| scheme.sign(message, &mut sk).expect("sign"));
-        let (_, v) = time_op(|| scheme.verify(message, &sig, &pk).expect("verify"));
+        let ((pk, mut sk), kg) = measure_time(|| scheme.keypair().expect("kg"));
+        let (sig, s) =
+            measure_time(|| scheme.sign(message, &mut sk).expect("sign"));
+        let (_, v) =
+            measure_time(|| scheme.verify(message, &sig, &pk).expect("verify"));
         Ok(BenchRun {
             keygen_ns: kg.as_nanos(),
             sign_ns: s.as_nanos(),
@@ -263,11 +253,11 @@ impl DsaBenchmark for XmssmtAdapter {
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         let scheme = xmssmt_bench::default_benchmark_scheme();
-        let (mut kp, kg) = time_op(|| scheme.keypair().expect("kg"));
+        let (mut kp, kg) = measure_time(|| scheme.keypair().expect("kg"));
         let pk_sz = kp.public_key_len();
         let sk_sz = kp.secret_key_len();
-        let (sig, s) = time_op(|| kp.sign(message).expect("sign"));
-        let (_, v) = time_op(|| kp.verify(message, &sig).expect("verify"));
+        let (sig, s) = measure_time(|| kp.sign(message).expect("sign"));
+        let (_, v) = measure_time(|| kp.verify(message, &sig).expect("verify"));
         Ok(BenchRun {
             keygen_ns: kg.as_nanos(),
             sign_ns: s.as_nanos(),
@@ -298,10 +288,11 @@ impl DsaBenchmark for LeansigAdapter {
         let n = message.len().min(MESSAGE_LENGTH);
         msg[..n].copy_from_slice(&message[..n]);
         let mut rng = rand::rng();
-        let ((pk, mut sk), kg) = time_op(|| S::key_gen(&mut rng, 0, S::LIFETIME as usize));
+        let ((pk, mut sk), kg) =
+            measure_time(|| S::key_gen(&mut rng, 0, S::LIFETIME as usize));
         prepare_sk_for_epoch(&mut sk, 1);
-        let (sig, s) = time_op(|| S::sign(&sk, 1, &msg).expect("sign"));
-        let (_, v) = time_op(|| S::verify(&pk, 1, &msg, &sig));
+        let (sig, s) = measure_time(|| S::sign(&sk, 1, &msg).expect("sign"));
+        let (_, v) = measure_time(|| S::verify(&pk, 1, &msg, &sig));
         Ok(BenchRun {
             keygen_ns: kg.as_nanos(),
             sign_ns: s.as_nanos(),
@@ -344,12 +335,16 @@ fn parse_binary_output(stdout: &str) -> Result<BenchRun, String> {
         None
     }
 
-    let kg = extract_ns(stdout, "generate keys").ok_or("missing keygen timing")?;
+    let kg =
+        extract_ns(stdout, "generate keys").ok_or("missing keygen timing")?;
     let s = extract_ns(stdout, "sign").ok_or("missing sign timing")?;
     let v = extract_ns(stdout, "verify").ok_or("missing verify timing")?;
-    let pk = extract_bytes(stdout, "Public key size").ok_or("missing pk size")?;
-    let sk = extract_bytes(stdout, "Secret key size").ok_or("missing sk size")?;
-    let sig = extract_bytes(stdout, "Signature size").ok_or("missing sig size")?;
+    let pk =
+        extract_bytes(stdout, "Public key size").ok_or("missing pk size")?;
+    let sk =
+        extract_bytes(stdout, "Secret key size").ok_or("missing sk size")?;
+    let sig =
+        extract_bytes(stdout, "Signature size").ok_or("missing sig size")?;
 
     Ok(BenchRun {
         keygen_ns: kg,
@@ -454,7 +449,10 @@ fn run_benchmark(
     })
 }
 
-fn write_csv(results: &[BenchResult], path: &std::path::Path) -> std::io::Result<()> {
+fn write_csv(
+    results: &[BenchResult],
+    path: &std::path::Path,
+) -> std::io::Result<()> {
     if let Some(p) = path.parent() {
         fs::create_dir_all(p)?;
     }

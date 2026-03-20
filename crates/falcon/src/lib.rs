@@ -2,13 +2,11 @@ use pqcrypto_falcon::falcon512;
 use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
 use std::alloc::{GlobalAlloc, Layout};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
 
-/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_bench::BENCH_MESSAGE;
-
-pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
-pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
+pub use pq_bench::{
+    bench_message, measure_time, BENCH_MESSAGE, BENCH_MESSAGE_BYTE,
+    BENCH_MESSAGE_SIZES,
+};
 
 static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
 static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
@@ -24,7 +22,9 @@ impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
     }
 }
 
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
+unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
+    for TrackingAllocator<A>
+{
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ptr = unsafe { self.inner.alloc(layout) };
         if !ptr.is_null() {
@@ -83,7 +83,11 @@ pub trait SignatureScheme {
 
     fn algorithm_name(&self) -> &'static str;
     fn keypair(&self) -> (Self::PublicKey, Self::SecretKey);
-    fn sign(&self, message: &[u8], secret_key: &Self::SecretKey) -> Self::SignedMessage;
+    fn sign(
+        &self,
+        message: &[u8],
+        secret_key: &Self::SecretKey,
+    ) -> Self::SignedMessage;
     fn open(
         &self,
         signed_message: &Self::SignedMessage,
@@ -109,7 +113,11 @@ impl SignatureScheme for Falcon512Scheme {
         falcon512::keypair()
     }
 
-    fn sign(&self, message: &[u8], secret_key: &Self::SecretKey) -> Self::SignedMessage {
+    fn sign(
+        &self,
+        message: &[u8],
+        secret_key: &Self::SecretKey,
+    ) -> Self::SignedMessage {
         falcon512::sign(message, secret_key)
     }
 
@@ -122,21 +130,11 @@ impl SignatureScheme for Falcon512Scheme {
     }
 }
 
-pub fn bench_message(size: usize) -> Vec<u8> {
-    vec![BENCH_MESSAGE_BYTE; size]
-}
-
-pub fn signature_size<S: SignedMessage>(signed_message: &S, message_len: usize) -> usize {
+pub fn signature_size<S: SignedMessage>(
+    signed_message: &S,
+    message_len: usize,
+) -> usize {
     signed_message.as_bytes().len().saturating_sub(message_len)
-}
-
-pub fn measure_time<T, F>(operation: F) -> (T, Duration)
-where
-    F: FnOnce() -> T,
-{
-    let start = Instant::now();
-    let value = operation();
-    (value, start.elapsed())
 }
 
 #[cfg(test)]
@@ -154,7 +152,9 @@ mod tests {
     fn signature_size_subtracts_message_length() {
         struct FakeSigned(Vec<u8>);
         impl pqcrypto_traits::sign::SignedMessage for FakeSigned {
-            fn from_bytes(bytes: &[u8]) -> Result<Self, pqcrypto_traits::Error> {
+            fn from_bytes(
+                bytes: &[u8],
+            ) -> Result<Self, pqcrypto_traits::Error> {
                 Ok(Self(bytes.to_vec()))
             }
 

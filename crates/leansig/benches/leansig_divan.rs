@@ -32,7 +32,8 @@ fn sign(bencher: Bencher) {
     bencher
         .with_inputs(|| {
             let mut rng = rand::rng();
-            let (pk, mut sk) = Scheme::key_gen(&mut rng, 0, Scheme::LIFETIME as usize);
+            let (pk, mut sk) =
+                Scheme::key_gen(&mut rng, 0, Scheme::LIFETIME as usize);
             prepare_sk_for_epoch(&mut sk, EPOCH);
             (pk, sk)
         })
@@ -50,7 +51,8 @@ fn verify(bencher: Bencher) {
     let mut rng = rand::rng();
     let (pk, mut sk) = Scheme::key_gen(&mut rng, 0, Scheme::LIFETIME as usize);
     prepare_sk_for_epoch(&mut sk, EPOCH);
-    let sig = Scheme::sign(&sk, EPOCH, &message).expect("setup sign should succeed");
+    let sig =
+        Scheme::sign(&sk, EPOCH, &message).expect("setup sign should succeed");
 
     bencher.bench(|| {
         let valid = Scheme::verify(
@@ -69,7 +71,8 @@ fn print_sizes() {
     let (pk, mut sk) = Scheme::key_gen(&mut rng, 0, Scheme::LIFETIME as usize);
     prepare_sk_for_epoch(&mut sk, EPOCH);
     let message = bench_message();
-    let sig = Scheme::sign(&sk, EPOCH, &message).expect("size sign should succeed");
+    let sig =
+        Scheme::sign(&sk, EPOCH, &message).expect("size sign should succeed");
 
     println!("LeanSig sizes:");
     println!("  Public key: {} bytes", pk.to_bytes().len());
