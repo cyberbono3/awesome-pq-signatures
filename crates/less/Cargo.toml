@@ -12,7 +12,7 @@ name = "less_divan"
 harness = false
 
 [dependencies]
-pq_config = { path = "../pq_config" }
+pq_bench = { path = "../pq_bench" }
 
 [build-dependencies]
 cc = "1"

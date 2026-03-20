@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 /// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_config::BENCH_MESSAGE;
+pub use pq_bench::BENCH_MESSAGE;
 
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
@@ -25,9 +25,7 @@ impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
     }
 }
 
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
-    for TrackingAllocator<A>
-{
+unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ptr = unsafe { self.inner.alloc(layout) };
         if !ptr.is_null() {
@@ -107,8 +105,7 @@ impl MayoScheme {
     }
 
     pub fn keypair(&self, seed: &MayoSeed) -> MayoKeyPair {
-        MayoKeyPair::from_seed(seed)
-            .expect("MAYO key generation from seed should succeed")
+        MayoKeyPair::from_seed(seed).expect("MAYO key generation from seed should succeed")
     }
 
     pub fn benchmark_keypair(&self) -> MayoKeyPair {
@@ -172,11 +169,7 @@ impl MayoScheme {
         signature.as_ref().len()
     }
 
-    pub fn sizes(
-        &self,
-        keypair: &MayoKeyPair,
-        signature: &MayoSignature,
-    ) -> MayoSizes {
+    pub fn sizes(&self, keypair: &MayoKeyPair, signature: &MayoSignature) -> MayoSizes {
         MayoSizes {
             public_key_bytes: self.public_key_size(keypair),
             secret_key_bytes: self.secret_key_size(keypair),
@@ -184,10 +177,7 @@ impl MayoScheme {
         }
     }
 
-    fn ensure_context_supported(
-        &self,
-        context: &[u8],
-    ) -> Result<(), MayoError> {
+    fn ensure_context_supported(&self, context: &[u8]) -> Result<(), MayoError> {
         if context.is_empty() {
             Ok(())
         } else {
@@ -219,10 +209,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        bench_message, default_seed, signed_message_size, BENCH_MESSAGE_BYTE,
-        MAYO,
-    };
+    use super::{bench_message, default_seed, signed_message_size, BENCH_MESSAGE_BYTE, MAYO};
 
     #[test]
     fn bench_message_uses_expected_fill_byte() {

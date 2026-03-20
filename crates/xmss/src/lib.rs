@@ -4,12 +4,12 @@ use std::str::FromStr;
 use std::time::{Duration, Instant};
 
 use xmss::{
-    DetachedSignature, KeyPair, SigningKey, VerifyingKey, XmssParameter,
-    XmssSha2_10_256, XmssSha2_16_256, XmssSha2_20_256,
+    DetachedSignature, KeyPair, SigningKey, VerifyingKey, XmssParameter, XmssSha2_10_256,
+    XmssSha2_16_256, XmssSha2_20_256,
 };
 
 /// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_config::BENCH_MESSAGE;
+pub use pq_bench::BENCH_MESSAGE;
 
 pub const DEFAULT_XMSS_PARAM_SET: XmssParamSet = XmssParamSet::XmssSha2_10_256;
 pub const DIVAN_BENCH_MESSAGE_SIZES: [usize; 2] = [32, 1024];
@@ -309,10 +309,7 @@ impl XmssScheme {
     ///
     /// Returns an error if any step of the key generation, signing, or
     /// verification flow fails.
-    pub fn benchmark_report(
-        self,
-        message: &[u8],
-    ) -> Result<XmssBenchmarkReport, XmssError> {
+    pub fn benchmark_report(self, message: &[u8]) -> Result<XmssBenchmarkReport, XmssError> {
         let display_name = self.display_name();
         let (keypair, keygen_duration) = measure_time(|| self.keypair());
         let (public_key, mut secret_key) = keypair?;
@@ -468,8 +465,7 @@ mod tests {
         let scheme = XmssScheme::new(XmssParamSet::XmssSha2_10_256);
         let message = b"xmss-roundtrip-test";
 
-        let (public_key, mut secret_key) =
-            scheme.keypair().expect("keypair must succeed");
+        let (public_key, mut secret_key) = scheme.keypair().expect("keypair must succeed");
         let signature = scheme
             .sign(message, &mut secret_key)
             .expect("sign must succeed");
@@ -485,8 +481,7 @@ mod tests {
     fn wrong_message_fails_verification() {
         let scheme = XmssScheme::new(XmssParamSet::XmssSha2_10_256);
 
-        let (public_key, mut secret_key) =
-            scheme.keypair().expect("keypair must succeed");
+        let (public_key, mut secret_key) = scheme.keypair().expect("keypair must succeed");
         let signature = scheme
             .sign(b"message-a", &mut secret_key)
             .expect("sign must succeed");

@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 /// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_config::BENCH_MESSAGE;
+pub use pq_bench::BENCH_MESSAGE;
 
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
@@ -23,9 +23,7 @@ impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
     }
 }
 
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
-    for TrackingAllocator<A>
-{
+unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ptr = unsafe { self.inner.alloc(layout) };
         if !ptr.is_null() {
@@ -151,11 +149,7 @@ impl SqisignScheme {
         signature.as_bytes().len()
     }
 
-    pub fn sizes(
-        &self,
-        keypair: &SqisignKeyPair,
-        signature: &SqisignSignature,
-    ) -> SqisignSizes {
+    pub fn sizes(&self, keypair: &SqisignKeyPair, signature: &SqisignSignature) -> SqisignSizes {
         SqisignSizes {
             public_key: self.public_key_size(keypair),
             secret_key: self.secret_key_size(keypair),
@@ -183,9 +177,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        bench_message, signed_message_size, BENCH_MESSAGE_BYTE, SQISIGN,
-    };
+    use super::{bench_message, signed_message_size, BENCH_MESSAGE_BYTE, SQISIGN};
 
     #[test]
     fn bench_message_uses_expected_fill_byte() {

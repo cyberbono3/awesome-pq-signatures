@@ -1,15 +1,14 @@
 use divan::{black_box, AllocProfiler, Bencher};
 use falcon::{
-    bench_message, memory, signature_size, SignatureScheme, TrackingAllocator,
-    BENCH_MESSAGE_SIZES, FALCON512,
+    bench_message, memory, signature_size, SignatureScheme, TrackingAllocator, BENCH_MESSAGE_SIZES,
+    FALCON512,
 };
 use pqcrypto_traits::sign::{PublicKey, SecretKey};
 
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
 
 #[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> =
-    TrackingAllocator::new(&DIVAN_ALLOC);
+static ALLOC: TrackingAllocator<AllocProfiler> = TrackingAllocator::new(&DIVAN_ALLOC);
 
 #[divan::bench]
 fn keygen(bencher: Bencher) {
@@ -26,9 +25,7 @@ fn sign(bencher: Bencher, message_size: usize) {
     let (_, secret_key) = scheme.keypair();
 
     bencher.bench(|| {
-        black_box(
-            scheme.sign(black_box(message.as_slice()), black_box(&secret_key)),
-        );
+        black_box(scheme.sign(black_box(message.as_slice()), black_box(&secret_key)));
     });
 }
 
