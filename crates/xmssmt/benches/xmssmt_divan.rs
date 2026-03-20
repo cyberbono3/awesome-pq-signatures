@@ -1,7 +1,5 @@
 use divan::Bencher;
-use xmssmt_bench::{
-    benchmark_message, default_benchmark_scheme, DIVAN_BENCH_MESSAGE_SIZES,
-};
+use xmssmt_bench::{benchmark_message, default_benchmark_scheme, DIVAN_BENCH_MESSAGE_SIZES};
 
 fn main() {
     divan::main();

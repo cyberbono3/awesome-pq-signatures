@@ -1,23 +1,19 @@
 use divan::{black_box, AllocProfiler, Bencher};
 use less::{
-    bench_message, memory, LessKeyPair, LessSignature, TrackingAllocator,
-    BENCH_MESSAGE_SIZES, LESS,
+    bench_message, memory, LessKeyPair, LessSignature, TrackingAllocator, BENCH_MESSAGE_SIZES, LESS,
 };
 
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
 
 #[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> =
-    TrackingAllocator::new(&DIVAN_ALLOC);
+static ALLOC: TrackingAllocator<AllocProfiler> = TrackingAllocator::new(&DIVAN_ALLOC);
 
 fn benchmark_keypair() -> LessKeyPair {
     LESS.benchmark_keypair()
         .expect("key generation should succeed")
 }
 
-fn signed_fixture(
-    message_size: usize,
-) -> (LessKeyPair, Vec<u8>, LessSignature) {
+fn signed_fixture(message_size: usize) -> (LessKeyPair, Vec<u8>, LessSignature) {
     let keypair = benchmark_keypair();
     let message = bench_message(message_size);
     let signature = LESS

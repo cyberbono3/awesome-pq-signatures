@@ -1,15 +1,11 @@
-use less::{
-    measure_time, memory, signed_message_size, TrackingAllocator,
-    BENCH_MESSAGE, LESS,
-};
+use less::{measure_time, memory, signed_message_size, TrackingAllocator, BENCH_MESSAGE, LESS};
 use std::alloc::System;
 use std::time::Duration;
 
 static SYSTEM_ALLOC: System = System;
 
 #[global_allocator]
-static GLOBAL: TrackingAllocator<System> =
-    TrackingAllocator::new(&SYSTEM_ALLOC);
+static GLOBAL: TrackingAllocator<System> = TrackingAllocator::new(&SYSTEM_ALLOC);
 
 const MESSAGE: &[u8] = &BENCH_MESSAGE;
 

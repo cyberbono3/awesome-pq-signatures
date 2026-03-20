@@ -7,8 +7,7 @@ use sqisign::{
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
 
 #[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> =
-    TrackingAllocator::new(&DIVAN_ALLOC);
+static ALLOC: TrackingAllocator<AllocProfiler> = TrackingAllocator::new(&DIVAN_ALLOC);
 
 fn benchmark_keypair() -> SqisignKeyPair {
     SQISIGN
@@ -16,9 +15,7 @@ fn benchmark_keypair() -> SqisignKeyPair {
         .expect("key generation should succeed")
 }
 
-fn signed_fixture(
-    message_size: usize,
-) -> (SqisignKeyPair, Vec<u8>, SqisignSignature) {
+fn signed_fixture(message_size: usize) -> (SqisignKeyPair, Vec<u8>, SqisignSignature) {
     let keypair = benchmark_keypair();
     let message = bench_message(message_size);
     let signature = SQISIGN

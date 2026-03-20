@@ -64,15 +64,7 @@ fn median(values: &mut [u128]) -> u128 {
 }
 
 fn format_ns(ns: u128) -> String {
-    if ns >= 1_000_000_000 {
-        format!("{:.3}s", ns as f64 / 1e9)
-    } else if ns >= 1_000_000 {
-        format!("{:.3}ms", ns as f64 / 1e6)
-    } else if ns >= 1_000 {
-        format!("{:.3}µs", ns as f64 / 1e3)
-    } else {
-        format!("{ns}ns")
-    }
+    format!("{:.3}ms", ns as f64 / 1e6)
 }
 
 fn time_op<T, F: FnOnce() -> T>(f: F) -> (T, Duration) {
@@ -181,54 +173,6 @@ impl DsaBenchmark for MayoAdapter {
             public_key_bytes: sz.public_key_bytes,
             secret_key_bytes: sz.secret_key_bytes,
             signature_bytes: sz.signature_bytes,
-        })
-    }
-}
-
-struct LamportAdapter;
-impl DsaBenchmark for LamportAdapter {
-    fn name(&self) -> &str {
-        "Lamport OTS"
-    }
-    fn param_set(&self) -> &str {
-        "Lamport-OTS-256"
-    }
-    fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
-        use lamport_ots::LamportOtsScheme;
-        let ((pk, mut sk), kg) = time_op(|| LamportOtsScheme.keypair());
-        let (sig, s) = time_op(|| LamportOtsScheme.sign(message, &mut sk).expect("sign"));
-        let (_, v) = time_op(|| LamportOtsScheme.verify(message, &sig, &pk).expect("verify"));
-        Ok(BenchRun {
-            keygen_ns: kg.as_nanos(),
-            sign_ns: s.as_nanos(),
-            verify_ns: v.as_nanos(),
-            public_key_bytes: pk.byte_len(),
-            secret_key_bytes: sk.byte_len(),
-            signature_bytes: sig.byte_len(),
-        })
-    }
-}
-
-struct WinternitzAdapter;
-impl DsaBenchmark for WinternitzAdapter {
-    fn name(&self) -> &str {
-        "Winternitz OTS"
-    }
-    fn param_set(&self) -> &str {
-        "w=16 n=32 blake2b"
-    }
-    fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
-        use winternitz_ots::{SignatureScheme as _, WINTERNITZ_OTS};
-        let (kp, kg) = time_op(|| WINTERNITZ_OTS.keypair());
-        let (sig, s) = time_op(|| WINTERNITZ_OTS.sign(&kp, message));
-        let (_, v) = time_op(|| WINTERNITZ_OTS.verify(&sig));
-        Ok(BenchRun {
-            keygen_ns: kg.as_nanos(),
-            sign_ns: s.as_nanos(),
-            verify_ns: v.as_nanos(),
-            public_key_bytes: WINTERNITZ_OTS.public_key_size(&kp),
-            secret_key_bytes: WINTERNITZ_OTS.secret_key_size(&kp),
-            signature_bytes: WINTERNITZ_OTS.signature_size(&sig),
         })
     }
 }
@@ -634,8 +578,6 @@ fn main() {
         Box::new(FalconAdapter),
         Box::new(SphincsPlusAdapter),
         Box::new(MayoAdapter),
-        Box::new(LamportAdapter),
-        Box::new(WinternitzAdapter),
         Box::new(LmsAdapter),
         Box::new(HssAdapter),
         Box::new(XmssAdapter),

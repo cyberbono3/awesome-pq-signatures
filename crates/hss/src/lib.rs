@@ -1,7 +1,7 @@
 use hbs_lms::signature::{SignerMut, Verifier};
 use hbs_lms::{
-    keygen, HssParameter, LmotsAlgorithm, LmsAlgorithm, Seed, Sha256_256,
-    Signature, SigningKey, VerifyingKey,
+    keygen, HssParameter, LmotsAlgorithm, LmsAlgorithm, Seed, Sha256_256, Signature, SigningKey,
+    VerifyingKey,
 };
 use std::alloc::{GlobalAlloc, Layout};
 use std::error::Error;
@@ -38,8 +38,7 @@ impl HssParamSet {
     }
 }
 
-pub const HSS_PARAM_SETS: [HssParamSet; 2] =
-    [HssParamSet::L1H5W2, HssParamSet::L2H5W2];
+pub const HSS_PARAM_SETS: [HssParamSet; 2] = [HssParamSet::L1H5W2, HssParamSet::L2H5W2];
 
 pub fn param_set_by_name(name: &str) -> Option<HssParamSet> {
     HSS_PARAM_SETS
@@ -120,10 +119,8 @@ impl HssScheme {
     }
 
     pub fn from_param_set_name(name: &str) -> Result<Self, HssError> {
-        let params = param_set_by_name(name).ok_or_else(|| {
-            HssError::UnknownParamSet {
-                name: name.to_owned(),
-            }
+        let params = param_set_by_name(name).ok_or_else(|| HssError::UnknownParamSet {
+            name: name.to_owned(),
         })?;
         Ok(Self::new(params))
     }
@@ -167,8 +164,7 @@ impl HssScheme {
         fill_seed_from_u64(seed_value, &mut seed);
         let parameters = parameters_for(self.params);
         let (secret_key, public_key) =
-            keygen::<Sha256_256>(&parameters, &seed, None)
-                .map_err(|_| HssError::KeygenFailed)?;
+            keygen::<Sha256_256>(&parameters, &seed, None).map_err(|_| HssError::KeygenFailed)?;
 
         Ok((
             HssPublicKey {
@@ -222,10 +218,7 @@ impl HssScheme {
         signature.byte_len()
     }
 
-    fn ensure_secret_key_params(
-        &self,
-        secret_key: &HssSecretKey,
-    ) -> Result<(), HssError> {
+    fn ensure_secret_key_params(&self, secret_key: &HssSecretKey) -> Result<(), HssError> {
         if secret_key.params != self.params {
             return Err(HssError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -235,10 +228,7 @@ impl HssScheme {
         Ok(())
     }
 
-    fn ensure_public_key_params(
-        &self,
-        public_key: &HssPublicKey,
-    ) -> Result<(), HssError> {
+    fn ensure_public_key_params(&self, public_key: &HssPublicKey) -> Result<(), HssError> {
         if public_key.params != self.params {
             return Err(HssError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -248,10 +238,7 @@ impl HssScheme {
         Ok(())
     }
 
-    fn ensure_signature_params(
-        &self,
-        signature: &HssSignature,
-    ) -> Result<(), HssError> {
+    fn ensure_signature_params(&self, signature: &HssSignature) -> Result<(), HssError> {
         if signature.params != self.params {
             return Err(HssError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -391,9 +378,7 @@ impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
     }
 }
 
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
-    for TrackingAllocator<A>
-{
+unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ptr = unsafe { self.inner.alloc(layout) };
         if !ptr.is_null() {
@@ -437,10 +422,7 @@ fn track_dealloc(size: usize) {
 }
 
 pub mod memory {
-    use super::{
-        Ordering, ALLOCATED, BASELINE, PEAK_ALLOCATED, TOTAL_ALLOCATED,
-        TRACKING_ENABLED,
-    };
+    use super::{Ordering, ALLOCATED, BASELINE, PEAK_ALLOCATED, TOTAL_ALLOCATED, TRACKING_ENABLED};
 
     /// Reset all tracking counters and set the baseline to the current heap usage.
     /// Call this immediately before the operation you want to measure.
@@ -477,14 +459,13 @@ pub mod memory {
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, param_set_by_name, HssScheme, BENCH_MESSAGE_BYTE,
-        DEFAULT_PARAM_SET_NAME,
+        bench_message, param_set_by_name, HssScheme, BENCH_MESSAGE_BYTE, DEFAULT_PARAM_SET_NAME,
     };
 
     #[test]
     fn param_set_lookup_works() {
-        let found = param_set_by_name(DEFAULT_PARAM_SET_NAME)
-            .expect("known param set should resolve");
+        let found =
+            param_set_by_name(DEFAULT_PARAM_SET_NAME).expect("known param set should resolve");
         assert_eq!(found.name(), DEFAULT_PARAM_SET_NAME);
     }
 
@@ -494,9 +475,8 @@ mod tests {
             .name("hss-roundtrip".to_owned())
             .stack_size(32 * 1024 * 1024)
             .spawn(|| {
-                let scheme =
-                    HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
-                        .expect("param set should resolve");
+                let scheme = HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+                    .expect("param set should resolve");
                 let message = b"hss-roundtrip";
                 let (public_key, mut secret_key) =
                     scheme.keypair().expect("keypair should succeed");
@@ -520,9 +500,8 @@ mod tests {
             .name("hss-verify-fail".to_owned())
             .stack_size(32 * 1024 * 1024)
             .spawn(|| {
-                let scheme =
-                    HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
-                        .expect("param set should resolve");
+                let scheme = HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+                    .expect("param set should resolve");
                 let (public_key, mut secret_key) =
                     scheme.keypair().expect("keypair should succeed");
 
@@ -532,10 +511,7 @@ mod tests {
                 let verified = scheme
                     .verify(b"message-b", &signature, &public_key)
                     .expect("verify should succeed");
-                assert!(
-                    !verified,
-                    "different message should fail verification"
-                );
+                assert!(!verified, "different message should fail verification");
             })
             .expect("test thread should start")
             .join()
