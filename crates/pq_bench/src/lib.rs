@@ -251,6 +251,88 @@ pub fn emit_benchmark_report(
     }
 }
 
+pub struct StandardBenchmarkHumanReport<'a> {
+    pub heading_algorithm: &'a str,
+    pub heading_param_set: &'a str,
+    pub summary_algorithm: &'a str,
+    pub keygen_duration: Duration,
+    pub sign_duration: Duration,
+    pub verify_duration: Duration,
+    pub public_key_bytes: usize,
+    pub secret_key_bytes: usize,
+    pub signature_bytes: usize,
+    pub sign_peak_bytes: usize,
+    pub verify_peak_bytes: usize,
+}
+
+pub fn emit_standard_benchmark_report(
+    config: &BenchmarkBinaryConfig,
+    report: &BenchmarkBinaryReport,
+    human: StandardBenchmarkHumanReport<'_>,
+) {
+    emit_benchmark_report(config, report, |report| {
+        println!(
+            "=== {} ({}) Benchmark ===\n",
+            human.heading_algorithm, human.heading_param_set
+        );
+        println!("--- Key Generation ---");
+        print_timing("generate keys", human.keygen_duration);
+        println!("\n--- Signing ---");
+        print_timing("sign", human.sign_duration);
+        println!(
+            "Peak memory during signing: {} bytes",
+            human.sign_peak_bytes
+        );
+        println!("\n--- Verification ---");
+        print_timing("verify", human.verify_duration);
+        println!(
+            "Peak memory during verification: {} bytes",
+            human.verify_peak_bytes
+        );
+
+        if report.verified {
+            println!("Signature verification: SUCCESS");
+        } else {
+            println!("Signature verification: FAILED");
+        }
+
+        println!("\n--- Size Measurements ---");
+        println!("Public key size: {} bytes", human.public_key_bytes);
+        println!("Secret key size: {} bytes", human.secret_key_bytes);
+        println!("Signature size: {} bytes", human.signature_bytes);
+        println!(
+            "Signed message size: {} bytes",
+            report
+                .sizes
+                .signed_message_bytes
+                .expect("signed message size should exist")
+        );
+
+        println!("\n=== Summary ===");
+        println!("Algorithm: {}", human.summary_algorithm);
+        println!("\nTiming:");
+        println!(
+            "  Key Generation: {:?} ({} ns)",
+            human.keygen_duration, report.keygen_ns
+        );
+        println!(
+            "  Signing:        {:?} ({} ns)",
+            human.sign_duration, report.sign_ns
+        );
+        println!(
+            "  Verification:   {:?} ({} ns)",
+            human.verify_duration, report.verify_ns
+        );
+        println!("\nSizes:");
+        println!("  Public Key:  {} bytes", human.public_key_bytes);
+        println!("  Secret Key:  {} bytes", human.secret_key_bytes);
+        println!("  Signature:   {} bytes", human.signature_bytes);
+        println!("\nMemory Usage (heap allocations):");
+        println!("  Signing:      {} bytes", human.sign_peak_bytes);
+        println!("  Verification: {} bytes", human.verify_peak_bytes);
+    });
+}
+
 pub struct AllocationTracker {
     allocated: AtomicUsize,
     peak_allocated: AtomicUsize,

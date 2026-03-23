@@ -1,10 +1,11 @@
 use less::{
     measure_time, memory, signed_message_size, TrackingAllocator,
-    ALLOCATION_TRACKER, BENCH_MESSAGE, LESS,
+    ALLOCATION_TRACKER, LESS,
 };
 use pq_bench::{
-    benchmark_message, duration_ns, emit_benchmark_report, print_timing,
+    benchmark_message, duration_ns, emit_standard_benchmark_report,
     BenchmarkBinaryConfig, BenchmarkBinaryReport, BenchmarkSizeReport,
+    StandardBenchmarkHumanReport,
 };
 pq_bench::install_system_tracking_allocator!(
     TrackingAllocator,
@@ -18,11 +19,6 @@ fn main() {
             std::process::exit(1);
         });
     let message = benchmark_message(config.message_size);
-    let message = if config.message_size == BENCH_MESSAGE.len() {
-        BENCH_MESSAGE.to_vec()
-    } else {
-        message
-    };
     let scheme = LESS;
     let (keypair, keygen_duration) = measure_time(|| {
         scheme
@@ -65,56 +61,21 @@ fn main() {
         verify_peak_bytes: Some(verify_peak_mem),
     };
 
-    emit_benchmark_report(&config, &report, |report| {
-        println!("=== LESS ({}) Benchmark ===\n", scheme.algorithm_name());
-        println!("--- Key Generation ---");
-        print_timing("generate keys", keygen_duration);
-        println!("\n--- Signing ---");
-        print_timing("sign", sign_duration);
-        println!("Peak memory during signing: {sign_peak_mem} bytes");
-        println!("\n--- Verification ---");
-        print_timing("verify", verify_duration);
-        println!("Peak memory during verification: {verify_peak_mem} bytes");
-
-        if report.verified {
-            println!("Signature verification: SUCCESS");
-        } else {
-            println!("Signature verification: FAILED");
-        }
-
-        println!("\n--- Size Measurements ---");
-        println!("Public key size: {} bytes", sizes.public_key);
-        println!("Secret key size: {} bytes", sizes.secret_key);
-        println!("Signature size: {} bytes", sizes.signature);
-        println!(
-            "Signed message size: {} bytes",
-            report
-                .sizes
-                .signed_message_bytes
-                .expect("signed message size should exist")
-        );
-
-        println!("\n=== Summary ===");
-        println!("Algorithm: {}", scheme.algorithm_name());
-        println!("\nTiming:");
-        println!(
-            "  Key Generation: {:?} ({} ns)",
-            keygen_duration, report.keygen_ns
-        );
-        println!(
-            "  Signing:        {:?} ({} ns)",
-            sign_duration, report.sign_ns
-        );
-        println!(
-            "  Verification:   {:?} ({} ns)",
-            verify_duration, report.verify_ns
-        );
-        println!("\nSizes:");
-        println!("  Public Key:  {} bytes", sizes.public_key);
-        println!("  Secret Key:  {} bytes", sizes.secret_key);
-        println!("  Signature:   {} bytes", sizes.signature);
-        println!("\nMemory Usage (heap allocations):");
-        println!("  Signing:      {sign_peak_mem} bytes");
-        println!("  Verification: {verify_peak_mem} bytes");
-    });
+    emit_standard_benchmark_report(
+        &config,
+        &report,
+        StandardBenchmarkHumanReport {
+            heading_algorithm: "LESS",
+            heading_param_set: scheme.algorithm_name(),
+            summary_algorithm: scheme.algorithm_name(),
+            keygen_duration,
+            sign_duration,
+            verify_duration,
+            public_key_bytes: sizes.public_key,
+            secret_key_bytes: sizes.secret_key,
+            signature_bytes: sizes.signature,
+            sign_peak_bytes: sign_peak_mem,
+            verify_peak_bytes: verify_peak_mem,
+        },
+    );
 }
