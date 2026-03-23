@@ -12,6 +12,32 @@ pub struct RunnerContext {
     pub ffi_executables: HashMap<&'static str, PathBuf>,
 }
 
+macro_rules! benchmark_adapter {
+    (
+        $name:ident,
+        algorithm = $algorithm:literal,
+        param_set = $param_set:literal,
+        run_once = |$message:ident| $body:block
+    ) => {
+        #[derive(Default)]
+        pub struct $name;
+
+        impl DsaBenchmark for $name {
+            fn name(&self) -> &str {
+                $algorithm
+            }
+
+            fn param_set(&self) -> &str {
+                $param_set
+            }
+
+            fn run_once(&self, $message: &[u8]) -> Result<BenchRun, String> {
+                $body
+            }
+        }
+    };
+}
+
 fn measure_benchmark_flow<K, S>(
     keygen: impl FnOnce() -> K,
     sign: impl FnOnce(&mut K) -> S,
@@ -30,18 +56,11 @@ fn measure_benchmark_flow<K, S>(
     )
 }
 
-pub struct DilithiumAdapter;
-
-impl DsaBenchmark for DilithiumAdapter {
-    fn name(&self) -> &str {
-        "ML-DSA-65 (Dilithium)"
-    }
-
-    fn param_set(&self) -> &str {
-        "ML-DSA-65"
-    }
-
-    fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
+benchmark_adapter!(
+    DilithiumAdapter,
+    algorithm = "ML-DSA-65 (Dilithium)",
+    param_set = "ML-DSA-65",
+    run_once = |message| {
         use dilithium::{default_seed, SignatureScheme as _, ML_DSA_65};
 
         let seed = default_seed();
@@ -60,20 +79,13 @@ impl DsaBenchmark for DilithiumAdapter {
             },
         ))
     }
-}
+);
 
-pub struct FalconAdapter;
-
-impl DsaBenchmark for FalconAdapter {
-    fn name(&self) -> &str {
-        "Falcon-512"
-    }
-
-    fn param_set(&self) -> &str {
-        "Falcon-512"
-    }
-
-    fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
+benchmark_adapter!(
+    FalconAdapter,
+    algorithm = "Falcon-512",
+    param_set = "Falcon-512",
+    run_once = |message| {
         use falcon::{signature_size, SignatureScheme as _, FALCON512};
         use pqcrypto_traits::sign::{PublicKey, SecretKey};
 
@@ -92,20 +104,13 @@ impl DsaBenchmark for FalconAdapter {
             },
         ))
     }
-}
+);
 
-pub struct SphincsPlusAdapter;
-
-impl DsaBenchmark for SphincsPlusAdapter {
-    fn name(&self) -> &str {
-        "SPHINCS+-SHAKE-128f"
-    }
-
-    fn param_set(&self) -> &str {
-        "SPHINCS+-SHAKE-128f-simple"
-    }
-
-    fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
+benchmark_adapter!(
+    SphincsPlusAdapter,
+    algorithm = "SPHINCS+-SHAKE-128f",
+    param_set = "SPHINCS+-SHAKE-128f-simple",
+    run_once = |message| {
         use pqcrypto_traits::sign::{PublicKey, SecretKey};
         use sphincs_plus::{
             signature_size, SignatureScheme as _,
@@ -129,20 +134,13 @@ impl DsaBenchmark for SphincsPlusAdapter {
             },
         ))
     }
-}
+);
 
-pub struct MayoAdapter;
-
-impl DsaBenchmark for MayoAdapter {
-    fn name(&self) -> &str {
-        "MAYO-1"
-    }
-
-    fn param_set(&self) -> &str {
-        "MAYO-1"
-    }
-
-    fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
+benchmark_adapter!(
+    MayoAdapter,
+    algorithm = "MAYO-1",
+    param_set = "MAYO-1",
+    run_once = |message| {
         use mayo::MAYO;
 
         Ok(measure_benchmark_flow(
@@ -161,20 +159,13 @@ impl DsaBenchmark for MayoAdapter {
             },
         ))
     }
-}
+);
 
-pub struct LmsAdapter;
-
-impl DsaBenchmark for LmsAdapter {
-    fn name(&self) -> &str {
-        "LMS"
-    }
-
-    fn param_set(&self) -> &str {
-        "LMS-SHA256-M32-H5"
-    }
-
-    fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
+benchmark_adapter!(
+    LmsAdapter,
+    algorithm = "LMS",
+    param_set = "LMS-SHA256-M32-H5",
+    run_once = |message| {
         use lms::{default_seed, LmsScheme, DEFAULT_PARAM_SET_NAME};
 
         let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
@@ -196,20 +187,13 @@ impl DsaBenchmark for LmsAdapter {
             },
         ))
     }
-}
+);
 
-pub struct HssAdapter;
-
-impl DsaBenchmark for HssAdapter {
-    fn name(&self) -> &str {
-        "HSS"
-    }
-
-    fn param_set(&self) -> &str {
-        "HSS-SHA256-H5-W2-L1"
-    }
-
-    fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
+benchmark_adapter!(
+    HssAdapter,
+    algorithm = "HSS",
+    param_set = "HSS-SHA256-H5-W2-L1",
+    run_once = |message| {
         use hss::{default_seed, HssScheme, DEFAULT_PARAM_SET_NAME};
 
         let scheme = HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
@@ -231,20 +215,13 @@ impl DsaBenchmark for HssAdapter {
             },
         ))
     }
-}
+);
 
-pub struct XmssAdapter;
-
-impl DsaBenchmark for XmssAdapter {
-    fn name(&self) -> &str {
-        "XMSS"
-    }
-
-    fn param_set(&self) -> &str {
-        "XMSS-SHA2_10_256"
-    }
-
-    fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
+benchmark_adapter!(
+    XmssAdapter,
+    algorithm = "XMSS",
+    param_set = "XMSS-SHA2_10_256",
+    run_once = |message| {
         let scheme = xmss_bench::default_benchmark_scheme();
         Ok(measure_benchmark_flow(
             || scheme.keypair().expect("kg"),
@@ -263,20 +240,13 @@ impl DsaBenchmark for XmssAdapter {
             },
         ))
     }
-}
+);
 
-pub struct XmssmtAdapter;
-
-impl DsaBenchmark for XmssmtAdapter {
-    fn name(&self) -> &str {
-        "XMSS^MT"
-    }
-
-    fn param_set(&self) -> &str {
-        "XMSSMT-SHA2_20/2_256"
-    }
-
-    fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
+benchmark_adapter!(
+    XmssmtAdapter,
+    algorithm = "XMSS^MT",
+    param_set = "XMSSMT-SHA2_20/2_256",
+    run_once = |message| {
         let scheme = xmssmt_bench::default_benchmark_scheme();
         Ok(measure_benchmark_flow(
             || {
@@ -301,20 +271,13 @@ impl DsaBenchmark for XmssmtAdapter {
             },
         ))
     }
-}
+);
 
-pub struct LeansigAdapter;
-
-impl DsaBenchmark for LeansigAdapter {
-    fn name(&self) -> &str {
-        "LeanSig"
-    }
-
-    fn param_set(&self) -> &str {
-        "Poseidon-L2^18-TS-w4"
-    }
-
-    fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
+benchmark_adapter!(
+    LeansigAdapter,
+    algorithm = "LeanSig",
+    param_set = "Poseidon-L2^18-TS-w4",
+    run_once = |message| {
         use leansig::serialization::Serializable;
         use leansig::signature::generalized_xmss::instantiations_poseidon::lifetime_2_to_the_18::target_sum::SIGTargetSumLifetime18W4NoOff;
         use leansig::signature::SignatureScheme;
@@ -343,7 +306,7 @@ impl DsaBenchmark for LeansigAdapter {
             },
         ))
     }
-}
+);
 
 pub struct SubprocessAdapter {
     pub algorithm: &'static str,
@@ -394,67 +357,14 @@ impl DsaBenchmark for SubprocessAdapter {
     }
 }
 
-pub fn build_dilithium(
+pub fn build_pure_adapter<T>(
     _context: &RunnerContext,
     _spec: &'static AdapterSpec,
-) -> Box<dyn DsaBenchmark> {
-    Box::new(DilithiumAdapter)
-}
-
-pub fn build_falcon(
-    _context: &RunnerContext,
-    _spec: &'static AdapterSpec,
-) -> Box<dyn DsaBenchmark> {
-    Box::new(FalconAdapter)
-}
-
-pub fn build_sphincs_plus(
-    _context: &RunnerContext,
-    _spec: &'static AdapterSpec,
-) -> Box<dyn DsaBenchmark> {
-    Box::new(SphincsPlusAdapter)
-}
-
-pub fn build_mayo(
-    _context: &RunnerContext,
-    _spec: &'static AdapterSpec,
-) -> Box<dyn DsaBenchmark> {
-    Box::new(MayoAdapter)
-}
-
-pub fn build_lms(
-    _context: &RunnerContext,
-    _spec: &'static AdapterSpec,
-) -> Box<dyn DsaBenchmark> {
-    Box::new(LmsAdapter)
-}
-
-pub fn build_hss(
-    _context: &RunnerContext,
-    _spec: &'static AdapterSpec,
-) -> Box<dyn DsaBenchmark> {
-    Box::new(HssAdapter)
-}
-
-pub fn build_xmss(
-    _context: &RunnerContext,
-    _spec: &'static AdapterSpec,
-) -> Box<dyn DsaBenchmark> {
-    Box::new(XmssAdapter)
-}
-
-pub fn build_xmssmt(
-    _context: &RunnerContext,
-    _spec: &'static AdapterSpec,
-) -> Box<dyn DsaBenchmark> {
-    Box::new(XmssmtAdapter)
-}
-
-pub fn build_leansig(
-    _context: &RunnerContext,
-    _spec: &'static AdapterSpec,
-) -> Box<dyn DsaBenchmark> {
-    Box::new(LeansigAdapter)
+) -> Box<dyn DsaBenchmark>
+where
+    T: DsaBenchmark + Default + 'static,
+{
+    Box::new(T::default())
 }
 
 pub fn build_ffi_adapter(

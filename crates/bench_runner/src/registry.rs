@@ -3,12 +3,36 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::adapters::{
-    build_dilithium, build_falcon, build_ffi_adapter, build_hss, build_leansig,
-    build_lms, build_mayo, build_sphincs_plus, build_xmss, build_xmssmt,
-    RunnerContext,
+    build_ffi_adapter, build_pure_adapter, DilithiumAdapter, FalconAdapter,
+    HssAdapter, LeansigAdapter, LmsAdapter, MayoAdapter, RunnerContext,
+    SphincsPlusAdapter, XmssAdapter, XmssmtAdapter,
 };
 use crate::cli::CliConfig;
 use crate::types::DsaBenchmark;
+
+macro_rules! pure_spec {
+    ($algorithm:literal, $param_set:literal, $adapter:ty) => {
+        AdapterSpec {
+            algorithm: $algorithm,
+            param_set: $param_set,
+            executable_name: None,
+            backend: BackendKind::Pure,
+            builder: build_pure_adapter::<$adapter>,
+        }
+    };
+}
+
+macro_rules! ffi_spec {
+    ($algorithm:literal, $param_set:literal, $bin:literal) => {
+        AdapterSpec {
+            algorithm: $algorithm,
+            param_set: $param_set,
+            executable_name: Some($bin),
+            backend: BackendKind::Ffi,
+            builder: build_ffi_adapter,
+        }
+    };
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BackendKind {
@@ -20,94 +44,35 @@ pub enum BackendKind {
 pub struct AdapterSpec {
     pub algorithm: &'static str,
     pub param_set: &'static str,
+    pub executable_name: Option<&'static str>,
     pub backend: BackendKind,
     pub builder:
         fn(&RunnerContext, &'static AdapterSpec) -> Box<dyn DsaBenchmark>,
 }
 
 pub static ADAPTER_SPECS: &[AdapterSpec] = &[
-    AdapterSpec {
-        algorithm: "ML-DSA-65 (Dilithium)",
-        param_set: "ML-DSA-65",
-        backend: BackendKind::Pure,
-        builder: build_dilithium,
-    },
-    AdapterSpec {
-        algorithm: "Falcon-512",
-        param_set: "Falcon-512",
-        backend: BackendKind::Pure,
-        builder: build_falcon,
-    },
-    AdapterSpec {
-        algorithm: "SPHINCS+-SHAKE-128f",
-        param_set: "SPHINCS+-SHAKE-128f-simple",
-        backend: BackendKind::Pure,
-        builder: build_sphincs_plus,
-    },
-    AdapterSpec {
-        algorithm: "MAYO-1",
-        param_set: "MAYO-1",
-        backend: BackendKind::Pure,
-        builder: build_mayo,
-    },
-    AdapterSpec {
-        algorithm: "LMS",
-        param_set: "LMS-SHA256-M32-H5",
-        backend: BackendKind::Pure,
-        builder: build_lms,
-    },
-    AdapterSpec {
-        algorithm: "HSS",
-        param_set: "HSS-SHA256-H5-W2-L1",
-        backend: BackendKind::Pure,
-        builder: build_hss,
-    },
-    AdapterSpec {
-        algorithm: "XMSS",
-        param_set: "XMSS-SHA2_10_256",
-        backend: BackendKind::Pure,
-        builder: build_xmss,
-    },
-    AdapterSpec {
-        algorithm: "XMSS^MT",
-        param_set: "XMSSMT-SHA2_20/2_256",
-        backend: BackendKind::Pure,
-        builder: build_xmssmt,
-    },
-    AdapterSpec {
-        algorithm: "LeanSig",
-        param_set: "Poseidon-L2^18-TS-w4",
-        backend: BackendKind::Pure,
-        builder: build_leansig,
-    },
-    AdapterSpec {
-        algorithm: "SQISign",
-        param_set: "SQISign-lvl1",
-        backend: BackendKind::Ffi,
-        builder: build_ffi_adapter,
-    },
-    AdapterSpec {
-        algorithm: "LESS",
-        param_set: "LESS-252-45",
-        backend: BackendKind::Ffi,
-        builder: build_ffi_adapter,
-    },
-    AdapterSpec {
-        algorithm: "CROSS",
-        param_set: "CROSS-RSDPG-192-BAL",
-        backend: BackendKind::Ffi,
-        builder: build_ffi_adapter,
-    },
+    pure_spec!("ML-DSA-65 (Dilithium)", "ML-DSA-65", DilithiumAdapter),
+    pure_spec!("Falcon-512", "Falcon-512", FalconAdapter),
+    pure_spec!(
+        "SPHINCS+-SHAKE-128f",
+        "SPHINCS+-SHAKE-128f-simple",
+        SphincsPlusAdapter
+    ),
+    pure_spec!("MAYO-1", "MAYO-1", MayoAdapter),
+    pure_spec!("LMS", "LMS-SHA256-M32-H5", LmsAdapter),
+    pure_spec!("HSS", "HSS-SHA256-H5-W2-L1", HssAdapter),
+    pure_spec!("XMSS", "XMSS-SHA2_10_256", XmssAdapter),
+    pure_spec!("XMSS^MT", "XMSSMT-SHA2_20/2_256", XmssmtAdapter),
+    pure_spec!("LeanSig", "Poseidon-L2^18-TS-w4", LeansigAdapter),
+    ffi_spec!("SQISign", "SQISign-lvl1", "sqisign"),
+    ffi_spec!("LESS", "LESS-252-45", "less"),
+    ffi_spec!("CROSS", "CROSS-RSDPG-192-BAL", "cross"),
 ];
 
 pub fn selected_specs(config: &CliConfig) -> Vec<&'static AdapterSpec> {
     ADAPTER_SPECS
         .iter()
-        .filter(|spec| {
-            (!config.skip_ffi || spec.backend != BackendKind::Ffi)
-                && matches_filter(spec.algorithm, &config.only_filters)
-                && matches_filter(spec.param_set, &config.param_set_filters)
-        })
+        .filter(|spec| spec.matches(config))
         .collect()
 }
 
@@ -140,7 +105,7 @@ pub fn resolve_ffi_binaries(
         .current_dir(&workspace_root)
         .args(["build", "--release"]);
     for spec in &ffi_specs {
-        build.args(["--bin", ffi_bin_name(spec.algorithm)?]);
+        build.args(["--bin", spec.executable_name()?]);
     }
     let status = build
         .status()
@@ -152,7 +117,7 @@ pub fn resolve_ffi_binaries(
     let mut binaries = HashMap::new();
     let target_dir = workspace_root.join("target").join("release");
     for spec in ffi_specs {
-        let bin_name = ffi_bin_name(spec.algorithm)?;
+        let bin_name = spec.executable_name()?;
         let executable = target_dir
             .join(format!("{bin_name}{}", std::env::consts::EXE_SUFFIX));
         if !executable.exists() {
@@ -167,13 +132,6 @@ pub fn resolve_ffi_binaries(
     Ok(binaries)
 }
 
-fn matches_filter(value: &str, filters: &[String]) -> bool {
-    filters.is_empty()
-        || filters
-            .iter()
-            .any(|filter| value.to_ascii_lowercase().contains(filter))
-}
-
 fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -182,12 +140,27 @@ fn workspace_root() -> PathBuf {
         .to_path_buf()
 }
 
-fn ffi_bin_name(algorithm: &str) -> Result<&'static str, String> {
-    match algorithm {
-        "SQISign" => Ok("sqisign"),
-        "LESS" => Ok("less"),
-        "CROSS" => Ok("cross"),
-        _ => Err(format!("unknown ffi algorithm: {algorithm}")),
+impl AdapterSpec {
+    fn matches(&self, config: &CliConfig) -> bool {
+        (!config.skip_ffi || self.backend != BackendKind::Ffi)
+            && self.matches_filter(self.algorithm, &config.only_filters)
+            && self.matches_filter(self.param_set, &config.param_set_filters)
+    }
+
+    fn matches_filter(&self, value: &str, filters: &[String]) -> bool {
+        filters.is_empty()
+            || filters
+                .iter()
+                .any(|filter| value.to_ascii_lowercase().contains(filter))
+    }
+
+    fn executable_name(&self) -> Result<&'static str, String> {
+        self.executable_name.ok_or_else(|| {
+            format!(
+                "missing executable name for ffi algorithm: {}",
+                self.algorithm
+            )
+        })
     }
 }
 
