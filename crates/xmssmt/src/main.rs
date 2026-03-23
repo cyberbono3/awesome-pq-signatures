@@ -1,13 +1,7 @@
-use std::time::Duration;
-
+use pq_bench::print_timing;
 use xmssmt_bench::{default_benchmark_scheme, BENCH_MESSAGE};
 
 const MESSAGE: &[u8] = &BENCH_MESSAGE;
-
-fn print_timing(label: &str, duration: Duration) {
-    println!("Time to {label}: {duration:?}");
-    println!("Time to {label} (ns): {}", duration.as_nanos());
-}
 
 fn main() {
     let scheme = default_benchmark_scheme();

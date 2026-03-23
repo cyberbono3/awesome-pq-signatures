@@ -2,13 +2,8 @@ use hss::{
     default_seed, measure_time, signed_message_size, HssScheme, BENCH_MESSAGE,
     DEFAULT_PARAM_SET_NAME,
 };
+use pq_bench::print_timing;
 use std::env;
-use std::time::Duration;
-
-fn print_timing(label: &str, duration: Duration) {
-    println!("Time to {label}: {duration:?}");
-    println!("Time to {label} (ns): {}", duration.as_nanos());
-}
 
 fn main() {
     let param_set_name = env::var("PARAM_SET")

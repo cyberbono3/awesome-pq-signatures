@@ -2,14 +2,12 @@ use blake2_rfc::blake2b::blake2b;
 use std::alloc::{GlobalAlloc, Layout};
 use std::panic::AssertUnwindSafe;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
 use winternitz_ots_lib::wots::{self, Wots, WotsSignature};
 
-/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_bench::BENCH_MESSAGE;
-
-pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
-pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
+pub use pq_bench::{
+    bench_message, measure_time, BENCH_MESSAGE, BENCH_MESSAGE_BYTE,
+    BENCH_MESSAGE_SIZES,
+};
 
 static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
 static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
@@ -144,19 +142,6 @@ impl SignatureScheme for WinternitzOtsScheme {
     fn signed_input_size(&self, signature: &Self::Signature) -> usize {
         hex_string_byte_len(&signature.input)
     }
-}
-
-pub fn bench_message(size: usize) -> Vec<u8> {
-    vec![BENCH_MESSAGE_BYTE; size]
-}
-
-pub fn measure_time<T, F>(operation: F) -> (T, Duration)
-where
-    F: FnOnce() -> T,
-{
-    let start = Instant::now();
-    let value = operation();
-    (value, start.elapsed())
 }
 
 pub fn message_digest_hex(message: &[u8]) -> String {

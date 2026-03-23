@@ -1,9 +1,9 @@
+use pq_bench::print_timing;
 use sqisign::{
     measure_time, memory, signed_message_size, TrackingAllocator,
     BENCH_MESSAGE, SQISIGN,
 };
 use std::alloc::System;
-use std::time::Duration;
 
 static SYSTEM_ALLOC: System = System;
 
@@ -12,11 +12,6 @@ static GLOBAL: TrackingAllocator<System> =
     TrackingAllocator::new(&SYSTEM_ALLOC);
 
 const MESSAGE: &[u8] = &BENCH_MESSAGE;
-
-fn print_timing(label: &str, duration: Duration) {
-    println!("Time to {label}: {duration:?}");
-    println!("Time to {label} (ns): {}", duration.as_nanos());
-}
 
 fn main() {
     let scheme = SQISIGN;

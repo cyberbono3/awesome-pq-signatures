@@ -2,20 +2,9 @@ use leansig::serialization::Serializable;
 use leansig::signature::SignatureScheme;
 use leansig::signature::SignatureSchemeSecretKey;
 use leansig::MESSAGE_LENGTH;
-use std::time::{Duration, Instant};
+use pq_bench::print_timing;
 
-/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_bench::BENCH_MESSAGE;
-
-/// Measure wall-clock time of a closure.
-pub fn measure_time<T, F>(operation: F) -> (T, Duration)
-where
-    F: FnOnce() -> T,
-{
-    let start = Instant::now();
-    let value = operation();
-    (value, start.elapsed())
-}
+pub use pq_bench::{measure_time, BENCH_MESSAGE};
 
 /// Advance secret-key preparation until `epoch` is inside the prepared
 /// interval.
@@ -34,11 +23,6 @@ pub fn prepare_sk_for_epoch<SK: SignatureSchemeSecretKey>(
         sk.get_prepared_interval().contains(&(epoch as u64)),
         "Failed to advance key preparation to epoch {epoch}"
     );
-}
-
-fn print_timing(label: &str, duration: Duration) {
-    println!("Time to {label}: {duration:?}");
-    println!("Time to {label} (ns): {}", duration.as_nanos());
 }
 
 /// Run a full keygen → sign → verify cycle for a single LeanSig

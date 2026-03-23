@@ -2,8 +2,8 @@ use dilithium::{
     default_seed, measure_time, memory, signed_message_size, SignatureScheme,
     TrackingAllocator, BENCH_MESSAGE, ML_DSA_65,
 };
+use pq_bench::print_timing;
 use std::alloc::System;
-use std::time::Duration;
 
 static SYSTEM_ALLOC: System = System;
 
@@ -13,11 +13,6 @@ static GLOBAL: TrackingAllocator<System> =
 
 const MESSAGE: &[u8] = &BENCH_MESSAGE;
 const CONTEXT: &[u8] = &[];
-
-fn print_timing(label: &str, duration: Duration) {
-    println!("Time to {label}: {duration:?}");
-    println!("Time to {label} (ns): {}", duration.as_nanos());
-}
 
 fn main() {
     let scheme = ML_DSA_65;

@@ -1,15 +1,14 @@
 use std::error::Error;
 use std::fmt;
 use std::str::FromStr;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use xmss::{
     DetachedSignature, KeyPair, SigningKey, VerifyingKey, XmssParameter,
     XmssSha2_10_256, XmssSha2_16_256, XmssSha2_20_256,
 };
 
-/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_bench::BENCH_MESSAGE;
+pub use pq_bench::{measure_time, BENCH_MESSAGE};
 
 pub const DEFAULT_XMSS_PARAM_SET: XmssParamSet = XmssParamSet::XmssSha2_10_256;
 pub const DIVAN_BENCH_MESSAGE_SIZES: [usize; 2] = [32, 1024];
@@ -347,16 +346,6 @@ pub const fn default_benchmark_scheme() -> XmssScheme {
 #[must_use]
 pub fn benchmark_message(size: usize, fill_byte: u8) -> Vec<u8> {
     vec![fill_byte; size]
-}
-
-/// Measure wall-clock time of a closure.
-pub fn measure_time<T, F>(operation: F) -> (T, Duration)
-where
-    F: FnOnce() -> T,
-{
-    let start = Instant::now();
-    let value = operation();
-    (value, start.elapsed())
 }
 
 fn extract_keys<P: XmssParameter>(

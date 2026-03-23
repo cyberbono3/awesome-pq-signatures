@@ -1,5 +1,5 @@
+use pq_bench::print_timing;
 use std::alloc::System;
-use std::time::Duration;
 use winternitz_ots::{
     measure_time, memory, SignatureScheme, TrackingAllocator, BENCH_MESSAGE,
     WINTERNITZ_OTS,
@@ -12,11 +12,6 @@ static GLOBAL: TrackingAllocator<System> =
     TrackingAllocator::new(&SYSTEM_ALLOC);
 
 const MESSAGE: &[u8] = &BENCH_MESSAGE;
-
-fn print_timing(label: &str, duration: Duration) {
-    println!("Time to {label}: {duration:?}");
-    println!("Time to {label} (ns): {}", duration.as_nanos());
-}
 
 fn main() {
     let scheme = WINTERNITZ_OTS;

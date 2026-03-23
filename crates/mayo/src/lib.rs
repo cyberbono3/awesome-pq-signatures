@@ -1,14 +1,11 @@
+pub use pq_bench::{
+    bench_message, measure_time, signed_message_size, BENCH_MESSAGE,
+    BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
+};
 use pq_mayo::{KeyPair, Mayo1, Signature as RawMayoSignature};
 use signature::{Error as SignatureError, Signer, Verifier};
 use std::alloc::{GlobalAlloc, Layout};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
-
-/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_bench::BENCH_MESSAGE;
-
-pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
-pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
 pub const DEFAULT_CONTEXT: &[u8] = &[];
 
 static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
@@ -198,23 +195,6 @@ impl MayoScheme {
 
 pub fn default_seed() -> MayoSeed {
     [7_u8; 24]
-}
-
-pub fn bench_message(size: usize) -> Vec<u8> {
-    vec![BENCH_MESSAGE_BYTE; size]
-}
-
-pub fn signed_message_size(message_len: usize, signature_len: usize) -> usize {
-    message_len.saturating_add(signature_len)
-}
-
-pub fn measure_time<T, F>(operation: F) -> (T, Duration)
-where
-    F: FnOnce() -> T,
-{
-    let start = Instant::now();
-    let value = operation();
-    (value, start.elapsed())
 }
 
 #[cfg(test)]
