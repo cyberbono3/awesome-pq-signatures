@@ -1,14 +1,12 @@
-use divan::{black_box, AllocProfiler, Bencher};
+use divan::{black_box, Bencher};
 use mayo::{
     bench_message, memory, signed_message_size, TrackingAllocator,
     ALLOCATION_TRACKER, BENCH_MESSAGE_SIZES, MAYO,
 };
-
-static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
-
-#[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> =
-    TrackingAllocator::new(&DIVAN_ALLOC, &ALLOCATION_TRACKER);
+pq_bench::install_divan_tracking_allocator!(
+    TrackingAllocator,
+    ALLOCATION_TRACKER
+);
 
 fn benchmark_keypair() -> mayo::MayoKeyPair {
     MAYO.benchmark_keypair()

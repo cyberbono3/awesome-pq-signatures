@@ -15,6 +15,7 @@ pub use pq_bench::{
 };
 pub const DEFAULT_PARAM_SET_NAME: &str =
     "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4";
+pq_bench::declare_tracking_allocator!();
 
 const LMS_PUBLIC_KEY_BYTES: usize = 56;
 const LMS_SECRET_KEY_BYTES: usize = 48;
@@ -376,20 +377,7 @@ impl XorShift64 {
     }
 }
 
-pub static ALLOCATION_TRACKER: AllocationTracker = AllocationTracker::new();
-pub type TrackingAllocator<A> = AllocationTrackingAllocator<A>;
-
-pub mod memory {
-    use super::ALLOCATION_TRACKER;
-
-    pub fn reset_peak() {
-        ALLOCATION_TRACKER.reset_peak();
-    }
-
-    pub fn peak_bytes() -> usize {
-        ALLOCATION_TRACKER.peak_bytes()
-    }
-}
+pq_bench::declare_peak_memory_api!();
 
 #[cfg(test)]
 mod tests {

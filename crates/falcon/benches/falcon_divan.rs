@@ -1,15 +1,13 @@
-use divan::{black_box, AllocProfiler, Bencher};
+use divan::{black_box, Bencher};
 use falcon::{
     bench_message, memory, signature_size, SignatureScheme, TrackingAllocator,
     ALLOCATION_TRACKER, BENCH_MESSAGE_SIZES, FALCON512,
 };
 use pqcrypto_traits::sign::{PublicKey, SecretKey};
-
-static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
-
-#[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> =
-    TrackingAllocator::new(&DIVAN_ALLOC, &ALLOCATION_TRACKER);
+pq_bench::install_divan_tracking_allocator!(
+    TrackingAllocator,
+    ALLOCATION_TRACKER
+);
 
 #[divan::bench]
 fn keygen(bencher: Bencher) {

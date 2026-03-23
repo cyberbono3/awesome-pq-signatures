@@ -1,15 +1,13 @@
-use divan::{black_box, AllocProfiler, Bencher};
+use divan::{black_box, Bencher};
 use hss::{
     bench_message, default_seed, memory, signed_message_size, HssScheme,
     TrackingAllocator, ALLOCATION_TRACKER, BENCH_MESSAGE_SIZES,
     DEFAULT_PARAM_SET_NAME, HSS_PARAM_SETS,
 };
-
-static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
-
-#[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> =
-    TrackingAllocator::new(&DIVAN_ALLOC, &ALLOCATION_TRACKER);
+pq_bench::install_divan_tracking_allocator!(
+    TrackingAllocator,
+    ALLOCATION_TRACKER
+);
 
 const PARAM_SET_NAMES: [&str; 2] =
     ["HSS-SHA256-H5-W2-L1", "HSS-SHA256-H5-W2-L2"];

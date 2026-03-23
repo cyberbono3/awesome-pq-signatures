@@ -6,13 +6,10 @@ use pq_bench::{
     benchmark_message, duration_ns, emit_benchmark_report, print_timing,
     BenchmarkBinaryConfig, BenchmarkBinaryReport, BenchmarkSizeReport,
 };
-use std::alloc::System;
-
-static SYSTEM_ALLOC: System = System;
-
-#[global_allocator]
-static GLOBAL: TrackingAllocator<System> =
-    TrackingAllocator::new(&SYSTEM_ALLOC, &ALLOCATION_TRACKER);
+pq_bench::install_system_tracking_allocator!(
+    TrackingAllocator,
+    ALLOCATION_TRACKER
+);
 
 fn main() {
     let config = BenchmarkBinaryConfig::parse(std::env::args().skip(1))

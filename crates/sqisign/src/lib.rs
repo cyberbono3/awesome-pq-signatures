@@ -4,20 +4,8 @@ pub use pq_bench::{
     BENCH_MESSAGE_SIZES,
 };
 use sqisign_lvl1::{KeyPair, Signature as RawSqisignSignature, SqisignError};
-pub static ALLOCATION_TRACKER: AllocationTracker = AllocationTracker::new();
-pub type TrackingAllocator<A> = AllocationTrackingAllocator<A>;
-
-pub mod memory {
-    use super::ALLOCATION_TRACKER;
-
-    pub fn reset_peak() {
-        ALLOCATION_TRACKER.reset_peak();
-    }
-
-    pub fn peak_bytes() -> usize {
-        ALLOCATION_TRACKER.peak_bytes()
-    }
-}
+pq_bench::declare_tracking_allocator!();
+pq_bench::declare_peak_memory_api!();
 
 pub type SqisignKeyPair = KeyPair;
 pub type SqisignSignature = RawSqisignSignature;

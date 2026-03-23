@@ -3,13 +3,10 @@ use mayo::{
     ALLOCATION_TRACKER, BENCH_MESSAGE, MAYO,
 };
 use pq_bench::print_timing;
-use std::alloc::System;
-
-static SYSTEM_ALLOC: System = System;
-
-#[global_allocator]
-static GLOBAL: TrackingAllocator<System> =
-    TrackingAllocator::new(&SYSTEM_ALLOC, &ALLOCATION_TRACKER);
+pq_bench::install_system_tracking_allocator!(
+    TrackingAllocator,
+    ALLOCATION_TRACKER
+);
 
 const MESSAGE: &[u8] = &BENCH_MESSAGE;
 

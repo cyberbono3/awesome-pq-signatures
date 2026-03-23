@@ -2,13 +2,11 @@ use cross::{
     bench_message, memory, CrossKeyPair, CrossSignature, TrackingAllocator,
     ALLOCATION_TRACKER, BENCH_MESSAGE_SIZES, CROSS,
 };
-use divan::{black_box, AllocProfiler, Bencher};
-
-static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
-
-#[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> =
-    TrackingAllocator::new(&DIVAN_ALLOC, &ALLOCATION_TRACKER);
+use divan::{black_box, Bencher};
+pq_bench::install_divan_tracking_allocator!(
+    TrackingAllocator,
+    ALLOCATION_TRACKER
+);
 
 fn benchmark_keypair() -> CrossKeyPair {
     CROSS

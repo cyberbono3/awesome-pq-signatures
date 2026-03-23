@@ -2,13 +2,11 @@ use dilithium::{
     bench_message, default_seed, memory, SignatureScheme, TrackingAllocator,
     ALLOCATION_TRACKER, BENCH_MESSAGE_SIZES, ML_DSA_65,
 };
-use divan::{black_box, AllocProfiler, Bencher};
-
-static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
-
-#[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> =
-    TrackingAllocator::new(&DIVAN_ALLOC, &ALLOCATION_TRACKER);
+use divan::{black_box, Bencher};
+pq_bench::install_divan_tracking_allocator!(
+    TrackingAllocator,
+    ALLOCATION_TRACKER
+);
 
 const CONTEXT: &[u8] = &[];
 

@@ -16,6 +16,53 @@ pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
 pub const BENCHMARK_SEED_U64: u64 = 0x7A5B_91C3_E4D2_F607;
 
+#[macro_export]
+macro_rules! declare_tracking_allocator {
+    () => {
+        pub static ALLOCATION_TRACKER: $crate::AllocationTracker =
+            $crate::AllocationTracker::new();
+        pub type TrackingAllocator<A> = $crate::AllocationTrackingAllocator<A>;
+    };
+}
+
+#[macro_export]
+macro_rules! declare_peak_memory_api {
+    () => {
+        pub mod memory {
+            pub fn reset_peak() {
+                super::ALLOCATION_TRACKER.reset_peak();
+            }
+
+            pub fn peak_bytes() -> usize {
+                super::ALLOCATION_TRACKER.peak_bytes()
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! install_system_tracking_allocator {
+    ($tracking_allocator:ident, $tracker:ident) => {
+        static SYSTEM_ALLOC: std::alloc::System = std::alloc::System;
+
+        #[global_allocator]
+        static GLOBAL: $tracking_allocator<std::alloc::System> =
+            $tracking_allocator::new(&SYSTEM_ALLOC, &$tracker);
+    };
+}
+
+#[macro_export]
+macro_rules! install_divan_tracking_allocator {
+    ($tracking_allocator:ident, $tracker:ident) => {
+        static DIVAN_ALLOC: divan::AllocProfiler =
+            divan::AllocProfiler::system();
+
+        #[global_allocator]
+        static ALLOC: $tracking_allocator<divan::AllocProfiler> =
+            $tracking_allocator::new(&DIVAN_ALLOC, &$tracker);
+    };
+}
+
 pub fn bench_message(size: usize) -> Vec<u8> {
     vec![BENCH_MESSAGE_BYTE; size]
 }

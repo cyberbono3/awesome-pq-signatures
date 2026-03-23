@@ -12,6 +12,7 @@ pub use pq_bench::{
     BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
 };
 pub const DEFAULT_PARAM_SET_NAME: &str = "HSS-SHA256-H5-W2-L1";
+pq_bench::declare_tracking_allocator!();
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HssParamSet {
@@ -350,9 +351,6 @@ impl XorShift64 {
         x
     }
 }
-
-pub static ALLOCATION_TRACKER: AllocationTracker = AllocationTracker::new();
-pub type TrackingAllocator<A> = AllocationTrackingAllocator<A>;
 
 pub mod memory {
     use super::ALLOCATION_TRACKER;

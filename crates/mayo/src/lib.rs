@@ -6,20 +6,8 @@ pub use pq_bench::{
 use pq_mayo::{KeyPair, Mayo1, Signature as RawMayoSignature};
 use signature::{Error as SignatureError, Signer, Verifier};
 pub const DEFAULT_CONTEXT: &[u8] = &[];
-pub static ALLOCATION_TRACKER: AllocationTracker = AllocationTracker::new();
-pub type TrackingAllocator<A> = AllocationTrackingAllocator<A>;
-
-pub mod memory {
-    use super::ALLOCATION_TRACKER;
-
-    pub fn reset_peak() {
-        ALLOCATION_TRACKER.reset_peak();
-    }
-
-    pub fn peak_bytes() -> usize {
-        ALLOCATION_TRACKER.peak_bytes()
-    }
-}
+pq_bench::declare_tracking_allocator!();
+pq_bench::declare_peak_memory_api!();
 
 pub type MayoSeed = [u8; 24];
 pub type MayoKeyPair = KeyPair<Mayo1>;
