@@ -27,25 +27,16 @@ fn keygen(bencher: Bencher, param_set_name: &'static str) {
     });
 }
 
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn sign_l1(bencher: Bencher, message_size: usize) {
-    sign_bench(bencher, "HSS-SHA256-H5-W2-L1", message_size);
-}
-
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn sign_l2(bencher: Bencher, message_size: usize) {
-    sign_bench(bencher, "HSS-SHA256-H5-W2-L2", message_size);
-}
-
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn verify_l1(bencher: Bencher, message_size: usize) {
-    verify_bench(bencher, "HSS-SHA256-H5-W2-L1", message_size);
-}
-
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn verify_l2(bencher: Bencher, message_size: usize) {
-    verify_bench(bencher, "HSS-SHA256-H5-W2-L2", message_size);
-}
+pq_bench::declare_param_message_benches!(
+    sign = {
+        sign_l1 => "HSS-SHA256-H5-W2-L1",
+        sign_l2 => "HSS-SHA256-H5-W2-L2"
+    },
+    verify = {
+        verify_l1 => "HSS-SHA256-H5-W2-L1",
+        verify_l2 => "HSS-SHA256-H5-W2-L2"
+    }
+);
 
 fn sign_bench(
     bencher: Bencher,

@@ -1,7 +1,8 @@
 pub use pq_bench::{
-    bench_message, measure_time, signed_message_size, AllocationTracker,
-    AllocationTrackingAllocator, BENCH_MESSAGE, BENCH_MESSAGE_BYTE,
-    BENCH_MESSAGE_SIZES,
+    bench_message, ffi_keypair, ffi_sign, ffi_verify, measure_time,
+    signed_message_size, with_deterministic_rng, with_ffi_lock,
+    AllocationTracker, AllocationTrackingAllocator, FfiSignedMessageDimensions,
+    BENCH_MESSAGE, BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
 };
 use std::ffi::{c_int, c_uchar, c_ulonglong};
 use std::sync::Mutex;
@@ -27,13 +28,6 @@ type LessSeed = [u8; 16];
 struct DeterministicRngProfile {
     seed: LessSeed,
     domain_separator: u16,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-struct LessDimensions {
-    public_key: usize,
-    secret_key: usize,
-    signature: usize,
 }
 
 struct NativeLess;
@@ -207,8 +201,8 @@ impl LessScheme {
 }
 
 impl NativeLess {
-    fn dimensions() -> LessDimensions {
-        LessDimensions {
+    fn dimensions() -> FfiSignedMessageDimensions {
+        FfiSignedMessageDimensions {
             public_key: unsafe { less_rs_public_key_bytes() },
             secret_key: unsafe { less_rs_secret_key_bytes() },
             signature: unsafe { less_rs_signature_bytes() },
@@ -222,63 +216,54 @@ impl NativeLess {
     where
         F: FnOnce(&Self) -> Result<T, LessError>,
     {
-        let _guard = LESS_FFI_LOCK
-            .lock()
-            .map_err(|_| LessError::FfiLockPoisoned)?;
-        init_rng(&profile);
-        operation(&Self)
+        with_deterministic_rng(
+            &LESS_FFI_LOCK,
+            || LessError::FfiLockPoisoned,
+            || init_rng(&profile),
+            || operation(&Self),
+        )
     }
 
     fn keypair() -> Result<LessKeyPair, LessError> {
-        let dimensions = Self::dimensions();
-        let mut public_key = vec![0_u8; dimensions.public_key];
-        let mut secret_key = vec![0_u8; dimensions.secret_key];
-        let rc = unsafe {
-            crypto_sign_keypair(
-                public_key.as_mut_ptr(),
-                secret_key.as_mut_ptr(),
-            )
-        };
-
-        if rc == 0 {
-            Ok(LessKeyPair {
+        ffi_keypair(
+            Self::dimensions(),
+            |public_key, secret_key| unsafe {
+                crypto_sign_keypair(public_key, secret_key)
+            },
+            |public_key, secret_key| LessKeyPair {
                 public_key,
                 secret_key,
-            })
-        } else {
-            Err(LessError::KeygenFailed(rc))
-        }
+            },
+            LessError::KeygenFailed,
+        )
     }
 
     fn sign(
         keypair: &LessKeyPair,
         message: &[u8],
     ) -> Result<LessSignature, LessError> {
-        let dimensions = Self::dimensions();
-        let message_len = ulonglong_len(message.len())?;
-        let mut signed_message =
-            vec![
-                0_u8;
-                signed_message_size(message.len(), dimensions.signature)
-            ];
-        let mut signed_message_len = 0_u64;
-
-        let rc = unsafe {
-            crypto_sign(
-                signed_message.as_mut_ptr(),
-                &raw mut signed_message_len,
-                message.as_ptr(),
-                message_len,
-                keypair.secret_key.as_ptr(),
-            )
-        };
-
-        if rc != 0 {
-            return Err(LessError::SignFailed(rc));
-        }
-
-        let signed_message_len = usize_len(signed_message_len)?;
-        extract_signature(message.len(), &signed_message, signed_message_len)
+        ffi_sign(
+            Self::dimensions(),
+            message,
+            &keypair.secret_key,
+            |signed_message,
+             signed_message_len,
+             message,
+             message_len,
+             secret_key| unsafe {
+                crypto_sign(
+                    signed_message,
+                    signed_message_len,
+                    message,
+                    message_len,
+                    secret_key,
+                )
+            },
+            LessSignature,
+            LessError::SignFailed,
+            || LessError::LengthOverflow,
+            || LessError::InvalidSignedMessage,
+        )
     }
 
     fn verify(
@@ -286,37 +271,32 @@ impl NativeLess {
         message: &[u8],
         signature: &LessSignature,
     ) -> Result<bool, LessError> {
-        let _guard = LESS_FFI_LOCK
-            .lock()
-            .map_err(|_| LessError::FfiLockPoisoned)?;
-
-        let signed_message = combine_signed_message(message, signature);
-        let signed_message_len = ulonglong_len(signed_message.len())?;
-        let mut opened_message = vec![0_u8; message.len()];
-        let mut opened_message_len = 0_u64;
-
-        let rc = unsafe {
-            crypto_sign_open(
-                opened_message.as_mut_ptr(),
-                &raw mut opened_message_len,
-                signed_message.as_ptr(),
-                signed_message_len,
-                keypair.public_key.as_ptr(),
-            )
-        };
-
-        match rc {
-            0 => {
-                let opened_message_len = usize_len(opened_message_len)?;
-                Ok(matches_opened_message(
+        with_ffi_lock(
+            &LESS_FFI_LOCK,
+            || LessError::FfiLockPoisoned,
+            || {
+                ffi_verify(
                     message,
-                    &opened_message,
-                    opened_message_len,
-                ))
-            }
-            -1 => Ok(false),
-            _ => Err(LessError::VerifyFailed(rc)),
-        }
+                    signature.as_bytes(),
+                    &keypair.public_key,
+                    |opened_message,
+                     opened_message_len,
+                     signed_message,
+                     signed_message_len,
+                     public_key| unsafe {
+                        crypto_sign_open(
+                            opened_message,
+                            opened_message_len,
+                            signed_message,
+                            signed_message_len,
+                            public_key,
+                        )
+                    },
+                    LessError::VerifyFailed,
+                    || LessError::LengthOverflow,
+                )
+            },
+        )
     }
 }
 
@@ -330,49 +310,6 @@ fn init_rng(profile: &DeterministicRngProfile) {
             profile.domain_separator,
         );
     }
-}
-
-fn ulonglong_len(value: usize) -> Result<c_ulonglong, LessError> {
-    c_ulonglong::try_from(value).map_err(|_| LessError::LengthOverflow)
-}
-
-fn usize_len(value: c_ulonglong) -> Result<usize, LessError> {
-    usize::try_from(value).map_err(|_| LessError::LengthOverflow)
-}
-
-fn extract_signature(
-    message_len: usize,
-    signed_message: &[u8],
-    signed_message_len: usize,
-) -> Result<LessSignature, LessError> {
-    signed_message
-        .get(message_len..signed_message_len)
-        .map(|bytes| LessSignature(bytes.to_vec()))
-        .ok_or(LessError::InvalidSignedMessage)
-}
-
-fn combine_signed_message(
-    message: &[u8],
-    signature: &LessSignature,
-) -> Vec<u8> {
-    let mut signed_message = Vec::with_capacity(signed_message_size(
-        message.len(),
-        signature.0.len(),
-    ));
-    signed_message.extend_from_slice(message);
-    signed_message.extend_from_slice(signature.as_bytes());
-    signed_message
-}
-
-fn matches_opened_message(
-    expected_message: &[u8],
-    opened_message: &[u8],
-    opened_message_len: usize,
-) -> bool {
-    opened_message_len == expected_message.len()
-        && opened_message
-            .get(..opened_message_len)
-            .is_some_and(|message| message == expected_message)
 }
 
 unsafe extern "C" {

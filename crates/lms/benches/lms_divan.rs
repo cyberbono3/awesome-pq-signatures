@@ -29,41 +29,16 @@ fn keygen(bencher: Bencher, param_set_name: &'static str) {
     });
 }
 
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn sign_h5w4(bencher: Bencher, message_size: usize) {
-    sign_bench(
-        bencher,
-        "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4",
-        message_size,
-    );
-}
-
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn sign_h10w4(bencher: Bencher, message_size: usize) {
-    sign_bench(
-        bencher,
-        "LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4",
-        message_size,
-    );
-}
-
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn verify_h5w4(bencher: Bencher, message_size: usize) {
-    verify_bench(
-        bencher,
-        "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4",
-        message_size,
-    );
-}
-
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn verify_h10w4(bencher: Bencher, message_size: usize) {
-    verify_bench(
-        bencher,
-        "LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4",
-        message_size,
-    );
-}
+pq_bench::declare_param_message_benches!(
+    sign = {
+        sign_h5w4 => "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4",
+        sign_h10w4 => "LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4"
+    },
+    verify = {
+        verify_h5w4 => "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4",
+        verify_h10w4 => "LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4"
+    }
+);
 
 fn sign_bench(
     bencher: Bencher,

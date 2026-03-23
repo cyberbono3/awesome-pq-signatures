@@ -10,11 +10,18 @@ use std::alloc::{GlobalAlloc, Layout};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
+mod ffi_signed_message;
+
 include!(concat!(env!("OUT_DIR"), "/bench_message.rs"));
 
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
 pub const BENCHMARK_SEED_U64: u64 = 0x7A5B_91C3_E4D2_F607;
+
+pub use ffi_signed_message::{
+    ffi_keypair, ffi_sign, ffi_verify, with_deterministic_rng, with_ffi_lock,
+    FfiSignedMessageDimensions,
+};
 
 #[macro_export]
 macro_rules! declare_tracking_allocator {
@@ -60,6 +67,28 @@ macro_rules! install_divan_tracking_allocator {
         #[global_allocator]
         static ALLOC: $tracking_allocator<divan::AllocProfiler> =
             $tracking_allocator::new(&DIVAN_ALLOC, &$tracker);
+    };
+}
+
+#[macro_export]
+macro_rules! declare_param_message_benches {
+    (
+        sign = { $( $sign_fn:ident => $sign_param:expr ),+ $(,)? },
+        verify = { $( $verify_fn:ident => $verify_param:expr ),+ $(,)? }
+    ) => {
+        $(
+            #[divan::bench(args = BENCH_MESSAGE_SIZES)]
+            fn $sign_fn(bencher: divan::Bencher, message_size: usize) {
+                sign_bench(bencher, $sign_param, message_size);
+            }
+        )+
+
+        $(
+            #[divan::bench(args = BENCH_MESSAGE_SIZES)]
+            fn $verify_fn(bencher: divan::Bencher, message_size: usize) {
+                verify_bench(bencher, $verify_param, message_size);
+            }
+        )+
     };
 }
 
