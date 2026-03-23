@@ -398,6 +398,16 @@ mod tests {
         DEFAULT_PARAM_SET_NAME,
     };
 
+    fn run_with_large_stack(name: &str, test: impl FnOnce() + Send + 'static) {
+        std::thread::Builder::new()
+            .name(name.to_owned())
+            .stack_size(32 * 1024 * 1024)
+            .spawn(test)
+            .expect("test thread should start")
+            .join()
+            .expect("test thread should complete");
+    }
+
     #[test]
     fn param_set_lookup_works() {
         let found = param_set_by_name(DEFAULT_PARAM_SET_NAME)
@@ -407,36 +417,40 @@ mod tests {
 
     #[test]
     fn sign_verify_roundtrip() {
-        let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
-            .expect("param set should resolve");
-        let message = b"lms-roundtrip";
-        let (public_key, mut secret_key) =
-            scheme.keypair_with_seed(7).expect("keypair should succeed");
+        run_with_large_stack("lms-roundtrip", || {
+            let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+                .expect("param set should resolve");
+            let message = b"lms-roundtrip";
+            let (public_key, mut secret_key) =
+                scheme.keypair_with_seed(7).expect("keypair should succeed");
 
-        let signature = scheme
-            .sign(message, &mut secret_key)
-            .expect("sign should succeed");
-        let verified = scheme
-            .verify(message, &signature, &public_key)
-            .expect("verify should succeed");
-        assert!(verified, "signature should verify");
+            let signature = scheme
+                .sign(message, &mut secret_key)
+                .expect("sign should succeed");
+            let verified = scheme
+                .verify(message, &signature, &public_key)
+                .expect("verify should succeed");
+            assert!(verified, "signature should verify");
+        });
     }
 
     #[test]
     fn verify_fails_for_other_message() {
-        let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
-            .expect("param set should resolve");
-        let (public_key, mut secret_key) = scheme
-            .keypair_with_seed(11)
-            .expect("keypair should succeed");
+        run_with_large_stack("lms-verify-fail", || {
+            let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+                .expect("param set should resolve");
+            let (public_key, mut secret_key) = scheme
+                .keypair_with_seed(11)
+                .expect("keypair should succeed");
 
-        let signature = scheme
-            .sign(b"message-a", &mut secret_key)
-            .expect("sign should succeed");
-        let verified = scheme
-            .verify(b"message-b", &signature, &public_key)
-            .expect("verify should succeed");
-        assert!(!verified, "different message should fail verification");
+            let signature = scheme
+                .sign(b"message-a", &mut secret_key)
+                .expect("sign should succeed");
+            let verified = scheme
+                .verify(b"message-b", &signature, &public_key)
+                .expect("verify should succeed");
+            assert!(!verified, "different message should fail verification");
+        });
     }
 
     #[test]
