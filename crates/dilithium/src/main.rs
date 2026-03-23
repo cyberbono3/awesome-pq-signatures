@@ -1,6 +1,6 @@
 use dilithium::{
     default_seed, measure_time, memory, signed_message_size, SignatureScheme,
-    TrackingAllocator, BENCH_MESSAGE, ML_DSA_65,
+    TrackingAllocator, ALLOCATION_TRACKER, BENCH_MESSAGE, ML_DSA_65,
 };
 use pq_bench::print_timing;
 use std::alloc::System;
@@ -9,7 +9,7 @@ static SYSTEM_ALLOC: System = System;
 
 #[global_allocator]
 static GLOBAL: TrackingAllocator<System> =
-    TrackingAllocator::new(&SYSTEM_ALLOC);
+    TrackingAllocator::new(&SYSTEM_ALLOC, &ALLOCATION_TRACKER);
 
 const MESSAGE: &[u8] = &BENCH_MESSAGE;
 const CONTEXT: &[u8] = &[];

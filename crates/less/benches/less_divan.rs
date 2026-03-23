@@ -1,14 +1,14 @@
 use divan::{black_box, AllocProfiler, Bencher};
 use less::{
     bench_message, memory, LessKeyPair, LessSignature, TrackingAllocator,
-    BENCH_MESSAGE_SIZES, LESS,
+    ALLOCATION_TRACKER, BENCH_MESSAGE_SIZES, LESS,
 };
 
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
 
 #[global_allocator]
 static ALLOC: TrackingAllocator<AllocProfiler> =
-    TrackingAllocator::new(&DIVAN_ALLOC);
+    TrackingAllocator::new(&DIVAN_ALLOC, &ALLOCATION_TRACKER);
 
 fn benchmark_keypair() -> LessKeyPair {
     LESS.benchmark_keypair()

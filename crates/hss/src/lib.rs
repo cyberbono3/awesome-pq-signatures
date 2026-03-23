@@ -3,14 +3,12 @@ use hbs_lms::{
     keygen, HssParameter, LmotsAlgorithm, LmsAlgorithm, Seed, Sha256_256,
     Signature, SigningKey, VerifyingKey,
 };
-use std::alloc::{GlobalAlloc, Layout};
 use std::error::Error;
 use std::fmt;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub use pq_bench::{
-    bench_message, measure_time, signed_message_size, BENCH_MESSAGE,
+    bench_message, benchmark_seed_u64, measure_time, signed_message_size,
+    AllocationTracker, AllocationTrackingAllocator, BENCH_MESSAGE,
     BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
 };
 pub const DEFAULT_PARAM_SET_NAME: &str = "HSS-SHA256-H5-W2-L1";
@@ -299,11 +297,7 @@ impl fmt::Display for HssError {
 impl Error for HssError {}
 
 pub fn default_seed() -> u64 {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
-    let pid = std::process::id() as u64;
-    now.as_nanos() as u64 ^ (pid << 32)
+    benchmark_seed_u64()
 }
 
 fn fill_seed_from_u64(seed_value: u64, seed: &mut Seed<Sha256_256>) {
@@ -357,102 +351,37 @@ impl XorShift64 {
     }
 }
 
-static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static BASELINE: AtomicUsize = AtomicUsize::new(0);
-static TOTAL_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static TRACKING_ENABLED: AtomicUsize = AtomicUsize::new(0);
-
-pub struct TrackingAllocator<A: GlobalAlloc + Sync + 'static> {
-    inner: &'static A,
-}
-
-impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
-    pub const fn new(inner: &'static A) -> Self {
-        Self { inner }
-    }
-}
-
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
-    for TrackingAllocator<A>
-{
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { self.inner.alloc(layout) };
-        if !ptr.is_null() {
-            track_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        unsafe { self.inner.dealloc(ptr, layout) };
-        track_dealloc(layout.size());
-    }
-}
-
-fn track_alloc(size: usize) {
-    let current = ALLOCATED.fetch_add(size, Ordering::SeqCst) + size;
-
-    if TRACKING_ENABLED.load(Ordering::SeqCst) != 0 {
-        TOTAL_ALLOCATED.fetch_add(size, Ordering::SeqCst);
-    }
-
-    let baseline = BASELINE.load(Ordering::SeqCst);
-    let relative_current = current.saturating_sub(baseline);
-    let mut peak = PEAK_ALLOCATED.load(Ordering::SeqCst);
-
-    while relative_current > peak {
-        match PEAK_ALLOCATED.compare_exchange_weak(
-            peak,
-            relative_current,
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-        ) {
-            Ok(_) => break,
-            Err(observed) => peak = observed,
-        }
-    }
-}
-
-fn track_dealloc(size: usize) {
-    ALLOCATED.fetch_sub(size, Ordering::SeqCst);
-}
+pub static ALLOCATION_TRACKER: AllocationTracker = AllocationTracker::new();
+pub type TrackingAllocator<A> = AllocationTrackingAllocator<A>;
 
 pub mod memory {
-    use super::{
-        Ordering, ALLOCATED, BASELINE, PEAK_ALLOCATED, TOTAL_ALLOCATED,
-        TRACKING_ENABLED,
-    };
+    use super::ALLOCATION_TRACKER;
 
     /// Reset all tracking counters and set the baseline to the current heap usage.
     /// Call this immediately before the operation you want to measure.
     pub fn reset_peak() {
-        let current = ALLOCATED.load(Ordering::SeqCst);
-        BASELINE.store(current, Ordering::SeqCst);
-        PEAK_ALLOCATED.store(0, Ordering::SeqCst);
-        TOTAL_ALLOCATED.store(0, Ordering::SeqCst);
-        TRACKING_ENABLED.store(1, Ordering::SeqCst);
+        ALLOCATION_TRACKER.reset_peak();
     }
 
     /// Stop tracking and return results.
     pub fn stop_tracking() {
-        TRACKING_ENABLED.store(0, Ordering::SeqCst);
+        ALLOCATION_TRACKER.stop_tracking();
     }
 
     /// Peak *net* heap usage above the baseline (high-water mark of live allocations).
     pub fn peak_bytes() -> usize {
-        PEAK_ALLOCATED.load(Ordering::SeqCst)
+        ALLOCATION_TRACKER.peak_bytes()
     }
 
     /// Total cumulative bytes allocated during the measurement window.
     /// This counts every allocation, even if it was freed before the next one.
     pub fn total_allocated_bytes() -> usize {
-        TOTAL_ALLOCATED.load(Ordering::SeqCst)
+        ALLOCATION_TRACKER.total_allocated_bytes()
     }
 
     /// Current live heap usage (absolute, not relative to baseline).
     pub fn current_bytes() -> usize {
-        ALLOCATED.load(Ordering::SeqCst)
+        ALLOCATION_TRACKER.current_bytes()
     }
 }
 

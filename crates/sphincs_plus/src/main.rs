@@ -2,7 +2,7 @@ use pq_bench::print_timing;
 use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
 use sphincs_plus::{
     measure_time, memory, signature_size, SignatureScheme, TrackingAllocator,
-    BENCH_MESSAGE, SPHINCS_PLUS_SHAKE_128F_SIMPLE,
+    ALLOCATION_TRACKER, BENCH_MESSAGE, SPHINCS_PLUS_SHAKE_128F_SIMPLE,
 };
 use std::alloc::System;
 
@@ -10,7 +10,7 @@ static SYSTEM_ALLOC: System = System;
 
 #[global_allocator]
 static GLOBAL: TrackingAllocator<System> =
-    TrackingAllocator::new(&SYSTEM_ALLOC);
+    TrackingAllocator::new(&SYSTEM_ALLOC, &ALLOCATION_TRACKER);
 
 const MESSAGE: &[u8] = &BENCH_MESSAGE;
 

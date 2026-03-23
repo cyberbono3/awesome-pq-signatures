@@ -1,6 +1,6 @@
 use cross::{
     bench_message, memory, CrossKeyPair, CrossSignature, TrackingAllocator,
-    BENCH_MESSAGE_SIZES, CROSS,
+    ALLOCATION_TRACKER, BENCH_MESSAGE_SIZES, CROSS,
 };
 use divan::{black_box, AllocProfiler, Bencher};
 
@@ -8,7 +8,7 @@ static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
 
 #[global_allocator]
 static ALLOC: TrackingAllocator<AllocProfiler> =
-    TrackingAllocator::new(&DIVAN_ALLOC);
+    TrackingAllocator::new(&DIVAN_ALLOC, &ALLOCATION_TRACKER);
 
 fn benchmark_keypair() -> CrossKeyPair {
     CROSS

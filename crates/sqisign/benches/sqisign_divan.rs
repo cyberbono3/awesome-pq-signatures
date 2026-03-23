@@ -1,14 +1,14 @@
 use divan::{black_box, AllocProfiler, Bencher};
 use sqisign::{
     bench_message, memory, SqisignKeyPair, SqisignSignature, TrackingAllocator,
-    BENCH_MESSAGE_SIZES, SQISIGN,
+    ALLOCATION_TRACKER, BENCH_MESSAGE_SIZES, SQISIGN,
 };
 
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
 
 #[global_allocator]
 static ALLOC: TrackingAllocator<AllocProfiler> =
-    TrackingAllocator::new(&DIVAN_ALLOC);
+    TrackingAllocator::new(&DIVAN_ALLOC, &ALLOCATION_TRACKER);
 
 fn benchmark_keypair() -> SqisignKeyPair {
     SQISIGN

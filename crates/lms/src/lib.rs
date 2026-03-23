@@ -5,14 +5,12 @@ use hbs_lms::{
     Signature as RawSignature, SigningKey as RawSigningKey,
     VerifyingKey as RawVerifyingKey,
 };
-use std::alloc::{GlobalAlloc, Layout};
 use std::error::Error;
 use std::fmt;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub use pq_bench::{
-    bench_message, measure_time, signed_message_size, BENCH_MESSAGE,
+    bench_message, benchmark_seed_u64, measure_time, signed_message_size,
+    AllocationTracker, AllocationTrackingAllocator, BENCH_MESSAGE,
     BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
 };
 pub const DEFAULT_PARAM_SET_NAME: &str =
@@ -336,11 +334,7 @@ impl fmt::Display for LmsError {
 impl Error for LmsError {}
 
 pub fn default_seed() -> u64 {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
-    let pid = std::process::id() as u64;
-    now.as_nanos() as u64 ^ (pid << 32)
+    benchmark_seed_u64()
 }
 
 fn seed_material_from_u64(seed_value: u64) -> [u8; 32] {
@@ -382,71 +376,18 @@ impl XorShift64 {
     }
 }
 
-static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static BASELINE: AtomicUsize = AtomicUsize::new(0);
-
-pub struct TrackingAllocator<A: GlobalAlloc + Sync + 'static> {
-    inner: &'static A,
-}
-
-impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
-    pub const fn new(inner: &'static A) -> Self {
-        Self { inner }
-    }
-}
-
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
-    for TrackingAllocator<A>
-{
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { self.inner.alloc(layout) };
-        if !ptr.is_null() {
-            track_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        unsafe { self.inner.dealloc(ptr, layout) };
-        track_dealloc(layout.size());
-    }
-}
-
-fn track_alloc(size: usize) {
-    let current = ALLOCATED.fetch_add(size, Ordering::SeqCst) + size;
-    let baseline = BASELINE.load(Ordering::SeqCst);
-    let relative_current = current.saturating_sub(baseline);
-    let mut peak = PEAK_ALLOCATED.load(Ordering::SeqCst);
-
-    while relative_current > peak {
-        match PEAK_ALLOCATED.compare_exchange_weak(
-            peak,
-            relative_current,
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-        ) {
-            Ok(_) => break,
-            Err(observed) => peak = observed,
-        }
-    }
-}
-
-fn track_dealloc(size: usize) {
-    ALLOCATED.fetch_sub(size, Ordering::SeqCst);
-}
+pub static ALLOCATION_TRACKER: AllocationTracker = AllocationTracker::new();
+pub type TrackingAllocator<A> = AllocationTrackingAllocator<A>;
 
 pub mod memory {
-    use super::{Ordering, ALLOCATED, BASELINE, PEAK_ALLOCATED};
+    use super::ALLOCATION_TRACKER;
 
     pub fn reset_peak() {
-        let current = ALLOCATED.load(Ordering::SeqCst);
-        BASELINE.store(current, Ordering::SeqCst);
-        PEAK_ALLOCATED.store(0, Ordering::SeqCst);
+        ALLOCATION_TRACKER.reset_peak();
     }
 
     pub fn peak_bytes() -> usize {
-        PEAK_ALLOCATED.load(Ordering::SeqCst)
+        ALLOCATION_TRACKER.peak_bytes()
     }
 }
 

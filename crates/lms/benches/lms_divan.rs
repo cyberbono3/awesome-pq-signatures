@@ -1,15 +1,15 @@
 use divan::{black_box, AllocProfiler, Bencher};
 use lms::{
     bench_message, default_seed, memory, signed_message_size, LmsScheme,
-    TrackingAllocator, BENCH_MESSAGE_SIZES, DEFAULT_PARAM_SET_NAME,
-    LMS_PARAM_SETS,
+    TrackingAllocator, ALLOCATION_TRACKER, BENCH_MESSAGE_SIZES,
+    DEFAULT_PARAM_SET_NAME, LMS_PARAM_SETS,
 };
 
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
 
 #[global_allocator]
 static ALLOC: TrackingAllocator<AllocProfiler> =
-    TrackingAllocator::new(&DIVAN_ALLOC);
+    TrackingAllocator::new(&DIVAN_ALLOC, &ALLOCATION_TRACKER);
 
 const PARAM_SET_NAMES: [&str; 2] = [
     "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4",

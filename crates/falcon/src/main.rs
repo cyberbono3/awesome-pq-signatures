@@ -1,6 +1,6 @@
 use falcon::{
     measure_time, memory, signature_size, SignatureScheme, TrackingAllocator,
-    BENCH_MESSAGE, FALCON512,
+    ALLOCATION_TRACKER, BENCH_MESSAGE, FALCON512,
 };
 use pq_bench::print_timing;
 use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
@@ -10,7 +10,7 @@ static SYSTEM_ALLOC: System = System;
 
 #[global_allocator]
 static GLOBAL: TrackingAllocator<System> =
-    TrackingAllocator::new(&SYSTEM_ALLOC);
+    TrackingAllocator::new(&SYSTEM_ALLOC, &ALLOCATION_TRACKER);
 
 const MESSAGE: &[u8] = &BENCH_MESSAGE;
 

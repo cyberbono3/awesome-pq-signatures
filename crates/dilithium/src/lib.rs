@@ -1,76 +1,21 @@
 use ml_dsa::{KeyGen, KeyPair, MlDsa65, Signature, B32};
 pub use pq_bench::{
-    bench_message, measure_time, signed_message_size, BENCH_MESSAGE,
+    bench_message, benchmark_seed_array, measure_time, signed_message_size,
+    AllocationTracker, AllocationTrackingAllocator, BENCH_MESSAGE,
     BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
 };
-use std::alloc::{GlobalAlloc, Layout};
-use std::sync::atomic::{AtomicUsize, Ordering};
-
-static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static BASELINE: AtomicUsize = AtomicUsize::new(0);
-
-pub struct TrackingAllocator<A: GlobalAlloc + Sync + 'static> {
-    inner: &'static A,
-}
-
-impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
-    pub const fn new(inner: &'static A) -> Self {
-        Self { inner }
-    }
-}
-
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc
-    for TrackingAllocator<A>
-{
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { self.inner.alloc(layout) };
-        if !ptr.is_null() {
-            track_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        unsafe { self.inner.dealloc(ptr, layout) };
-        track_dealloc(layout.size());
-    }
-}
-
-fn track_alloc(size: usize) {
-    let current = ALLOCATED.fetch_add(size, Ordering::SeqCst) + size;
-    let baseline = BASELINE.load(Ordering::SeqCst);
-    let relative_current = current.saturating_sub(baseline);
-    let mut peak = PEAK_ALLOCATED.load(Ordering::SeqCst);
-
-    while relative_current > peak {
-        match PEAK_ALLOCATED.compare_exchange_weak(
-            peak,
-            relative_current,
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-        ) {
-            Ok(_) => break,
-            Err(observed) => peak = observed,
-        }
-    }
-}
-
-fn track_dealloc(size: usize) {
-    ALLOCATED.fetch_sub(size, Ordering::SeqCst);
-}
+pub static ALLOCATION_TRACKER: AllocationTracker = AllocationTracker::new();
+pub type TrackingAllocator<A> = AllocationTrackingAllocator<A>;
 
 pub mod memory {
-    use super::{Ordering, ALLOCATED, BASELINE, PEAK_ALLOCATED};
+    use super::ALLOCATION_TRACKER;
 
     pub fn reset_peak() {
-        let current = ALLOCATED.load(Ordering::SeqCst);
-        BASELINE.store(current, Ordering::SeqCst);
-        PEAK_ALLOCATED.store(0, Ordering::SeqCst);
+        ALLOCATION_TRACKER.reset_peak();
     }
 
     pub fn peak_bytes() -> usize {
-        PEAK_ALLOCATED.load(Ordering::SeqCst)
+        ALLOCATION_TRACKER.peak_bytes()
     }
 }
 
@@ -154,7 +99,7 @@ impl SignatureScheme for MlDsa65Scheme {
 }
 
 pub fn default_seed() -> B32 {
-    [7_u8; 32].into()
+    benchmark_seed_array::<32>().into()
 }
 
 #[cfg(test)]
