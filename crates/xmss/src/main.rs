@@ -1,14 +1,20 @@
 use pq_bench::{
-    print_human_benchmark_report, HumanBenchmarkLine, HumanBenchmarkReport,
+    benchmark_message, duration_ns, emit_benchmark_report,
+    print_human_benchmark_report, BenchmarkBinaryConfig, BenchmarkBinaryReport,
+    BenchmarkSizeReport, HumanBenchmarkLine, HumanBenchmarkReport,
 };
-use xmss_bench::{default_benchmark_scheme, BENCH_MESSAGE};
-
-const MESSAGE: &[u8] = &BENCH_MESSAGE;
+use xmss_bench::default_benchmark_scheme;
 
 fn main() {
+    let config = BenchmarkBinaryConfig::parse(std::env::args().skip(1))
+        .unwrap_or_else(|err| {
+            eprintln!("{err}");
+            std::process::exit(1);
+        });
+    let message = benchmark_message(config.message_size);
     let scheme = default_benchmark_scheme();
     let report = scheme
-        .benchmark_report(MESSAGE)
+        .benchmark_report(&message)
         .expect("xmss benchmark report must succeed");
 
     const BANNER: [&str; 4] = [
@@ -18,30 +24,53 @@ fn main() {
         "╚══════════════════════════════════════════════════╝",
     ];
 
-    print_human_benchmark_report(&HumanBenchmarkReport {
-        banner_lines: &BANNER,
-        heading: report.display_name.as_str().into(),
-        summary_algorithm: report.param_set.as_str().into(),
-        keygen_duration: report.keygen_duration,
-        sign_duration: report.sign_duration,
-        verify_duration: report.verify_duration,
+    let binary_report = BenchmarkBinaryReport {
+        algorithm: "XMSS".to_string(),
+        backend: Some(scheme.backend_name().to_string()),
+        param_set: Some(report.param_set.as_str().to_string()),
+        keygen_ns: duration_ns(report.keygen_duration),
+        sign_ns: duration_ns(report.sign_duration),
+        verify_ns: duration_ns(report.verify_duration),
         verified: report.verified,
-        size_lines: vec![
-            HumanBenchmarkLine::bytes(
-                "Public key size",
-                report.public_key_size,
-            ),
-            HumanBenchmarkLine::bytes(
-                "Secret key size",
-                report.secret_key_size,
-            ),
-            HumanBenchmarkLine::bytes("Signature size", report.signature_size),
-        ],
-        summary_size_lines: vec![
-            HumanBenchmarkLine::bytes("Public Key", report.public_key_size),
-            HumanBenchmarkLine::bytes("Secret Key", report.secret_key_size),
-            HumanBenchmarkLine::bytes("Signature", report.signature_size),
-        ],
-        ..HumanBenchmarkReport::default()
+        sizes: BenchmarkSizeReport {
+            public_key_bytes: report.public_key_size,
+            secret_key_bytes: report.secret_key_size,
+            signature_bytes: report.signature_size,
+            signed_message_bytes: None,
+        },
+        sign_peak_bytes: None,
+        verify_peak_bytes: None,
+    };
+
+    emit_benchmark_report(&config, &binary_report, |_| {
+        print_human_benchmark_report(&HumanBenchmarkReport {
+            banner_lines: &BANNER,
+            heading: report.display_name.as_str().into(),
+            summary_algorithm: report.param_set.as_str().into(),
+            keygen_duration: report.keygen_duration,
+            sign_duration: report.sign_duration,
+            verify_duration: report.verify_duration,
+            verified: report.verified,
+            size_lines: vec![
+                HumanBenchmarkLine::bytes(
+                    "Public key size",
+                    report.public_key_size,
+                ),
+                HumanBenchmarkLine::bytes(
+                    "Secret key size",
+                    report.secret_key_size,
+                ),
+                HumanBenchmarkLine::bytes(
+                    "Signature size",
+                    report.signature_size,
+                ),
+            ],
+            summary_size_lines: vec![
+                HumanBenchmarkLine::bytes("Public Key", report.public_key_size),
+                HumanBenchmarkLine::bytes("Secret Key", report.secret_key_size),
+                HumanBenchmarkLine::bytes("Signature", report.signature_size),
+            ],
+            ..HumanBenchmarkReport::default()
+        });
     });
 }
