@@ -99,8 +99,6 @@ Sorted by `Family`, then by `Signature (B)` ascending within each family.
 | Lattice-based | 2 | ML-DSA-65 (Dilithium) | ML-DSA-65 | 3309 | 1952 | 4032 | 0.5695 | 0.04458 |
 | System-of-equations | 1 | MAYO-1 | MAYO-1 | 454 | 1420 | 24 | 2.04 | 0.7638 |
 
-![Lowest signature size by family](./docs/diagrams/lowest-signature-by-family.svg)
-
 ## Fastest Sign And Verify By Family
 
 Sorted by `Family`, then by `Sign (ms)` ascending with `Verify (ms)` as the secondary sort within each family.
@@ -119,5 +117,3 @@ Sorted by `Family`, then by `Sign (ms)` ascending with `Verify (ms)` as the seco
 | Lattice-based | 1 | Falcon-512 | Falcon-512 | 0.151 | 0.02161 | 653 | 897 | 1281 |
 | Lattice-based | 2 | ML-DSA-65 (Dilithium) | ML-DSA-65 | 0.5695 | 0.04458 | 3309 | 1952 | 4032 |
 | System-of-equations | 1 | MAYO-1 | MAYO-1 | 2.04 | 0.7638 | 454 | 1420 | 24 |
-
-![Fastest sign and verify by family](./docs/diagrams/fastest-sign-verify-by-family.svg)
