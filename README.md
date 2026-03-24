@@ -79,3 +79,41 @@ Sorted by `Sign (ms)` ascending, with `Verify (ms)` as the secondary sort.
 | 10 | SQISign | SQISign-lvl1 | Isogeny-based | 41.45 | 2.896 | 148 | 65 | 353 |
 | 11 | XMSS | XMSS-SHA2_10_256 | Hash-based | 3304 | 0.8081 | 2500 | 68 | 136 |
 | 12 | XMSS^MT | XMSSMT-SHA2_20/2_256 | Hash-based | 4762 | 1.795 | 4963 | 68 | 135 |
+
+## Lowest Signature Size By Family
+
+Sorted by `Family`, then by `Signature (B)` ascending within each family.
+
+| Family | Rank | Name | Param Set | Signature (B) | PK (B) | SK (B) | Sign (ms) | Verify (ms) |
+|---|---:|---|---|---:|---:|---:|---:|---:|
+| Code-based | 1 | LESS | LESS-252-45 | 1329 | 97484 | 32 | 19.06 | 18.69 |
+| Code-based | 2 | CROSS | CROSS-RSDPG-192-BALANCED | 22464 | 83 | 48 | 1.371 | 0.7868 |
+| Hash-based | 1 | LeanSig | Poseidon-L2^18-TS-w4 | 1632 | 48 | 86588 | 2.888 | 0.3607 |
+| Hash-based | 2 | LMS | LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4 | 2352 | 56 | 48 | 6.646 | 0.1026 |
+| Hash-based | 3 | XMSS | XMSS-SHA2_10_256 | 2500 | 68 | 136 | 3304 | 0.8081 |
+| Hash-based | 4 | HSS | HSS-SHA256-H5-W2-L1 | 4464 | 60 | 48 | 3.824 | 0.05408 |
+| Hash-based | 5 | XMSS^MT | XMSSMT-SHA2_20/2_256 | 4963 | 68 | 135 | 4762 | 1.795 |
+| Hash-based | 6 | SPHINCS+ | SPHINCS+-SHAKE-128f-simple | 17088 | 32 | 64 | 24.98 | 1.507 |
+| Isogeny-based | 1 | SQISign | SQISign-lvl1 | 148 | 65 | 353 | 41.45 | 2.896 |
+| Lattice-based | 1 | Falcon-512 | Falcon-512 | 653 | 897 | 1281 | 0.151 | 0.02161 |
+| Lattice-based | 2 | ML-DSA-65 (Dilithium) | ML-DSA-65 | 3309 | 1952 | 4032 | 0.5695 | 0.04458 |
+| System-of-equations | 1 | MAYO-1 | MAYO-1 | 454 | 1420 | 24 | 2.04 | 0.7638 |
+
+## Fastest Sign And Verify By Family
+
+Sorted by `Family`, then by `Sign (ms)` ascending with `Verify (ms)` as the secondary sort within each family.
+
+| Family | Rank | Name | Param Set | Sign (ms) | Verify (ms) | Signature (B) | PK (B) | SK (B) |
+|---|---:|---|---|---:|---:|---:|---:|---:|
+| Code-based | 1 | CROSS | CROSS-RSDPG-192-BALANCED | 1.371 | 0.7868 | 22464 | 83 | 48 |
+| Code-based | 2 | LESS | LESS-252-45 | 19.06 | 18.69 | 1329 | 97484 | 32 |
+| Hash-based | 1 | LeanSig | Poseidon-L2^18-TS-w4 | 2.888 | 0.3607 | 1632 | 48 | 86588 |
+| Hash-based | 2 | HSS | HSS-SHA256-H5-W2-L1 | 3.824 | 0.05408 | 4464 | 60 | 48 |
+| Hash-based | 3 | LMS | LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4 | 6.646 | 0.1026 | 2352 | 56 | 48 |
+| Hash-based | 4 | SPHINCS+ | SPHINCS+-SHAKE-128f-simple | 24.98 | 1.507 | 17088 | 32 | 64 |
+| Hash-based | 5 | XMSS | XMSS-SHA2_10_256 | 3304 | 0.8081 | 2500 | 68 | 136 |
+| Hash-based | 6 | XMSS^MT | XMSSMT-SHA2_20/2_256 | 4762 | 1.795 | 4963 | 68 | 135 |
+| Isogeny-based | 1 | SQISign | SQISign-lvl1 | 41.45 | 2.896 | 148 | 65 | 353 |
+| Lattice-based | 1 | Falcon-512 | Falcon-512 | 0.151 | 0.02161 | 653 | 897 | 1281 |
+| Lattice-based | 2 | ML-DSA-65 (Dilithium) | ML-DSA-65 | 0.5695 | 0.04458 | 3309 | 1952 | 4032 |
+| System-of-equations | 1 | MAYO-1 | MAYO-1 | 2.04 | 0.7638 | 454 | 1420 | 24 |
