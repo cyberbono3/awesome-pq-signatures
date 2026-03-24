@@ -99,34 +99,6 @@ Sorted by `Family`, then by `Signature (B)` ascending within each family.
 | Lattice-based | 2 | ML-DSA-65 (Dilithium) | ML-DSA-65 | 3309 | 1952 | 4032 | 0.5695 | 0.04458 |
 | System-of-equations | 1 | MAYO-1 | MAYO-1 | 454 | 1420 | 24 | 2.04 | 0.7638 |
 
-```mermaid
-flowchart TB
-    subgraph code_sig["Code-based"]
-        direction LR
-        less_sig["1. LESS<br/>1329 B"] --> cross_sig["2. CROSS<br/>22464 B"]
-    end
-
-    subgraph hash_sig["Hash-based"]
-        direction LR
-        leansig_sig["1. LeanSig<br/>1632 B"] --> lms_sig["2. LMS<br/>2352 B"] --> xmss_sig["3. XMSS<br/>2500 B"] --> hss_sig["4. HSS<br/>4464 B"] --> xmssmt_sig["5. XMSS^MT<br/>4963 B"] --> sphincs_sig["6. SPHINCS+<br/>17088 B"]
-    end
-
-    subgraph isogeny_sig["Isogeny-based"]
-        direction LR
-        sqisign_sig["1. SQISign<br/>148 B"]
-    end
-
-    subgraph lattice_sig["Lattice-based"]
-        direction LR
-        falcon_sig["1. Falcon-512<br/>653 B"] --> dilithium_sig["2. ML-DSA-65<br/>3309 B"]
-    end
-
-    subgraph system_sig["System-of-equations"]
-        direction LR
-        mayo_sig["1. MAYO-1<br/>454 B"]
-    end
-```
-
 ## Fastest Sign And Verify By Family
 
 Sorted by `Family`, then by `Sign (ms)` ascending with `Verify (ms)` as the secondary sort within each family.
@@ -145,31 +117,3 @@ Sorted by `Family`, then by `Sign (ms)` ascending with `Verify (ms)` as the seco
 | Lattice-based | 1 | Falcon-512 | Falcon-512 | 0.151 | 0.02161 | 653 | 897 | 1281 |
 | Lattice-based | 2 | ML-DSA-65 (Dilithium) | ML-DSA-65 | 0.5695 | 0.04458 | 3309 | 1952 | 4032 |
 | System-of-equations | 1 | MAYO-1 | MAYO-1 | 2.04 | 0.7638 | 454 | 1420 | 24 |
-
-```mermaid
-flowchart TB
-    subgraph code_speed["Code-based"]
-        direction LR
-        cross_speed["1. CROSS<br/>sign 1.371 ms<br/>verify 0.7868 ms"] --> less_speed["2. LESS<br/>sign 19.06 ms<br/>verify 18.69 ms"]
-    end
-
-    subgraph hash_speed["Hash-based"]
-        direction LR
-        leansig_speed["1. LeanSig<br/>sign 2.888 ms<br/>verify 0.3607 ms"] --> hss_speed["2. HSS<br/>sign 3.824 ms<br/>verify 0.05408 ms"] --> lms_speed["3. LMS<br/>sign 6.646 ms<br/>verify 0.1026 ms"] --> sphincs_speed["4. SPHINCS+<br/>sign 24.98 ms<br/>verify 1.507 ms"] --> xmss_speed["5. XMSS<br/>sign 3304 ms<br/>verify 0.8081 ms"] --> xmssmt_speed["6. XMSS^MT<br/>sign 4762 ms<br/>verify 1.795 ms"]
-    end
-
-    subgraph isogeny_speed["Isogeny-based"]
-        direction LR
-        sqisign_speed["1. SQISign<br/>sign 41.45 ms<br/>verify 2.896 ms"]
-    end
-
-    subgraph lattice_speed["Lattice-based"]
-        direction LR
-        falcon_speed["1. Falcon-512<br/>sign 0.151 ms<br/>verify 0.02161 ms"] --> dilithium_speed["2. ML-DSA-65<br/>sign 0.5695 ms<br/>verify 0.04458 ms"]
-    end
-
-    subgraph system_speed["System-of-equations"]
-        direction LR
-        mayo_speed["1. MAYO-1<br/>sign 2.04 ms<br/>verify 0.7638 ms"]
-    end
-```
