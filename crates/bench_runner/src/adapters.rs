@@ -9,7 +9,7 @@ use crate::types::{BenchRun, DsaBenchmark, SizeMetrics};
 
 pub struct RunnerContext {
     pub message_size: usize,
-    pub ffi_executables: HashMap<&'static str, PathBuf>,
+    pub binary_executables: HashMap<&'static str, PathBuf>,
 }
 
 macro_rules! benchmark_adapter {
@@ -306,29 +306,6 @@ benchmark_adapter!(
     }
 );
 
-benchmark_adapter!(
-    LeansigAdapter,
-    algorithm = "LeanSig",
-    param_set = "Poseidon-L2^18-TS-w4",
-    run_once = |message| {
-        use leansig::signature::generalized_xmss::instantiations_poseidon::lifetime_2_to_the_18::target_sum::SIGTargetSumLifetime18W4NoOff;
-        let benchmark = leansig_bench::benchmark_once::<
-            SIGTargetSumLifetime18W4NoOff,
-        >(message)
-        .map_err(|err| err.to_string())?;
-        Ok(BenchRun::from_durations(
-            benchmark.keygen_duration,
-            benchmark.sign_duration,
-            benchmark.verify_duration,
-            SizeMetrics::new(
-                benchmark.public_key_bytes,
-                benchmark.secret_key_bytes,
-                benchmark.signature_bytes,
-            ),
-        ))
-    }
-);
-
 pub struct SubprocessAdapter {
     pub algorithm: &'static str,
     pub param_set: &'static str,
@@ -388,7 +365,7 @@ where
     Box::new(T::default())
 }
 
-pub fn build_ffi_adapter(
+pub fn build_binary_adapter(
     context: &RunnerContext,
     spec: &'static AdapterSpec,
 ) -> Box<dyn DsaBenchmark> {
@@ -396,9 +373,9 @@ pub fn build_ffi_adapter(
         algorithm: spec.algorithm,
         param_set: spec.param_set,
         executable: context
-            .ffi_executables
+            .binary_executables
             .get(spec.algorithm)
-            .expect("ffi executable should be resolved")
+            .expect("binary executable should be resolved")
             .clone(),
         message_size: context.message_size,
     })

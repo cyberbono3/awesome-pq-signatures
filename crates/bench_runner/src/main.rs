@@ -7,7 +7,9 @@ mod types;
 use adapters::RunnerContext;
 use cli::{print_help, CliAction};
 use pq_bench::benchmark_message;
-use registry::{instantiate_adapters, resolve_ffi_binaries, selected_specs};
+use registry::{
+    instantiate_adapters, resolve_binary_executables, selected_specs,
+};
 use reporting::{print_banner, print_table, run_benchmark, CsvReporter};
 
 fn main() {
@@ -35,7 +37,7 @@ fn main() {
 
     let context = RunnerContext {
         message_size: config.message_size,
-        ffi_executables: match resolve_ffi_binaries(&specs) {
+        binary_executables: match resolve_binary_executables(&specs) {
             Ok(paths) => paths,
             Err(err) => {
                 eprintln!("{err}");

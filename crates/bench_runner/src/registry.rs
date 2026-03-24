@@ -3,9 +3,9 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::adapters::{
-    build_ffi_adapter, build_pure_adapter, DilithiumAdapter, FalconAdapter,
-    HssAdapter, LamportAdapter, LeansigAdapter, LmsAdapter, MayoAdapter,
-    RunnerContext, SphincsPlusAdapter, XmssAdapter, XmssmtAdapter,
+    build_binary_adapter, build_pure_adapter, DilithiumAdapter, FalconAdapter,
+    HssAdapter, LamportAdapter, LmsAdapter, MayoAdapter, RunnerContext,
+    SphincsPlusAdapter, XmssAdapter, XmssmtAdapter,
 };
 use crate::cli::CliConfig;
 use crate::types::DsaBenchmark;
@@ -29,7 +29,19 @@ macro_rules! ffi_spec {
             param_set: $param_set,
             executable_name: Some($bin),
             backend: BackendKind::Ffi,
-            builder: build_ffi_adapter,
+            builder: build_binary_adapter,
+        }
+    };
+}
+
+macro_rules! subprocess_spec {
+    ($algorithm:literal, $param_set:literal, $bin:literal) => {
+        AdapterSpec {
+            algorithm: $algorithm,
+            param_set: $param_set,
+            executable_name: Some($bin),
+            backend: BackendKind::Subprocess,
+            builder: build_binary_adapter,
         }
     };
 }
@@ -38,6 +50,7 @@ macro_rules! ffi_spec {
 pub enum BackendKind {
     Pure,
     Ffi,
+    Subprocess,
 }
 
 #[derive(Clone, Copy)]
@@ -64,7 +77,7 @@ pub static ADAPTER_SPECS: &[AdapterSpec] = &[
     pure_spec!("HSS", "HSS-SHA256-H5-W2-L1", HssAdapter),
     pure_spec!("XMSS", "XMSS-SHA2_10_256", XmssAdapter),
     pure_spec!("XMSS^MT", "XMSSMT-SHA2_20/2_256", XmssmtAdapter),
-    pure_spec!("LeanSig", "Poseidon-L2^18-TS-w4", LeansigAdapter),
+    subprocess_spec!("LeanSig", "Poseidon-L2^18-TS-w4", "leansig"),
     ffi_spec!("SQISign", "SQISign-lvl1", "sqisign"),
     ffi_spec!("LESS", "LESS-252-45", "less"),
     ffi_spec!("CROSS", "CROSS-RSDPG-192-BAL", "cross"),
@@ -87,16 +100,16 @@ pub fn instantiate_adapters(
         .collect()
 }
 
-pub fn resolve_ffi_binaries(
+pub fn resolve_binary_executables(
     specs: &[&'static AdapterSpec],
 ) -> Result<HashMap<&'static str, PathBuf>, String> {
-    let ffi_specs: Vec<_> = specs
+    let binary_specs: Vec<_> = specs
         .iter()
         .copied()
-        .filter(|spec| spec.backend == BackendKind::Ffi)
+        .filter(|spec| spec.backend != BackendKind::Pure)
         .collect();
 
-    if ffi_specs.is_empty() {
+    if binary_specs.is_empty() {
         return Ok(HashMap::new());
     }
 
@@ -105,19 +118,19 @@ pub fn resolve_ffi_binaries(
     build
         .current_dir(&workspace_root)
         .args(["build", "--release"]);
-    for spec in &ffi_specs {
+    for spec in &binary_specs {
         build.args(["--bin", spec.executable_name()?]);
     }
     let status = build
         .status()
-        .map_err(|err| format!("failed to build FFI binaries: {err}"))?;
+        .map_err(|err| format!("failed to build benchmark binaries: {err}"))?;
     if !status.success() {
         return Err(format!("release build failed with status {status}"));
     }
 
     let mut binaries = HashMap::new();
     let target_dir = workspace_root.join("target").join("release");
-    for spec in ffi_specs {
+    for spec in binary_specs {
         let bin_name = spec.executable_name()?;
         let executable = target_dir
             .join(format!("{bin_name}{}", std::env::consts::EXE_SUFFIX));
@@ -177,5 +190,15 @@ mod tests {
         let specs = selected_specs(&config);
         assert_eq!(specs.len(), 1);
         assert_eq!(specs[0].algorithm, "XMSS^MT");
+    }
+
+    #[test]
+    fn skip_ffi_keeps_non_ffi_subprocess_benchmarks() {
+        let mut config = CliConfig::default();
+        config.skip_ffi = true;
+        config.only_filters.push("leansig".to_string());
+        let specs = selected_specs(&config);
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].backend, BackendKind::Subprocess);
     }
 }
