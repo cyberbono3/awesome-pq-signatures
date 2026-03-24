@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="760" viewBox="0 0 1600 760" role="img" aria-labelledby="title desc">
+  <title id="title">Lowest Signature Size By Family</title>
+  <desc id="desc">Families are shown as horizontal lanes, ordered internally by ascending signature size in bytes.</desc>
+  <style>
+    .bg { fill: #f7f4ee; }
+    .title { font: 700 28px Arial, sans-serif; fill: #1f2933; }
+    .subtitle { font: 400 14px Arial, sans-serif; fill: #52606d; }
+    .family { font: 700 18px Arial, sans-serif; fill: #102a43; }
+    .small { font: 400 12px Arial, sans-serif; fill: #486581; }
+    .node-title { font: 700 14px Arial, sans-serif; fill: #102a43; }
+    .node-body { font: 400 12px Arial, sans-serif; fill: #243b53; }
+    .lane { fill: #ffffff; stroke: #d9e2ec; stroke-width: 1; rx: 14; }
+    .node { fill: #fffdf8; stroke: #bcccdc; stroke-width: 1.2; rx: 12; }
+    .arrow { stroke: #7b8794; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    .accent-code { fill: #d9f2e6; }
+    .accent-hash { fill: #e8efff; }
+    .accent-iso { fill: #fde8e8; }
+    .accent-lattice { fill: #fff0d9; }
+    .accent-system { fill: #f3e8ff; }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#7b8794"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1600" height="760"/>
+  <text class="title" x="48" y="48">Lowest Signature Size By Family</text>
+  <text class="subtitle" x="48" y="76">Each family is ranked left to right by ascending signature size in bytes.</text>
+
+  <rect class="lane" x="36" y="106" width="1528" height="98"/>
+  <rect class="accent-code" x="48" y="122" width="170" height="66" rx="12"/>
+  <text class="family" x="64" y="150">Code-based</text>
+  <text class="small" x="64" y="170">signature size order</text>
+  <rect class="node" x="252" y="122" width="188" height="66" rx="12"/>
+  <text class="node-title" x="268" y="148">#1 LESS</text>
+  <text class="node-body" x="268" y="168">1329 B</text>
+  <path class="arrow" d="M440 155 H 494"/>
+  <rect class="node" x="494" y="122" width="198" height="66" rx="12"/>
+  <text class="node-title" x="510" y="148">#2 CROSS</text>
+  <text class="node-body" x="510" y="168">22464 B</text>
+
+  <rect class="lane" x="36" y="222" width="1528" height="170"/>
+  <rect class="accent-hash" x="48" y="238" width="170" height="138" rx="12"/>
+  <text class="family" x="64" y="266">Hash-based</text>
+  <text class="small" x="64" y="286">signature size order</text>
+  <rect class="node" x="252" y="238" width="188" height="56" rx="12"/>
+  <text class="node-title" x="268" y="261">#1 LeanSig</text>
+  <text class="node-body" x="268" y="279">1632 B</text>
+  <path class="arrow" d="M440 266 H 466"/>
+  <rect class="node" x="466" y="238" width="188" height="56" rx="12"/>
+  <text class="node-title" x="482" y="261">#2 LMS</text>
+  <text class="node-body" x="482" y="279">2352 B</text>
+  <path class="arrow" d="M654 266 H 680"/>
+  <rect class="node" x="680" y="238" width="188" height="56" rx="12"/>
+  <text class="node-title" x="696" y="261">#3 XMSS</text>
+  <text class="node-body" x="696" y="279">2500 B</text>
+  <path class="arrow" d="M868 266 H 894"/>
+  <rect class="node" x="894" y="238" width="188" height="56" rx="12"/>
+  <text class="node-title" x="910" y="261">#4 HSS</text>
+  <text class="node-body" x="910" y="279">4464 B</text>
+  <path class="arrow" d="M1082 266 H 1108"/>
+  <rect class="node" x="1108" y="238" width="206" height="56" rx="12"/>
+  <text class="node-title" x="1124" y="261">#5 XMSS^MT</text>
+  <text class="node-body" x="1124" y="279">4963 B</text>
+  <rect class="node" x="252" y="310" width="216" height="56" rx="12"/>
+  <text class="node-title" x="268" y="333">#6 SPHINCS+</text>
+  <text class="node-body" x="268" y="351">17088 B</text>
+
+  <rect class="lane" x="36" y="410" width="1528" height="98"/>
+  <rect class="accent-iso" x="48" y="426" width="170" height="66" rx="12"/>
+  <text class="family" x="64" y="454">Isogeny-based</text>
+  <text class="small" x="64" y="474">signature size order</text>
+  <rect class="node" x="252" y="426" width="188" height="66" rx="12"/>
+  <text class="node-title" x="268" y="452">#1 SQISign</text>
+  <text class="node-body" x="268" y="472">148 B</text>
+
+  <rect class="lane" x="36" y="526" width="1528" height="98"/>
+  <rect class="accent-lattice" x="48" y="542" width="170" height="66" rx="12"/>
+  <text class="family" x="64" y="570">Lattice-based</text>
+  <text class="small" x="64" y="590">signature size order</text>
+  <rect class="node" x="252" y="542" width="188" height="66" rx="12"/>
+  <text class="node-title" x="268" y="568">#1 Falcon-512</text>
+  <text class="node-body" x="268" y="588">653 B</text>
+  <path class="arrow" d="M440 575 H 494"/>
+  <rect class="node" x="494" y="542" width="244" height="66" rx="12"/>
+  <text class="node-title" x="510" y="568">#2 ML-DSA-65</text>
+  <text class="node-body" x="510" y="588">3309 B</text>
+
+  <rect class="lane" x="36" y="642" width="1528" height="82"/>
+  <rect class="accent-system" x="48" y="650" width="170" height="58" rx="12"/>
+  <text class="family" x="64" y="676">System-of-equations</text>
+  <rect class="node" x="252" y="650" width="188" height="58" rx="12"/>
+  <text class="node-title" x="268" y="674">#1 MAYO-1</text>
+  <text class="node-body" x="268" y="692">454 B</text>
+</svg>
