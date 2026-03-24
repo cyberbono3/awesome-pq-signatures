@@ -21,7 +21,7 @@ Notes:
 
 ## `src/main.rs` (`hss` binary)
 
-`src/main.rs` is a single-run benchmark/report binary. It performs:
+`src/main.rs` is the standard workspace benchmark binary. It performs:
 
 - key generation timing
 - sign timing
@@ -31,13 +31,18 @@ Notes:
 Run it with:
 
 ```bash
-cargo run -p hss --release --bin hss
+cargo run -p hss --bin hss -- --format human --message-size 64
+```
+
+JSON output:
+
+```bash
+cargo run -p hss --bin hss -- --format json --message-size 64
 ```
 
 Environment overrides:
 
 - `PARAM_SET` (default `HSS-SHA256-H5-W2-L1`)
-- `MESSAGE_SIZE` (default `1024`)
 
 ## `benches/hss_divan.rs` (Divan benchmark suite)
 
@@ -70,12 +75,11 @@ Environment:
 Command:
 
 ```bash
-cargo run -p hss --release --bin hss
+cargo run -p hss --bin hss -- --format human --message-size 64
 ```
 
 Configuration used:
 - `PARAM_SET=HSS-SHA256-H5-W2-L1` (default)
-- `MESSAGE_SIZE=1024` (default)
 
 Results:
 - Key generation: `7.881083 ms` (`7,881,083 ns`)

@@ -157,6 +157,7 @@ fn workspace_root() -> PathBuf {
 impl AdapterSpec {
     fn matches(&self, config: &CliConfig) -> bool {
         (!config.skip_ffi || self.backend != BackendKind::Ffi)
+            && (!config.skip_subprocess || self.backend == BackendKind::Pure)
             && self.matches_filter(self.algorithm, &config.only_filters)
             && self.matches_filter(self.param_set, &config.param_set_filters)
     }
@@ -200,5 +201,14 @@ mod tests {
         let specs = selected_specs(&config);
         assert_eq!(specs.len(), 1);
         assert_eq!(specs[0].backend, BackendKind::Subprocess);
+    }
+
+    #[test]
+    fn skip_subprocess_removes_leansig() {
+        let mut config = CliConfig::default();
+        config.skip_subprocess = true;
+        config.only_filters.push("leansig".to_string());
+        let specs = selected_specs(&config);
+        assert!(specs.is_empty());
     }
 }

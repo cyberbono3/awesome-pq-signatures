@@ -32,7 +32,7 @@ Notes:
 
 ## `src/main.rs` (`lms` binary)
 
-`src/main.rs` is a single-run benchmark/report binary. It performs:
+`src/main.rs` is the standard workspace benchmark binary. It performs:
 
 - key generation timing
 - sign timing
@@ -42,13 +42,18 @@ Notes:
 Run it with:
 
 ```bash
-cargo run -p lms --release --bin lms
+cargo run -p lms --bin lms -- --format human --message-size 64
+```
+
+JSON output:
+
+```bash
+cargo run -p lms --bin lms -- --format json --message-size 64
 ```
 
 Environment overrides:
 
 - `PARAM_SET` (default `LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4`)
-- `MESSAGE_SIZE` (default `1024`)
 
 ## `benches/lms_divan.rs` (Divan benchmark suite)
 

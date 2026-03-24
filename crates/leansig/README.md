@@ -8,7 +8,7 @@ Poseidon2-based XMSS signature scheme with Target Sum encoding, from the [leanSi
 
 ## `src/main.rs` (`leansig` binary)
 
-`src/main.rs` is a single-run benchmark/report binary for LeanSig (Poseidon – Lifetime 2^18 – Target Sum – w 4). It performs:
+`src/main.rs` is the standard workspace benchmark binary for LeanSig (Poseidon – Lifetime 2^18 – Target Sum – w 4). It performs:
 - key generation timing
 - secret-key preparation (advance to epoch 1)
 - sign timing

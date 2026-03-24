@@ -12,7 +12,7 @@ Rust: [sqisign-lvl1](https://crates.io/crates/sqisign-lvl1)
 
 ## `src/main.rs` (`sqisign` binary)
 
-`src/main.rs` is a single-run benchmark/report binary for SQISign. It performs:
+`src/main.rs` is the standard workspace benchmark binary for SQISign. It performs:
 - key generation timing
 - sign timing + peak heap allocation tracking
 - verify timing + peak heap allocation tracking
@@ -21,7 +21,13 @@ Rust: [sqisign-lvl1](https://crates.io/crates/sqisign-lvl1)
 Run it with:
 
 ```bash
-cargo run --release -p sqisign --bin sqisign
+cargo run -p sqisign --bin sqisign -- --format human --message-size 64
+```
+
+JSON output:
+
+```bash
+cargo run -p sqisign --bin sqisign -- --format json --message-size 64
 ```
 
 Latest run result (captured on 2026-03-15 12:00:00 UTC):

@@ -8,7 +8,7 @@ Lattice-based signature scheme based on ML-DSA.
 
 ## `src/main.rs` (`dilithium` binary)
 
-`src/main.rs` is a single-run benchmark/report binary for ML-DSA-65. It performs:
+`src/main.rs` is the standard workspace benchmark binary for ML-DSA-65. It performs:
 - key generation timing
 - sign timing + peak heap allocation tracking
 - verify timing + peak heap allocation tracking
@@ -17,7 +17,13 @@ Lattice-based signature scheme based on ML-DSA.
 Run it with:
 
 ```bash
-cargo run -p dilithium --bin dilithium
+cargo run -p dilithium --bin dilithium -- --format human --message-size 64
+```
+
+JSON output:
+
+```bash
+cargo run -p dilithium --bin dilithium -- --format json --message-size 64
 ```
 
 Latest run result (captured on 2026-02-18 17:52:13 UTC):

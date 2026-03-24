@@ -45,7 +45,7 @@ That makes the crate suitable for benchmarking and comparative inspection, but i
 
 ## `src/main.rs` (`less` binary)
 
-`src/main.rs` is a single-run benchmark/report binary for the selected LESS variant. It performs:
+`src/main.rs` is the standard workspace benchmark binary for the selected LESS variant. It performs:
 - key generation timing
 - sign timing + peak heap allocation tracking
 - verify timing + peak heap allocation tracking
@@ -54,7 +54,13 @@ That makes the crate suitable for benchmarking and comparative inspection, but i
 Run it with:
 
 ```bash
-cargo run -p less --bin less --release
+cargo run -p less --bin less -- --format human --message-size 64
+```
+
+JSON output:
+
+```bash
+cargo run -p less --bin less -- --format json --message-size 64
 ```
 
 ## `benches/less_divan.rs` (Divan benchmark suite)

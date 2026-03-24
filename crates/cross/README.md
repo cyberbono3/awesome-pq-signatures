@@ -53,7 +53,7 @@ That makes the crate suitable for benchmarking and comparative inspection, but i
 
 ## `src/main.rs` (`cross` binary)
 
-`src/main.rs` is a single-run benchmark/report binary for the selected CROSS variant. It performs:
+`src/main.rs` is the standard workspace benchmark binary for the selected CROSS variant. It performs:
 - key generation timing
 - sign timing + peak heap allocation tracking
 - verify timing + peak heap allocation tracking
@@ -62,7 +62,13 @@ That makes the crate suitable for benchmarking and comparative inspection, but i
 Run it with:
 
 ```bash
-cargo run -p cross --bin cross
+cargo run -p cross --bin cross -- --format human --message-size 64
+```
+
+JSON output:
+
+```bash
+cargo run -p cross --bin cross -- --format json --message-size 64
 ```
 
 A recent local run produced:
@@ -125,7 +131,7 @@ Divan timing summary (median):
 ## Files
 
 - `src/lib.rs`: Rust wrapper around the vendored C reference implementation
-- `src/main.rs`: single-shot benchmark/report binary
+- `src/main.rs`: standard workspace benchmark binary
 - `benches/cross_divan.rs`: Divan microbenchmarks
 - `build.rs`: C build configuration for the selected CROSS variant
 - `vendor/reference/`: vendored upstream portable reference implementation

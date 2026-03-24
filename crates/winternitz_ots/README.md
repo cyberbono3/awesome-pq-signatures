@@ -8,7 +8,7 @@ One-time hash-based signature with Winternitz chaining.
 
 ## `src/main.rs` (`winternitz_ots` binary)
 
-`src/main.rs` is a single-run benchmark/report binary for W-OTS (`w=16`, `n=32`, Blake2b backend). It performs:
+`src/main.rs` is the standard workspace benchmark binary for W-OTS (`w=16`, `n=32`, Blake2b backend). It performs:
 - key generation timing
 - sign timing + peak heap allocation tracking
 - verify timing + peak heap allocation tracking
@@ -17,7 +17,13 @@ One-time hash-based signature with Winternitz chaining.
 Run it with:
 
 ```bash
-cargo run -p winternitz_ots --release --offline --bin winternitz_ots
+cargo run -p winternitz_ots --bin winternitz_ots -- --format human --message-size 64
+```
+
+JSON output:
+
+```bash
+cargo run -p winternitz_ots --bin winternitz_ots -- --format json --message-size 64
 ```
 
 Latest run result (captured on 2026-02-19 16:48:55 UTC):

@@ -9,6 +9,7 @@ pub struct CliConfig {
     pub only_filters: Vec<String>,
     pub param_set_filters: Vec<String>,
     pub skip_ffi: bool,
+    pub skip_subprocess: bool,
     pub message_size: usize,
 }
 
@@ -20,6 +21,7 @@ impl Default for CliConfig {
             only_filters: Vec::new(),
             param_set_filters: Vec::new(),
             skip_ffi: false,
+            skip_subprocess: false,
             message_size: BENCH_MESSAGE.len(),
         }
     }
@@ -70,6 +72,7 @@ impl CliAction {
                     config.param_set_filters.push(value.to_ascii_lowercase());
                 }
                 "--skip-ffi" => config.skip_ffi = true,
+                "--skip-subprocess" => config.skip_subprocess = true,
                 "--message-size" => {
                     let value = args.next().ok_or_else(|| {
                         "--message-size requires a value".to_string()
@@ -105,6 +108,9 @@ pub fn print_help() {
         "  --param-set TEXT      Filter param sets by substring (repeatable)"
     );
     println!("  --skip-ffi            Skip subprocess-based FFI algorithms");
+    println!(
+        "  --skip-subprocess     Skip all subprocess-based benchmark binaries"
+    );
     println!("  --message-size N      Benchmark message size in bytes");
 }
 
@@ -121,6 +127,7 @@ mod tests {
             "xmss".to_string(),
             "--param-set".to_string(),
             "sha2".to_string(),
+            "--skip-subprocess".to_string(),
             "--message-size".to_string(),
             "256".to_string(),
         ])
@@ -131,6 +138,7 @@ mod tests {
                 assert_eq!(config.runs, 7);
                 assert_eq!(config.only_filters, vec!["xmss"]);
                 assert_eq!(config.param_set_filters, vec!["sha2"]);
+                assert!(config.skip_subprocess);
                 assert_eq!(config.message_size, 256);
             }
             CliAction::Help => panic!("expected run config"),

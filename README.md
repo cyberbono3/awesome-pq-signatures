@@ -22,3 +22,57 @@ LM-OTS is typically used inside LMS as its one-time signature component, so LMS 
 | 11 | Mayo | System-of-equations | Non-stateful | Multivariate post-quantum signature scheme (MAYO). | [mayo](./crates/mayo/README.md) | [pq-mayo](https://crates.io/crates/pq-mayo) |
 | 12 | CROSS | Code-based | Non-stateful | Code-based post-quantum signature candidate (CROSS). | [cross](./crates/cross/README.md) | [CROSS C reference implementation](https://github.com/CROSS-signature/CROSS-implementation) |
 | 13 | LESS | Code-based | Non-stateful | Code-based post-quantum signature candidate (LESS). | [less](./crates/less/README.md) | [LESS C implementation](https://github.com/less-sig/LESS) |
+
+## Benchmark interfaces
+
+The workspace now uses one shared benchmark-binary contract across the standalone benchmark executables:
+
+- `--format human|json`
+- `--message-size N`
+
+The `human` format keeps each crate's readable benchmark summary. The `json` format emits a single `BenchmarkBinaryReport` payload that is consumed by the workspace runner and is stable enough for scripting.
+
+Representative examples:
+
+```bash
+cargo run -p dilithium -- --format json --message-size 64
+cargo run -p hss -- --format human --message-size 256
+cargo run -p lamport_ots --bin lamport_ots -- --format json --message-size 64
+cargo run --bin leansig -- --format json --message-size 64
+```
+
+Notes:
+
+- `LMS` and `HSS` still honor `PARAM_SET` for selecting a non-default parameter set.
+- Some crates are materially slower than others. `XMSS`, `XMSS^MT`, and `LeanSig` can take much longer to complete a single benchmark run.
+
+## Workspace runner
+
+Use the aggregated runner to benchmark multiple schemes and write a CSV summary:
+
+```bash
+cargo run --bin bench_runner -- --runs 3 --message-size 64 --output benchmarks/results.csv
+```
+
+Useful filters:
+
+- `--only TEXT`
+- `--param-set TEXT`
+- `--skip-ffi`
+- `--skip-subprocess`
+
+Example:
+
+```bash
+cargo run --bin bench_runner -- --runs 1 --only leansig --message-size 64 --output /tmp/leansig.csv
+```
+
+Runner execution model:
+
+- Pure Rust schemes such as Dilithium, Falcon, Mayo, Lamport OTS, LMS, HSS, XMSS, and XMSS^MT run in-process.
+- Standalone binaries such as CROSS, LESS, SQISign, and LeanSig run as subprocesses and return JSON back to `bench_runner`.
+
+Filter behavior:
+
+- `--skip-ffi` skips only the FFI-backed subprocess schemes.
+- `--skip-subprocess` skips all subprocess-run schemes, including LeanSig.

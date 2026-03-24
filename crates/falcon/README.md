@@ -8,7 +8,7 @@ Lattice-based signature scheme with small signatures.
 
 ## `src/main.rs` (`falcon-bench` binary)
 
-`src/main.rs` is a single-run benchmark/report binary for Falcon-512. It performs:
+`src/main.rs` is the standard workspace benchmark binary for Falcon-512. It performs:
 - key generation timing
 - sign timing + peak heap allocation tracking
 - verify timing + peak heap allocation tracking
@@ -17,7 +17,13 @@ Lattice-based signature scheme with small signatures.
 Run it with:
 
 ```bash
-cargo run -p falcon --bin falcon-bench
+cargo run -p falcon --bin falcon-bench -- --format human --message-size 64
+```
+
+JSON output:
+
+```bash
+cargo run -p falcon --bin falcon-bench -- --format json --message-size 64
 ```
 
 Latest run result (captured on 2026-02-18 17:34:51 UTC):

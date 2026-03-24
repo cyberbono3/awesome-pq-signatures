@@ -18,14 +18,20 @@ Notes:
 ## Project layout
 
 - `src/lib.rs`: safe Rust wrapper (`XmssmtScheme`, keypair/sign/verify, sizes, parameter parsing)
-- `src/main.rs`: executable benchmark summary for keygen/sign/verify
+- `src/main.rs`: standard workspace benchmark binary (`--format human|json --message-size N`)
 - `src/bin/xmssmt_bench.rs`: bench command used by `bench/run.sh`
 - `benches/xmssmt_divan.rs`: `divan` benchmark suite
 
 ## Run
 
 ```bash
-cargo run --release --bin xmssmt
+cargo run --bin xmssmt -- --format human --message-size 64
+```
+
+JSON output:
+
+```bash
+cargo run --bin xmssmt -- --format json --message-size 64
 ```
 
 Latest run result (captured on 2026-03-18 10:25:36 UTC):
@@ -69,8 +75,5 @@ Divan timing summary (median):
   verify(1024): 1.803 ms
 ```
 
-Environment overrides:
-
-- `XMSSMT_PARAM_SET` (default `XMSSMT-SHA2_20/2_256`)
-- `XMSSMT_MESSAGE_SIZE` (default `1024`)
-- `XMSSMT_ITERATIONS` (default `100`)
+The `xmssmt` benchmark binary uses the shared workspace CLI. The separate
+`src/bin/xmssmt_bench.rs` helper keeps its own environment-based interface.

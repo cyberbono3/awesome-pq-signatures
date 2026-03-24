@@ -9,7 +9,7 @@
 
 ## `src/main.rs` (`mayo` binary)
 
-`src/main.rs` is a single-run benchmark/report binary for MAYO. It performs:
+`src/main.rs` is the standard workspace benchmark binary for MAYO. It performs:
 - key generation timing
 - sign timing + peak heap allocation tracking
 - verify timing + peak heap allocation tracking
@@ -18,10 +18,16 @@
 Run it with:
 
 ```bash
-cargo run -p mayo --release --bin mayo
+cargo run -p mayo --bin mayo -- --format human --message-size 64
 ```
 
-Representative local result from `cargo run -p mayo --release --bin mayo`:
+JSON output:
+
+```bash
+cargo run -p mayo --bin mayo -- --format json --message-size 64
+```
+
+Representative local result from `cargo run -p mayo --bin mayo -- --format human --message-size 64`:
 timings below use the median of 5 local release runs; size and memory fields are from a representative release run.
 
 ```text

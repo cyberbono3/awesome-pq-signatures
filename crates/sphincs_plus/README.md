@@ -8,7 +8,7 @@ Stateless hash-based signature benchmarking crate.
 
 ## `src/main.rs` (`sphincs-plus-bench` binary)
 
-`src/main.rs` is a single-run benchmark/report binary for `SPHINCS+-SHAKE-128f-simple`. It performs:
+`src/main.rs` is the standard workspace benchmark binary for `SPHINCS+-SHAKE-128f-simple`. It performs:
 - key generation timing
 - sign timing + peak heap allocation tracking
 - verify timing + peak heap allocation tracking
@@ -17,7 +17,13 @@ Stateless hash-based signature benchmarking crate.
 Run it with:
 
 ```bash
-cargo run -p sphincs_plus --bin sphincs-plus-bench
+cargo run -p sphincs_plus --bin sphincs-plus-bench -- --format human --message-size 64
+```
+
+JSON output:
+
+```bash
+cargo run -p sphincs_plus --bin sphincs-plus-bench -- --format json --message-size 64
 ```
 
 Latest run result (captured on 2026-02-18 18:56:27 UTC):
