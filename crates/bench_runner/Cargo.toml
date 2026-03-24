@@ -17,6 +17,7 @@ dilithium = { path = "../dilithium" }
 falcon = { path = "../falcon" }
 sphincs_plus = { path = "../sphincs_plus" }
 mayo = { path = "../mayo" }
+lamport_ots = { path = "../lamport_ots" }
 lms = { path = "../lms" }
 hss = { path = "../hss" }
 xmss-bench = { path = "../xmss" }

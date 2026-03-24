@@ -16,21 +16,29 @@ Notes:
 ## Project layout
 
 - `src/lib.rs`: reusable Lamport OTS implementation (keygen/sign/verify + errors + tests)
-- `src/main.rs`: benchmark-style executable summary
-- `src/bin/lamport_ots_bench.rs`: direct benchmark command (`OPERATION=keygen|sign|verify`)
+- `src/main.rs`: standard workspace benchmark binary (`--format human|json --message-size N`)
+- `src/bin/lamport_ots_bench.rs`: direct operation benchmark command (`OPERATION=keygen|sign|verify`)
 - `benches/lamport_ots_divan.rs`: `divan` benchmark suite
 
 ## Run (`main.rs`)
 
 ```bash
-cargo run -p lamport_ots --release --offline --bin lamport_ots
+cargo run -p lamport_ots --bin lamport_ots -- --format human --message-size 1024
 ```
 
-Environment overrides:
+JSON output:
 
-- `LAMPORT_MESSAGE_SIZE` (default `1024`)
-- `LAMPORT_ITERATIONS` (default `100`)
-- `LAMPORT_DETERMINISTIC` (default `true`)
+```bash
+cargo run -p lamport_ots --bin lamport_ots -- --format json --message-size 64
+```
+
+## Direct operation benchmark
+
+Environment overrides for `src/bin/lamport_ots_bench.rs`:
+
+- `OPERATION` (`keygen`, `sign`, or `verify`)
+- `ITERATIONS` (default `100`)
+- `DETERMINISTIC_RNG` (default `true`)
 
 ## Divan benchmark
 

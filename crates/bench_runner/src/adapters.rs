@@ -162,6 +162,39 @@ benchmark_adapter!(
 );
 
 benchmark_adapter!(
+    LamportAdapter,
+    algorithm = "Lamport OTS",
+    param_set = "Lamport-OTS-256",
+    run_once = |message| {
+        use lamport_ots::LAMPORT_OTS_SCHEME;
+
+        Ok(measure_benchmark_flow(
+            || {
+                LAMPORT_OTS_SCHEME.keypair_with_seed(
+                    lamport_ots::seed_from_str("bench-runner-lamport"),
+                )
+            },
+            |(_, secret_key)| {
+                LAMPORT_OTS_SCHEME.sign(message, secret_key).expect("sign")
+            },
+            |(public_key, _), signature| {
+                LAMPORT_OTS_SCHEME
+                    .verify(message, signature, public_key)
+                    .expect("verify");
+            },
+            |_, _| {
+                let sizes = LAMPORT_OTS_SCHEME.sizes();
+                SizeMetrics::new(
+                    sizes.public_key_bytes,
+                    sizes.secret_key_bytes,
+                    sizes.signature_bytes,
+                )
+            },
+        ))
+    }
+);
+
+benchmark_adapter!(
     LmsAdapter,
     algorithm = "LMS",
     param_set = "LMS-SHA256-M32-H5",
@@ -278,32 +311,20 @@ benchmark_adapter!(
     algorithm = "LeanSig",
     param_set = "Poseidon-L2^18-TS-w4",
     run_once = |message| {
-        use leansig::serialization::Serializable;
         use leansig::signature::generalized_xmss::instantiations_poseidon::lifetime_2_to_the_18::target_sum::SIGTargetSumLifetime18W4NoOff;
-        use leansig::signature::SignatureScheme;
-        use leansig::MESSAGE_LENGTH;
-        use leansig_bench::prepare_sk_for_epoch;
-
-        type Scheme = SIGTargetSumLifetime18W4NoOff;
-
-        let message = copy_into_fixed::<MESSAGE_LENGTH>(message);
-        let mut rng = rand::rng();
-        Ok(measure_benchmark_flow(
-            || Scheme::key_gen(&mut rng, 0, Scheme::LIFETIME as usize),
-            |(_, secret_key)| {
-                prepare_sk_for_epoch(secret_key, 1);
-                Scheme::sign(secret_key, 1, &message).expect("sign")
-            },
-            |(public_key, _), signature| {
-                Scheme::verify(public_key, 1, &message, signature);
-            },
-            |(public_key, secret_key), signature| {
-                SizeMetrics::new(
-                    public_key.to_bytes().len(),
-                    secret_key.to_bytes().len(),
-                    signature.to_bytes().len(),
-                )
-            },
+        let benchmark = leansig_bench::benchmark_once::<
+            SIGTargetSumLifetime18W4NoOff,
+        >(message)
+        .map_err(|err| err.to_string())?;
+        Ok(BenchRun::from_durations(
+            benchmark.keygen_duration,
+            benchmark.sign_duration,
+            benchmark.verify_duration,
+            SizeMetrics::new(
+                benchmark.public_key_bytes,
+                benchmark.secret_key_bytes,
+                benchmark.signature_bytes,
+            ),
         ))
     }
 );
@@ -381,11 +402,4 @@ pub fn build_ffi_adapter(
             .clone(),
         message_size: context.message_size,
     })
-}
-
-fn copy_into_fixed<const N: usize>(message: &[u8]) -> [u8; N] {
-    let mut output = [0u8; N];
-    let len = message.len().min(N);
-    output[..len].copy_from_slice(&message[..len]);
-    output
 }

@@ -2,7 +2,9 @@ use hss::{
     default_seed, measure_time, signed_message_size, HssScheme, BENCH_MESSAGE,
     DEFAULT_PARAM_SET_NAME,
 };
-use pq_bench::print_timing;
+use pq_bench::{
+    print_human_benchmark_report, HumanBenchmarkLine, HumanBenchmarkReport,
+};
 use std::env;
 
 fn main() {
@@ -13,39 +15,21 @@ fn main() {
     let message: &[u8] = &BENCH_MESSAGE;
     let seed = default_seed();
 
-    println!("=== HSS ({}) Benchmark ===\n", scheme.param_set_name());
-    println!("Backend: {}", scheme.backend_name());
-    println!("Hierarchy levels: {}", scheme.levels());
-
-    println!("\n--- Key Generation ---");
     let ((public_key, mut secret_key), keygen_duration) = measure_time(|| {
         scheme
             .keypair_with_seed(seed)
             .expect("HSS key generation should succeed")
     });
-    print_timing("generate keys", keygen_duration);
-
-    println!("\n--- Signing ---");
     let (signature, sign_duration) = measure_time(|| {
         scheme
             .sign(&message, &mut secret_key)
             .expect("HSS signing should succeed")
     });
-    print_timing("sign", sign_duration);
-
-    println!("\n--- Verification ---");
     let (verified, verify_duration) = measure_time(|| {
         scheme
             .verify(&message, &signature, &public_key)
             .expect("HSS verify call should succeed")
     });
-    print_timing("verify", verify_duration);
-
-    if verified {
-        println!("Signature verification: SUCCESS");
-    } else {
-        println!("Signature verification: FAILED");
-    }
 
     let pk_size = scheme.public_key_size(&public_key);
     let sk_size = scheme.secret_key_size(&secret_key);
@@ -54,37 +38,42 @@ fn main() {
         .lifetime()
         .expect("HSS key lifetime should be available");
 
-    println!("\n--- Size Measurements ---");
-    println!("Public key size: {pk_size} bytes");
-    println!("Secret key size: {sk_size} bytes");
-    println!("Signature size: {sig_size} bytes");
-    println!(
-        "Signed message size: {} bytes",
-        signed_message_size(message.len(), sig_size)
-    );
-    println!("Estimated signatures per key: {key_lifetime}");
-
-    println!("\n=== Summary ===");
-    println!("Algorithm: {}", scheme.algorithm_name());
-    println!("Param set: {}", scheme.param_set_name());
-    println!("\nTiming:");
-    println!(
-        "  Key Generation: {:?} ({} ns)",
+    print_human_benchmark_report(&HumanBenchmarkReport {
+        heading: format!("HSS ({})", scheme.param_set_name()).into(),
+        intro_lines: vec![
+            HumanBenchmarkLine::new("Backend", scheme.backend_name()),
+            HumanBenchmarkLine::new(
+                "Hierarchy levels",
+                scheme.levels().to_string(),
+            ),
+        ],
+        summary_algorithm: scheme.algorithm_name().into(),
+        summary_intro_lines: vec![HumanBenchmarkLine::new(
+            "Param set",
+            scheme.param_set_name(),
+        )],
         keygen_duration,
-        keygen_duration.as_nanos()
-    );
-    println!(
-        "  Signing:        {:?} ({} ns)",
         sign_duration,
-        sign_duration.as_nanos()
-    );
-    println!(
-        "  Verification:   {:?} ({} ns)",
         verify_duration,
-        verify_duration.as_nanos()
-    );
-    println!("\nSizes:");
-    println!("  Public Key:  {pk_size} bytes");
-    println!("  Secret Key:  {sk_size} bytes");
-    println!("  Signature:   {sig_size} bytes");
+        verified,
+        size_lines: vec![
+            HumanBenchmarkLine::bytes("Public key size", pk_size),
+            HumanBenchmarkLine::bytes("Secret key size", sk_size),
+            HumanBenchmarkLine::bytes("Signature size", sig_size),
+            HumanBenchmarkLine::bytes(
+                "Signed message size",
+                signed_message_size(message.len(), sig_size),
+            ),
+            HumanBenchmarkLine::new(
+                "Estimated signatures per key",
+                key_lifetime.to_string(),
+            ),
+        ],
+        summary_size_lines: vec![
+            HumanBenchmarkLine::bytes("Public Key", pk_size),
+            HumanBenchmarkLine::bytes("Secret Key", sk_size),
+            HumanBenchmarkLine::bytes("Signature", sig_size),
+        ],
+        ..HumanBenchmarkReport::default()
+    });
 }

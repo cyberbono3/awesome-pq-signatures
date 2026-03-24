@@ -2,18 +2,14 @@ use divan::{black_box, Bencher};
 use leansig::serialization::Serializable;
 use leansig::signature::generalized_xmss::instantiations_poseidon::lifetime_2_to_the_18::target_sum::SIGTargetSumLifetime18W4NoOff;
 use leansig::signature::SignatureScheme;
-use leansig::MESSAGE_LENGTH;
-use leansig_bench::{prepare_sk_for_epoch, BENCH_MESSAGE};
+use leansig_bench::{benchmark_message_array, prepare_sk_for_epoch, BENCH_MESSAGE};
 
 type Scheme = SIGTargetSumLifetime18W4NoOff;
 
 const EPOCH: u32 = 1;
 
-fn bench_message() -> [u8; MESSAGE_LENGTH] {
-    let mut message = [0u8; MESSAGE_LENGTH];
-    let copy_len = BENCH_MESSAGE.len().min(MESSAGE_LENGTH);
-    message[..copy_len].copy_from_slice(&BENCH_MESSAGE[..copy_len]);
-    message
+fn bench_message() -> [u8; leansig::MESSAGE_LENGTH] {
+    benchmark_message_array(&BENCH_MESSAGE)
 }
 
 #[divan::bench]

@@ -2,7 +2,10 @@ use falcon::{
     measure_time, memory, signature_size, SignatureScheme, TrackingAllocator,
     ALLOCATION_TRACKER, BENCH_MESSAGE, FALCON512,
 };
-use pq_bench::print_timing;
+use pq_bench::{
+    print_human_benchmark_report, HumanBenchmarkLine, HumanBenchmarkReport,
+    HumanBenchmarkSection,
+};
 use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
 pq_bench::install_system_tracking_allocator!(
     TrackingAllocator,
@@ -13,77 +16,60 @@ const MESSAGE: &[u8] = &BENCH_MESSAGE;
 
 fn main() {
     let scheme = FALCON512;
-    println!("=== {} Benchmark ===\n", scheme.algorithm_name());
-
-    println!("--- Key Generation ---");
     let ((public_key, secret_key), keygen_duration) =
         measure_time(|| scheme.keypair());
-    print_timing("generate keys", keygen_duration);
-
-    println!("\n--- Signing ---");
     memory::reset_peak();
     let (signed_message, sign_duration) =
         measure_time(|| scheme.sign(MESSAGE, &secret_key));
-    print_timing("sign", sign_duration);
     let sign_peak_mem = memory::peak_bytes();
-    println!("Peak memory during signing: {sign_peak_mem} bytes");
-
-    println!("\n--- Verification ---");
     memory::reset_peak();
     let (opened_message, verify_duration) =
         measure_time(|| scheme.open(&signed_message, &public_key));
-    print_timing("verify", verify_duration);
     let verify_peak_mem = memory::peak_bytes();
-    println!("Peak memory during verification: {verify_peak_mem} bytes");
 
-    match opened_message {
-        Some(message) if message == MESSAGE => {
-            println!("Signature verification: SUCCESS")
-        }
-        Some(_) => {
-            println!("Signature verification: FAILED (message mismatch)")
-        }
-        None => println!("Signature verification: FAILED"),
-    }
+    let verified =
+        matches!(opened_message, Some(message) if message == MESSAGE);
+    let pk_size = public_key.as_bytes().len();
+    let sk_size = secret_key.as_bytes().len();
+    let sig_size = signature_size(&signed_message, MESSAGE.len());
+    let size_lines = vec![
+        HumanBenchmarkLine::bytes("Public key size", pk_size),
+        HumanBenchmarkLine::bytes("Secret key size", sk_size),
+        HumanBenchmarkLine::bytes("Signature size", sig_size),
+        HumanBenchmarkLine::bytes(
+            "Signed message size",
+            signed_message.as_bytes().len(),
+        ),
+    ];
 
-    println!("\n--- Size Measurements ---");
-    println!("Public key size: {} bytes", public_key.as_bytes().len());
-    println!("Secret key size: {} bytes", secret_key.as_bytes().len());
-    println!(
-        "Signature size: {} bytes",
-        signature_size(&signed_message, MESSAGE.len())
-    );
-    println!(
-        "Signed message size: {} bytes",
-        signed_message.as_bytes().len()
-    );
-
-    println!("\n=== Summary ===");
-    println!("Algorithm: {}", scheme.algorithm_name());
-    println!("\nTiming:");
-    println!(
-        "  Key Generation: {:?} ({} ns)",
+    print_human_benchmark_report(&HumanBenchmarkReport {
+        heading: scheme.algorithm_name().into(),
+        summary_algorithm: scheme.algorithm_name().into(),
         keygen_duration,
-        keygen_duration.as_nanos()
-    );
-    println!(
-        "  Signing:        {:?} ({} ns)",
         sign_duration,
-        sign_duration.as_nanos()
-    );
-    println!(
-        "  Verification:   {:?} ({} ns)",
         verify_duration,
-        verify_duration.as_nanos()
-    );
-    println!("\nSizes:");
-    println!("  Public Key:  {} bytes", public_key.as_bytes().len());
-    println!("  Secret Key:  {} bytes", secret_key.as_bytes().len());
-    println!(
-        "  Signature:   {} bytes",
-        signature_size(&signed_message, MESSAGE.len())
-    );
-    println!("\nMemory Usage (heap allocations):");
-    println!("  Signing:      {sign_peak_mem} bytes");
-    println!("  Verification: {verify_peak_mem} bytes");
+        sign_detail_lines: vec![HumanBenchmarkLine::bytes(
+            "Peak memory during signing",
+            sign_peak_mem,
+        )],
+        verify_detail_lines: vec![HumanBenchmarkLine::bytes(
+            "Peak memory during verification",
+            verify_peak_mem,
+        )],
+        verified,
+        size_lines,
+        summary_size_lines: vec![
+            HumanBenchmarkLine::bytes("Public Key", pk_size),
+            HumanBenchmarkLine::bytes("Secret Key", sk_size),
+            HumanBenchmarkLine::bytes("Signature", sig_size),
+        ],
+        summary_sections: vec![HumanBenchmarkSection {
+            title: "Memory Usage (heap allocations)",
+            lines: vec![
+                HumanBenchmarkLine::bytes("Signing", sign_peak_mem),
+                HumanBenchmarkLine::bytes("Verification", verify_peak_mem),
+            ],
+        }],
+        ..HumanBenchmarkReport::default()
+    });
 }

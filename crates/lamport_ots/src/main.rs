@@ -1,145 +1,105 @@
-use lamport_ots::{seed_from_str, LamportOtsScheme, XorShift64, BENCH_MESSAGE};
-use std::env;
-use std::time::Instant;
-use std::time::{SystemTime, UNIX_EPOCH};
+use lamport_ots::{benchmark_once, LAMPORT_OTS_SCHEME};
+use pq_bench::{
+    benchmark_message, duration_ns, emit_benchmark_report,
+    print_human_benchmark_report, signed_message_size, BenchmarkBinaryConfig,
+    BenchmarkBinaryReport, BenchmarkSizeReport, HumanBenchmarkLine,
+    HumanBenchmarkReport,
+};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let iterations = parse_usize_env("LAMPORT_ITERATIONS", 100)?;
-    let deterministic = parse_bool_env("LAMPORT_DETERMINISTIC", true);
-
-    let scheme = LamportOtsScheme;
-    let sizes = scheme.sizes();
-    let message: &[u8] = &BENCH_MESSAGE;
-
-    println!("algorithm: {}", scheme.algorithm_name());
-    println!("backend: {}", scheme.backend_name());
-    println!("param_set: {}", scheme.param_set_name());
-    println!("public_key_bytes: {}", sizes.public_key_bytes);
-    println!("secret_key_bytes: {}", sizes.secret_key_bytes);
-    println!("signature_bytes: {}", sizes.signature_bytes);
-    println!("message_size: {}", message.len());
-    println!("iterations: {}", iterations);
-    println!("deterministic_rng: {}", deterministic);
-
-    let keygen_elapsed = bench_keygen(scheme, iterations, deterministic)?;
-    print_stats("keygen", iterations, keygen_elapsed.as_nanos());
-
-    let sign_elapsed = bench_sign(scheme, &message, iterations, deterministic)?;
-    print_stats("sign", iterations, sign_elapsed.as_nanos());
-
-    let verify_elapsed =
-        bench_verify(scheme, &message, iterations, deterministic)?;
-    print_stats("verify", iterations, verify_elapsed.as_nanos());
-
-    Ok(())
-}
-
-fn bench_keygen(
-    scheme: LamportOtsScheme,
-    iterations: usize,
-    deterministic: bool,
-) -> Result<std::time::Duration, Box<dyn std::error::Error>> {
-    let mut rng = bench_rng("keygen", deterministic);
-    let start = Instant::now();
-    for _ in 0..iterations {
-        let keypair = scheme.keypair_with_rng(&mut rng);
-        std::hint::black_box(keypair);
-    }
-    Ok(start.elapsed())
-}
-
-fn bench_sign(
-    scheme: LamportOtsScheme,
-    message: &[u8],
-    iterations: usize,
-    deterministic: bool,
-) -> Result<std::time::Duration, Box<dyn std::error::Error>> {
-    let mut rng = bench_rng("sign-keygen", deterministic);
-    let mut secret_keys = Vec::with_capacity(iterations.max(1));
-    for _ in 0..iterations.max(1) {
-        let (_, secret_key) = scheme.keypair_with_rng(&mut rng);
-        secret_keys.push(secret_key);
-    }
-
-    let start = Instant::now();
-    for secret_key in secret_keys.iter_mut().take(iterations) {
-        let signature = scheme.sign(message, secret_key)?;
-        std::hint::black_box(signature);
-    }
-    Ok(start.elapsed())
-}
-
-fn bench_verify(
-    scheme: LamportOtsScheme,
-    message: &[u8],
-    iterations: usize,
-    deterministic: bool,
-) -> Result<std::time::Duration, Box<dyn std::error::Error>> {
-    let mut rng = bench_rng("verify-keygen", deterministic);
-    let (public_key, mut secret_key) = scheme.keypair_with_rng(&mut rng);
-    let signature = scheme.sign(message, &mut secret_key)?;
-
-    let start = Instant::now();
-    for _ in 0..iterations {
-        let is_valid = scheme.verify(message, &signature, &public_key)?;
-        if !is_valid {
-            return Err("lamport verify failed during benchmark loop".into());
-        }
-        std::hint::black_box(is_valid);
-    }
-    Ok(start.elapsed())
-}
-
-fn print_stats(operation: &str, iterations: usize, total_ns: u128) {
-    let avg_ns = if iterations == 0 {
-        0
-    } else {
-        total_ns / iterations as u128
+fn main() {
+    let config = BenchmarkBinaryConfig::parse(std::env::args().skip(1))
+        .unwrap_or_else(|err| {
+            eprintln!("{err}");
+            std::process::exit(1);
+        });
+    let message = benchmark_message(config.message_size);
+    let scheme = LAMPORT_OTS_SCHEME;
+    let benchmark = benchmark_once(&message).unwrap_or_else(|err| {
+        eprintln!("{err}");
+        std::process::exit(1);
+    });
+    let report = BenchmarkBinaryReport {
+        algorithm: scheme.algorithm_name().to_string(),
+        backend: Some(scheme.backend_name().to_string()),
+        param_set: Some(scheme.param_set_name().to_string()),
+        keygen_ns: duration_ns(benchmark.keygen_duration),
+        sign_ns: duration_ns(benchmark.sign_duration),
+        verify_ns: duration_ns(benchmark.verify_duration),
+        verified: benchmark.verified,
+        sizes: BenchmarkSizeReport {
+            public_key_bytes: benchmark.sizes.public_key_bytes,
+            secret_key_bytes: benchmark.sizes.secret_key_bytes,
+            signature_bytes: benchmark.sizes.signature_bytes,
+            signed_message_bytes: Some(signed_message_size(
+                message.len(),
+                benchmark.sizes.signature_bytes,
+            )),
+        },
+        sign_peak_bytes: None,
+        verify_peak_bytes: None,
     };
 
-    let throughput = if total_ns == 0 {
-        0.0
-    } else {
-        (iterations as f64 * 1_000_000_000.0) / total_ns as f64
-    };
-
-    println!("{operation}_total_ns: {total_ns}");
-    println!("{operation}_avg_ns: {avg_ns}");
-    println!("{operation}_throughput_ops_per_s: {:.3}", throughput);
-}
-
-fn bench_rng(label: &str, deterministic: bool) -> XorShift64 {
-    if deterministic {
-        XorShift64::new(seed_from_str(&format!("lamport-main-{label}")))
-    } else {
-        XorShift64::new(random_seed(label))
-    }
-}
-
-fn random_seed(label: &str) -> u64 {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
-    let pid = std::process::id() as u64;
-    let mix = now.as_nanos() as u64 ^ (pid << 32);
-    mix ^ seed_from_str(label)
-}
-
-fn parse_usize_env(
-    name: &str,
-    default: usize,
-) -> Result<usize, Box<dyn std::error::Error>> {
-    match env::var(name) {
-        Ok(value) => Ok(value.parse::<usize>()?),
-        Err(_) => Ok(default),
-    }
-}
-
-fn parse_bool_env(name: &str, default: bool) -> bool {
-    match env::var(name) {
-        Ok(value) => {
-            matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES")
-        }
-        Err(_) => default,
-    }
+    emit_benchmark_report(&config, &report, |_| {
+        print_human_benchmark_report(&HumanBenchmarkReport {
+            heading: format!(
+                "{} ({})",
+                scheme.algorithm_name(),
+                scheme.param_set_name()
+            )
+            .into(),
+            intro_lines: vec![HumanBenchmarkLine::new(
+                "Backend",
+                scheme.backend_name(),
+            )],
+            summary_algorithm: scheme.algorithm_name().into(),
+            summary_intro_lines: vec![HumanBenchmarkLine::new(
+                "Param set",
+                scheme.param_set_name(),
+            )],
+            keygen_duration: benchmark.keygen_duration,
+            sign_duration: benchmark.sign_duration,
+            verify_duration: benchmark.verify_duration,
+            verified: benchmark.verified,
+            size_lines: vec![
+                HumanBenchmarkLine::bytes(
+                    "Public key size",
+                    benchmark.sizes.public_key_bytes,
+                ),
+                HumanBenchmarkLine::bytes(
+                    "Secret key size",
+                    benchmark.sizes.secret_key_bytes,
+                ),
+                HumanBenchmarkLine::bytes(
+                    "Signature size",
+                    benchmark.sizes.signature_bytes,
+                ),
+                HumanBenchmarkLine::bytes(
+                    "Signed message size",
+                    signed_message_size(
+                        message.len(),
+                        benchmark.sizes.signature_bytes,
+                    ),
+                ),
+                HumanBenchmarkLine::new(
+                    "Max signatures per key",
+                    scheme.max_signatures_per_key().to_string(),
+                ),
+            ],
+            summary_size_lines: vec![
+                HumanBenchmarkLine::bytes(
+                    "Public Key",
+                    benchmark.sizes.public_key_bytes,
+                ),
+                HumanBenchmarkLine::bytes(
+                    "Secret Key",
+                    benchmark.sizes.secret_key_bytes,
+                ),
+                HumanBenchmarkLine::bytes(
+                    "Signature",
+                    benchmark.sizes.signature_bytes,
+                ),
+            ],
+            ..HumanBenchmarkReport::default()
+        });
+    });
 }

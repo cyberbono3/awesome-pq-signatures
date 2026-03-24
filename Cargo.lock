@@ -321,6 +321,7 @@ dependencies = [
  "dilithium",
  "falcon",
  "hss",
+ "lamport_ots",
  "leansig",
  "leansig-bench",
  "lms",

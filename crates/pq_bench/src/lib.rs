@@ -7,6 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::alloc::{GlobalAlloc, Layout};
+use std::borrow::Cow;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
@@ -280,6 +281,109 @@ pub fn emit_benchmark_report(
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HumanBenchmarkLine<'a> {
+    pub label: &'a str,
+    pub value: Cow<'a, str>,
+}
+
+impl<'a> HumanBenchmarkLine<'a> {
+    pub fn new(label: &'a str, value: impl Into<Cow<'a, str>>) -> Self {
+        Self {
+            label,
+            value: value.into(),
+        }
+    }
+
+    pub fn bytes(label: &'a str, bytes: usize) -> Self {
+        Self::new(label, format!("{bytes} bytes"))
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct HumanBenchmarkReport<'a> {
+    pub banner_lines: &'a [&'a str],
+    pub heading: Cow<'a, str>,
+    pub intro_lines: Vec<HumanBenchmarkLine<'a>>,
+    pub summary_algorithm: Cow<'a, str>,
+    pub summary_intro_lines: Vec<HumanBenchmarkLine<'a>>,
+    pub keygen_duration: Duration,
+    pub sign_duration: Duration,
+    pub verify_duration: Duration,
+    pub sign_detail_lines: Vec<HumanBenchmarkLine<'a>>,
+    pub verify_detail_lines: Vec<HumanBenchmarkLine<'a>>,
+    pub verified: bool,
+    pub size_lines: Vec<HumanBenchmarkLine<'a>>,
+    pub summary_size_lines: Vec<HumanBenchmarkLine<'a>>,
+    pub summary_sections: Vec<HumanBenchmarkSection<'a>>,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct HumanBenchmarkSection<'a> {
+    pub title: &'a str,
+    pub lines: Vec<HumanBenchmarkLine<'a>>,
+}
+
+pub fn print_human_benchmark_report(report: &HumanBenchmarkReport<'_>) {
+    for line in report.banner_lines {
+        println!("{line}");
+    }
+    if !report.banner_lines.is_empty() {
+        println!();
+    }
+
+    println!("=== {} Benchmark ===\n", report.heading);
+    print_human_report_lines(&report.intro_lines);
+    if !report.intro_lines.is_empty() {
+        println!();
+    }
+
+    println!("--- Key Generation ---");
+    print_timing("generate keys", report.keygen_duration);
+    println!("\n--- Signing ---");
+    print_timing("sign", report.sign_duration);
+    print_human_report_lines(&report.sign_detail_lines);
+    println!("\n--- Verification ---");
+    print_timing("verify", report.verify_duration);
+    print_human_report_lines(&report.verify_detail_lines);
+    println!(
+        "Signature verification: {}",
+        if report.verified { "SUCCESS" } else { "FAILED" }
+    );
+
+    println!("\n--- Size Measurements ---");
+    print_human_report_lines(&report.size_lines);
+
+    println!("\n=== Summary ===");
+    println!("Algorithm: {}", report.summary_algorithm);
+    print_human_report_lines(&report.summary_intro_lines);
+    if !report.summary_intro_lines.is_empty() {
+        println!();
+    }
+    println!("Timing:");
+    println!(
+        "  Key Generation: {:?} ({} ns)",
+        report.keygen_duration,
+        report.keygen_duration.as_nanos()
+    );
+    println!(
+        "  Signing:        {:?} ({} ns)",
+        report.sign_duration,
+        report.sign_duration.as_nanos()
+    );
+    println!(
+        "  Verification:   {:?} ({} ns)",
+        report.verify_duration,
+        report.verify_duration.as_nanos()
+    );
+    println!("\nSizes:");
+    print_human_summary_lines(&report.summary_size_lines);
+    for section in &report.summary_sections {
+        println!("\n{}:", section.title);
+        print_human_summary_lines(&section.lines);
+    }
+}
+
 pub struct StandardBenchmarkHumanReport<'a> {
     pub heading_algorithm: &'a str,
     pub heading_param_set: &'a str,
@@ -360,6 +464,18 @@ pub fn emit_standard_benchmark_report(
         println!("  Signing:      {} bytes", human.sign_peak_bytes);
         println!("  Verification: {} bytes", human.verify_peak_bytes);
     });
+}
+
+fn print_human_report_lines(lines: &[HumanBenchmarkLine<'_>]) {
+    for line in lines {
+        println!("{}: {}", line.label, line.value);
+    }
+}
+
+fn print_human_summary_lines(lines: &[HumanBenchmarkLine<'_>]) {
+    for line in lines {
+        println!("  {}: {}", line.label, line.value);
+    }
 }
 
 pub struct AllocationTracker {

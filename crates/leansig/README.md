@@ -18,7 +18,13 @@ Poseidon2-based XMSS signature scheme with Target Sum encoding, from the [leanSi
 Run it with:
 
 ```bash
-cargo run --release --bin leansig
+cargo run --bin leansig -- --format human --message-size 32
+```
+
+JSON output:
+
+```bash
+cargo run --bin leansig -- --format json --message-size 64
 ```
 
 Note: benchmark timings vary by machine, compiler version, and system load.

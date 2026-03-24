@@ -1,7 +1,7 @@
 use sha2::{Digest, Sha256};
 use std::error::Error;
 use std::fmt;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 /// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
 pub use pq_bench::BENCH_MESSAGE;
@@ -73,7 +73,7 @@ impl LamportSignature {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct LamportSizes {
     pub public_key_bytes: usize,
     pub secret_key_bytes: usize,
@@ -84,6 +84,22 @@ pub struct LamportSizes {
 pub struct LamportOtsScheme;
 
 pub const LAMPORT_OTS_SCHEME: LamportOtsScheme = LamportOtsScheme;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LamportBenchOperation {
+    Keygen,
+    Sign,
+    Verify,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct LamportBenchmarkRun {
+    pub keygen_duration: Duration,
+    pub sign_duration: Duration,
+    pub verify_duration: Duration,
+    pub verified: bool,
+    pub sizes: LamportSizes,
+}
 
 impl LamportOtsScheme {
     pub const fn algorithm_name(&self) -> &'static str {
@@ -203,6 +219,84 @@ impl LamportOtsScheme {
     }
 }
 
+pub fn benchmark_once(
+    message: &[u8],
+) -> Result<LamportBenchmarkRun, LamportError> {
+    let scheme = LAMPORT_OTS_SCHEME;
+    let ((public_key, mut secret_key), keygen_duration) =
+        pq_bench::measure_time(|| {
+            let mut rng = benchmark_rng("once-keygen", true);
+            scheme.keypair_with_rng(&mut rng)
+        });
+    let (signature, sign_duration) =
+        pq_bench::measure_time(|| scheme.sign(message, &mut secret_key));
+    let signature = signature?;
+    let (verified, verify_duration) = pq_bench::measure_time(|| {
+        scheme.verify(message, &signature, &public_key)
+    });
+
+    Ok(LamportBenchmarkRun {
+        keygen_duration,
+        sign_duration,
+        verify_duration,
+        verified: verified?,
+        sizes: scheme.sizes(),
+    })
+}
+
+pub fn benchmark_operation(
+    operation: LamportBenchOperation,
+    message: &[u8],
+    iterations: usize,
+    deterministic: bool,
+) -> Result<Duration, LamportError> {
+    let scheme = LAMPORT_OTS_SCHEME;
+
+    match operation {
+        LamportBenchOperation::Keygen => {
+            let mut rng = benchmark_rng("keygen", deterministic);
+            let start = Instant::now();
+            for _ in 0..iterations {
+                let keypair = scheme.keypair_with_rng(&mut rng);
+                std::hint::black_box(keypair);
+            }
+            Ok(start.elapsed())
+        }
+        LamportBenchOperation::Sign => {
+            let mut rng = benchmark_rng("sign-keygen", deterministic);
+            let mut secret_keys = Vec::with_capacity(iterations.max(1));
+            for _ in 0..iterations.max(1) {
+                let (_, secret_key) = scheme.keypair_with_rng(&mut rng);
+                secret_keys.push(secret_key);
+            }
+
+            let start = Instant::now();
+            for secret_key in secret_keys.iter_mut().take(iterations) {
+                let signature = scheme.sign(message, secret_key)?;
+                std::hint::black_box(signature);
+            }
+            Ok(start.elapsed())
+        }
+        LamportBenchOperation::Verify => {
+            let mut rng = benchmark_rng("verify-keygen", deterministic);
+            let (public_key, mut secret_key) =
+                scheme.keypair_with_rng(&mut rng);
+            let signature = scheme.sign(message, &mut secret_key)?;
+
+            let start = Instant::now();
+            for _ in 0..iterations {
+                let is_valid =
+                    scheme.verify(message, &signature, &public_key)?;
+                if !is_valid {
+                    return Err(LamportError::VerificationFailed);
+                }
+                std::hint::black_box(is_valid);
+            }
+            Ok(start.elapsed())
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct XorShift64 {
     state: u64,
@@ -244,6 +338,7 @@ pub enum LamportError {
     InvalidSecretKeyLength { expected: usize, actual: usize },
     InvalidPublicKeyLength { expected: usize, actual: usize },
     InvalidSignatureLength { expected: usize, actual: usize },
+    VerificationFailed,
 }
 
 impl fmt::Display for LamportError {
@@ -270,6 +365,9 @@ impl fmt::Display for LamportError {
                     "invalid signature length: expected {expected}, got {actual}"
                 )
             }
+            Self::VerificationFailed => {
+                write!(f, "Lamport verification failed during benchmark")
+            }
         }
     }
 }
@@ -281,6 +379,14 @@ pub fn seed_from_str(seed: &str) -> u64 {
     let mut seed_bytes = [0_u8; 8];
     seed_bytes.copy_from_slice(&digest[..8]);
     u64::from_le_bytes(seed_bytes)
+}
+
+pub fn benchmark_rng(label: &str, deterministic: bool) -> XorShift64 {
+    if deterministic {
+        XorShift64::new(seed_from_str(&format!("lamport-benchmark-{label}")))
+    } else {
+        XorShift64::new(default_seed() ^ seed_from_str(label))
+    }
 }
 
 fn default_seed() -> u64 {
@@ -320,7 +426,9 @@ fn selected_secret_index(digest: &[u8; HASH_SIZE], bit_index: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{LamportOtsScheme, XorShift64};
+    use super::{
+        benchmark_once, LamportBenchOperation, LamportOtsScheme, XorShift64,
+    };
 
     #[test]
     fn sign_and_verify_roundtrip() {
@@ -370,5 +478,29 @@ mod tests {
             .verify(b"message-b", &signature, &public_key)
             .expect("verify should succeed");
         assert!(!is_valid, "different message must not verify");
+    }
+
+    #[test]
+    fn benchmark_helpers_produce_valid_results() {
+        let report = benchmark_once(b"lamport-benchmark")
+            .expect("one-shot benchmark should succeed");
+        assert!(report.verified, "benchmark signature should verify");
+        assert_eq!(
+            report.sizes,
+            LamportOtsScheme.sizes(),
+            "benchmark sizes should match scheme metadata"
+        );
+
+        let verify_duration = super::benchmark_operation(
+            LamportBenchOperation::Verify,
+            b"lamport-benchmark",
+            2,
+            true,
+        )
+        .expect("verify benchmark should succeed");
+        assert!(
+            !verify_duration.is_zero(),
+            "verify benchmark should take measurable time"
+        );
     }
 }
