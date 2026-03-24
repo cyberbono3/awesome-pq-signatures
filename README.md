@@ -27,17 +27,17 @@ LM-OTS is typically used inside LMS as its one-time signature component, so LMS 
 
 This table mirrors the populated `PQ DSAs.xlsx` sheet. It uses the default parameter set for each scheme and the median `divan` result for the canonical 32-byte benchmark message.
 
-| Name | Param Set | Family | Keygen | Sign | Verify | PK | SK | Signature |
+| Name | Param Set | Family | Keygen (ms) | Sign (ms) | Verify (ms) | PK (B) | SK (B) | Signature (B) |
 |---|---|---|---:|---:|---:|---:|---:|---:|
-| SQISign | SQISign-lvl1 | Isogeny-based | 18.56 ms | 41.45 ms | 2.896 ms | 65 | 353 | 148 |
-| MAYO-1 | MAYO-1 | System-of-equations | 844.4 µs | 2.04 ms | 763.8 µs | 1420 | 24 | 454 |
-| Falcon-512 | Falcon-512 | Lattice-based | 5.264 ms | 151 us | 21.61 us | 897 | 1281 | 653 |
-| LESS | LESS-252-45 | Code-based | 2.072 ms | 19.06 ms | 18.69 ms | 97484 | 32 | 1329 |
-| LeanSig | Poseidon-L2^18-TS-w4 | Hash-based | 25.09 s | 2.888 ms | 360.7 µs | 48 | 86588 | 1632 |
-| LMS | LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4 | Hash-based | 6.683 ms | 6.646 ms | 102.6 µs | 56 | 48 | 2352 |
-| XMSS | XMSS-SHA2_10_256 | Hash-based | 1.645 s | 3.304 s | 808.1 us | 68 | 136 | 2500 |
-| ML-DSA-65 (Dilithium) | ML-DSA-65 | Lattice-based | 201.3 us | 569.5 us | 44.58 us | 1952 | 4032 | 3309 |
-| HSS | HSS-SHA256-H5-W2-L1 | Hash-based | 3.822 ms | 3.824 ms | 54.08 µs | 60 | 48 | 4464 |
-| XMSS^MT | XMSSMT-SHA2_20/2_256 | Hash-based | 1.655 s | 4.762 s | 1.795 ms | 68 | 135 | 4963 |
-| SPHINCS+ | SPHINCS+-SHAKE-128f-simple | Hash-based | 1.498 ms | 24.98 ms | 1.507 ms | 32 | 64 | 17088 |
-| CROSS | CROSS-RSDPG-192-BALANCED | Code-based | 12.44 us | 1.371 ms | 786.8 us | 83 | 48 | 22464 |
+| SQISign | SQISign-lvl1 | Isogeny-based | 18.56 | 41.45 | 2.896 | 65 | 353 | 148 |
+| MAYO-1 | MAYO-1 | System-of-equations | 0.8444 | 2.04 | 0.7638 | 1420 | 24 | 454 |
+| Falcon-512 | Falcon-512 | Lattice-based | 5.264 | 0.151 | 0.02161 | 897 | 1281 | 653 |
+| LESS | LESS-252-45 | Code-based | 2.072 | 19.06 | 18.69 | 97484 | 32 | 1329 |
+| LeanSig | Poseidon-L2^18-TS-w4 | Hash-based | 25090 | 2.888 | 0.3607 | 48 | 86588 | 1632 |
+| LMS | LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4 | Hash-based | 6.683 | 6.646 | 0.1026 | 56 | 48 | 2352 |
+| XMSS | XMSS-SHA2_10_256 | Hash-based | 1645 | 3304 | 0.8081 | 68 | 136 | 2500 |
+| ML-DSA-65 (Dilithium) | ML-DSA-65 | Lattice-based | 0.2013 | 0.5695 | 0.04458 | 1952 | 4032 | 3309 |
+| HSS | HSS-SHA256-H5-W2-L1 | Hash-based | 3.822 | 3.824 | 0.05408 | 60 | 48 | 4464 |
+| XMSS^MT | XMSSMT-SHA2_20/2_256 | Hash-based | 1655 | 4762 | 1.795 | 68 | 135 | 4963 |
+| SPHINCS+ | SPHINCS+-SHAKE-128f-simple | Hash-based | 1.498 | 24.98 | 1.507 | 32 | 64 | 17088 |
+| CROSS | CROSS-RSDPG-192-BALANCED | Code-based | 0.01244 | 1.371 | 0.7868 | 83 | 48 | 22464 |
