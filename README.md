@@ -99,6 +99,17 @@ Sorted by `Family`, then by `Signature (B)` ascending within each family.
 | Lattice-based | 2 | ML-DSA-65 (Dilithium) | ML-DSA-65 | 3309 | 1952 | 4032 | 0.5695 | 0.04458 |
 | System-of-equations | 1 | MAYO-1 | MAYO-1 | 454 | 1420 | 24 | 2.04 | 0.7638 |
 
+```text
+ASCII overview
+
+Code-based          [1] LESS (1329 B) -------- [2] CROSS (22464 B)
+Hash-based          [1] LeanSig (1632 B) ----- [2] LMS (2352 B) ----- [3] XMSS (2500 B)
+                    [4] HSS (4464 B) --------- [5] XMSS^MT (4963 B) -- [6] SPHINCS+ (17088 B)
+Isogeny-based       [1] SQISign (148 B)
+Lattice-based       [1] Falcon-512 (653 B) --- [2] ML-DSA-65 (3309 B)
+System-of-equations [1] MAYO-1 (454 B)
+```
+
 ## Fastest Sign And Verify By Family
 
 Sorted by `Family`, then by `Sign (ms)` ascending with `Verify (ms)` as the secondary sort within each family.
@@ -117,3 +128,15 @@ Sorted by `Family`, then by `Sign (ms)` ascending with `Verify (ms)` as the seco
 | Lattice-based | 1 | Falcon-512 | Falcon-512 | 0.151 | 0.02161 | 653 | 897 | 1281 |
 | Lattice-based | 2 | ML-DSA-65 (Dilithium) | ML-DSA-65 | 0.5695 | 0.04458 | 3309 | 1952 | 4032 |
 | System-of-equations | 1 | MAYO-1 | MAYO-1 | 2.04 | 0.7638 | 454 | 1420 | 24 |
+
+```text
+ASCII overview
+
+Code-based          [1] CROSS (sign 1.371, verify 0.7868) --- [2] LESS (sign 19.06, verify 18.69)
+Hash-based          [1] LeanSig (2.888, 0.3607) ------------ [2] HSS (3.824, 0.05408)
+                    [3] LMS (6.646, 0.1026) ---------------- [4] SPHINCS+ (24.98, 1.507)
+                    [5] XMSS (3304, 0.8081) ---------------- [6] XMSS^MT (4762, 1.795)
+Isogeny-based       [1] SQISign (41.45, 2.896)
+Lattice-based       [1] Falcon-512 (0.151, 0.02161) -------- [2] ML-DSA-65 (0.5695, 0.04458)
+System-of-equations [1] MAYO-1 (2.04, 0.7638)
+```
