@@ -24,6 +24,7 @@ LM-OTS is typically used inside LMS as its one-time signature component, so LMS 
 | 13 | LESS | Code-based | Stateless | Code-based post-quantum signature candidate (LESS). | [less](./crates/less/README.md) | [LESS C implementation](https://github.com/less-sig/LESS) |
 | 14 | LeanSig | Hash-based | Stateful | Poseidon2-based XMSS-style signature scheme with explicit lifetime parameter. | [leansig](./crates/leansig/README.md) | [leansig](https://github.com/leanEthereum/leanSig) |
 
+
 ## Benchmark Summary
 
 This table mirrors the populated `PQ DSAs.xlsx` sheet. It uses the median `divan` result for the canonical 32-byte benchmark message and groups schemes by statefulness. Stateless schemes are normalized to the workspace security target in [`bench_config.toml`](./bench_config.toml), currently `level3`. Stateful schemes are normalized to the workspace capacity class in [`bench_config.toml`](./bench_config.toml), currently `pow2_10`, and the exact selected capacity is shown explicitly in the `Capacity` column.
