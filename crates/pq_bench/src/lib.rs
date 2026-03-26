@@ -27,7 +27,8 @@ pub use {
     },
     binary::{
         parse_benchmark_binary_config_or_exit, run_human_benchmark_binary,
-        BenchmarkBinaryExecution,
+        run_standard_signed_message_benchmark_binary, BenchmarkBinaryExecution,
+        StandardBenchmarkSizes, StandardSignedMessageBinaryLabels,
     },
     config::{BenchmarkBinaryConfig, BenchmarkOutputFormat},
     message::{
