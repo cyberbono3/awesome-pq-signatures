@@ -14,7 +14,6 @@ pub use pq_bench::BENCH_MESSAGE;
 
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
-pub const DEFAULT_PARAM_SET_NAME: &str = "HSS-SHA256-H5-W2-L1";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HssParamSet {
@@ -40,11 +39,26 @@ impl HssParamSet {
 
 pub const HSS_PARAM_SETS: [HssParamSet; 2] = [HssParamSet::L1H5W2, HssParamSet::L2H5W2];
 
+pub fn default_param_set() -> HssParamSet {
+    match pq_bench::BENCH_STATEFUL_CAPACITY_CLASS {
+        "pow2_10" | "pow2_20" => HssParamSet::L2H5W2,
+        other => panic!("unsupported stateful capacity class for HSS: {other}"),
+    }
+}
+
+pub fn default_param_set_name() -> &'static str {
+    default_param_set().name()
+}
+
 pub fn param_set_by_name(name: &str) -> Option<HssParamSet> {
     HSS_PARAM_SETS
         .iter()
         .copied()
         .find(|param_set| param_set.name() == name)
+}
+
+pub fn default_benchmark_scheme() -> HssScheme {
+    HssScheme::new(default_param_set())
 }
 
 #[derive(Clone, Debug)]
@@ -459,14 +473,14 @@ pub mod memory {
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, param_set_by_name, HssScheme, BENCH_MESSAGE_BYTE, DEFAULT_PARAM_SET_NAME,
+        bench_message, default_param_set_name, param_set_by_name, HssScheme, BENCH_MESSAGE_BYTE,
     };
 
     #[test]
     fn param_set_lookup_works() {
         let found =
-            param_set_by_name(DEFAULT_PARAM_SET_NAME).expect("known param set should resolve");
-        assert_eq!(found.name(), DEFAULT_PARAM_SET_NAME);
+            param_set_by_name(default_param_set_name()).expect("known param set should resolve");
+        assert_eq!(found.name(), default_param_set_name());
     }
 
     #[test]
@@ -475,7 +489,7 @@ mod tests {
             .name("hss-roundtrip".to_owned())
             .stack_size(32 * 1024 * 1024)
             .spawn(|| {
-                let scheme = HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+                let scheme = HssScheme::from_param_set_name(default_param_set_name())
                     .expect("param set should resolve");
                 let message = b"hss-roundtrip";
                 let (public_key, mut secret_key) =
@@ -500,7 +514,7 @@ mod tests {
             .name("hss-verify-fail".to_owned())
             .stack_size(32 * 1024 * 1024)
             .spawn(|| {
-                let scheme = HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+                let scheme = HssScheme::from_param_set_name(default_param_set_name())
                     .expect("param set should resolve");
                 let (public_key, mut secret_key) =
                     scheme.keypair().expect("keypair should succeed");

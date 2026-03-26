@@ -29,6 +29,7 @@ Benchmark crate for LMS.
 Notes:
 - LMS signing is stateful: every signature advances the secret-key state.
 - This crate wraps `hbs-lms` with a benchmark-oriented API.
+- The default benchmark profile follows [`bench_config.toml`](../../bench_config.toml) `stateful_capacity_class`; with the current `pow2_10` setting it selects `LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4`.
 
 ## `src/main.rs` (`lms` binary)
 
@@ -47,7 +48,7 @@ cargo run -p lms --release --bin lms
 
 Environment overrides:
 
-- `PARAM_SET` (default `LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4`)
+- `PARAM_SET` (default `LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4`)
 - `MESSAGE_SIZE` (default `1024`)
 
 ## `benches/lms_divan.rs` (Divan benchmark suite)
@@ -68,33 +69,62 @@ cargo bench -p lms --bench lms_divan
 ```
 
 Observed size output from the latest `lms_divan` run:
-- `LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4`: `pk=56`, `sk=48`, `sig(32B)=2352`, `signed(32B)=2384`, `lifetime=32`
-- `LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4`: `pk=56`, `sk=48`, `sig(32B)=2512`, `signed(32B)=2544`, `lifetime=1024`
+- `LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4`: `pk=60`, `sk=48`, `sig(32B)=2352`, `signed(32B)=2384`, `lifetime=32`
+- `LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4`: `pk=60`, `sk=48`, `sig(32B)=2512`, `signed(32B)=2544`, `lifetime=1024`
 
-Median timings from `cargo bench -p lms --bench lms_divan` on `2026-03-17`:
+Latest default `lms` run (captured on `2026-03-26 11:18:00 UTC`):
+
+```text
+=== LMS (LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4) Benchmark ===
+
+Backend: hbs-lms
+Tree height: 10
+
+--- Key Generation ---
+Time to generate keys: 239.661666ms
+Time to generate keys (ns): 239661666
+
+--- Signing ---
+Time to sign: 232.711709ms
+Time to sign (ns): 232711709
+
+--- Verification ---
+Time to verify: 109.75µs
+Time to verify (ns): 109750
+Signature verification: SUCCESS
+
+--- Size Measurements ---
+Public key size: 60 bytes
+Secret key size: 48 bytes
+Signature size: 2512 bytes
+Signed message size: 2544 bytes
+Estimated signatures remaining: 1023
+```
+
+Median timings from `cargo bench -p lms --bench lms_divan -- --sample-count 10 --max-time 1` on `2026-03-26`:
 - `keygen`
-  - `LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4`: `6.683 ms`
-  - `LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4`: `211.1 ms`
+  - `LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4`: `6.671 ms`
+  - `LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4`: `234.7 ms`
 - `sign_h5w4`
-  - `32B`: `6.646 ms`
-  - `256B`: `6.624 ms`
-  - `1024B`: `6.647 ms`
-  - `4096B`: `6.664 ms`
+  - `32B`: `6.606 ms`
+  - `256B`: `6.702 ms`
+  - `1024B`: `6.628 ms`
+  - `4096B`: `6.653 ms`
 - `sign_h10w4`
-  - `32B`: `212.7 ms`
-  - `256B`: `213.6 ms`
-  - `1024B`: `213 ms`
-  - `4096B`: `212 ms`
+  - `32B`: `236 ms`
+  - `256B`: `234.8 ms`
+  - `1024B`: `220.7 ms`
+  - `4096B`: `221.5 ms`
 - `verify_h5w4`
-  - `32B`: `102.6 µs`
-  - `256B`: `103 µs`
-  - `1024B`: `102.2 µs`
-  - `4096B`: `118.9 µs`
+  - `32B`: `103.1 µs`
+  - `256B`: `108.9 µs`
+  - `1024B`: `103.1 µs`
+  - `4096B`: `121.8 µs`
 - `verify_h10w4`
-  - `32B`: `120.4 µs`
-  - `256B`: `96.45 µs`
-  - `1024B`: `117.7 µs`
-  - `4096B`: `115.4 µs`
+  - `32B`: `99.06 µs`
+  - `256B`: `106.7 µs`
+  - `1024B`: `111.1 µs`
+  - `4096B`: `123.3 µs`
 
 ## Library
 

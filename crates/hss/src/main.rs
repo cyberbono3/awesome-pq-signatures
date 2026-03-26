@@ -1,6 +1,6 @@
 use hss::{
-    default_seed, measure_time, signed_message_size, HssScheme, BENCH_MESSAGE,
-    DEFAULT_PARAM_SET_NAME,
+    default_param_set_name, default_seed, measure_time, signed_message_size, HssScheme,
+    BENCH_MESSAGE,
 };
 use std::env;
 use std::time::Duration;
@@ -11,8 +11,7 @@ fn print_timing(label: &str, duration: Duration) {
 }
 
 fn main() {
-    let param_set_name =
-        env::var("PARAM_SET").unwrap_or_else(|_| DEFAULT_PARAM_SET_NAME.to_owned());
+    let param_set_name = env::var("PARAM_SET").unwrap_or_else(|_| default_param_set_name().to_owned());
     let scheme = HssScheme::from_param_set_name(&param_set_name).expect("valid HSS parameter set");
     let message: &[u8] = &BENCH_MESSAGE;
     let seed = default_seed();

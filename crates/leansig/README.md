@@ -6,6 +6,8 @@ Poseidon2-based XMSS signature scheme with Target Sum encoding, from the [leanSi
 
 [leansig](https://github.com/leanEthereum/leanSig) (git dependency, rev `16c660e`)
 
+The default benchmark profile follows [`bench_config.toml`](../../bench_config.toml) `stateful_capacity_class`; with the current `pow2_10` setting it selects the smallest supported larger profile, `Poseidon-L2^18-TS-w4`.
+
 ## `src/main.rs` (`leansig` binary)
 
 `src/main.rs` is a single-run benchmark/report binary for LeanSig (Poseidon – Lifetime 2^18 – Target Sum – w 4). It performs:

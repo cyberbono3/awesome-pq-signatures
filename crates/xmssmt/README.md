@@ -14,6 +14,7 @@ Multi-tree hash-based signature scheme (RFC 8391), using the [RustCrypto `xmss`]
 Notes:
 - XMSS^MT is stateful; each signature updates the secret key state.
 - No C dependencies or OpenSSL required — pure Rust implementation.
+- The default benchmark profile follows [`bench_config.toml`](../../bench_config.toml) `stateful_capacity_class`; with the current `pow2_10` setting it selects the smallest supported larger profile, `XMSSMT-SHA2_20/2_256`.
 
 ## Project layout
 

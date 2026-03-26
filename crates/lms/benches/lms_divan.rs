@@ -1,7 +1,7 @@
 use divan::{black_box, AllocProfiler, Bencher};
 use lms::{
-    bench_message, default_seed, memory, signed_message_size, LmsScheme, TrackingAllocator,
-    BENCH_MESSAGE_SIZES, DEFAULT_PARAM_SET_NAME, LMS_PARAM_SETS,
+    bench_message, default_param_set_name, default_seed, memory, signed_message_size, LmsScheme,
+    TrackingAllocator, BENCH_MESSAGE_SIZES, LMS_PARAM_SETS,
 };
 
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
@@ -133,7 +133,7 @@ fn print_sizes() {
 }
 
 fn print_memory_usage() {
-    let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+    let scheme = LmsScheme::from_param_set_name(default_param_set_name())
         .expect("default LMS parameter set should exist");
     println!("{} peak heap usage:", scheme.algorithm_name());
 

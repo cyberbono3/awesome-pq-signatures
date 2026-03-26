@@ -199,12 +199,11 @@ impl DsaBenchmark for LmsAdapter {
         "LMS"
     }
     fn param_set(&self) -> &str {
-        "LMS-SHA256-M32-H5"
+        lms::default_param_set_name()
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
-        use lms::{default_seed, LmsScheme, DEFAULT_PARAM_SET_NAME};
-        let scheme =
-            LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME).map_err(|e| format!("{e:?}"))?;
+        use lms::{default_benchmark_scheme, default_seed};
+        let scheme = default_benchmark_scheme();
         let ((pk, mut sk), kg) = time_op(|| scheme.keypair_with_seed(default_seed()).expect("kg"));
         let (sig, s) = time_op(|| scheme.sign(message, &mut sk).expect("sign"));
         let (_, v) = time_op(|| scheme.verify(message, &sig, &pk).expect("verify"));
@@ -225,12 +224,11 @@ impl DsaBenchmark for HssAdapter {
         "HSS"
     }
     fn param_set(&self) -> &str {
-        "HSS-SHA256-H5-W2-L1"
+        hss::default_param_set_name()
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
-        use hss::{default_seed, HssScheme, DEFAULT_PARAM_SET_NAME};
-        let scheme =
-            HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME).map_err(|e| format!("{e:?}"))?;
+        use hss::{default_benchmark_scheme, default_seed};
+        let scheme = default_benchmark_scheme();
         let ((pk, mut sk), kg) = time_op(|| scheme.keypair_with_seed(default_seed()).expect("kg"));
         let (sig, s) = time_op(|| scheme.sign(message, &mut sk).expect("sign"));
         let (_, v) = time_op(|| scheme.verify(message, &sig, &pk).expect("verify"));
@@ -251,7 +249,7 @@ impl DsaBenchmark for XmssAdapter {
         "XMSS"
     }
     fn param_set(&self) -> &str {
-        "XMSS-SHA2_10_256"
+        xmss_bench::default_benchmark_scheme().param_set().as_str()
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         let scheme = xmss_bench::default_benchmark_scheme();
@@ -275,7 +273,7 @@ impl DsaBenchmark for XmssmtAdapter {
         "XMSS^MT"
     }
     fn param_set(&self) -> &str {
-        "XMSSMT-SHA2_20/2_256"
+        xmssmt_bench::default_benchmark_scheme().param_set().as_str()
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         let scheme = xmssmt_bench::default_benchmark_scheme();
@@ -301,15 +299,14 @@ impl DsaBenchmark for LeansigAdapter {
         "LeanSig"
     }
     fn param_set(&self) -> &str {
-        "Poseidon-L2^18-TS-w4"
+        leansig_bench::LEANSIG_VARIANT
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         use leansig::serialization::Serializable;
-        use leansig::signature::generalized_xmss::instantiations_poseidon::lifetime_2_to_the_18::target_sum::SIGTargetSumLifetime18W4NoOff;
         use leansig::signature::SignatureScheme;
         use leansig::MESSAGE_LENGTH;
-        use leansig_bench::prepare_sk_for_epoch;
-        type S = SIGTargetSumLifetime18W4NoOff;
+        use leansig_bench::{prepare_sk_for_epoch, SelectedLeanSigScheme};
+        type S = SelectedLeanSigScheme;
         let mut msg = [0u8; MESSAGE_LENGTH];
         let n = message.len().min(MESSAGE_LENGTH);
         msg[..n].copy_from_slice(&message[..n]);

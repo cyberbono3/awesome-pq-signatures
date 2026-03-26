@@ -35,12 +35,26 @@ fn main() {
         .and_then(|v| v.get("security_target"))
         .and_then(|v| v.as_str())
         .unwrap_or("level1");
+    let stateful_capacity_class = config
+        .get("bench")
+        .and_then(|v| v.get("stateful_capacity_class"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("pow2_10");
 
     match security_target {
         "level1" | "level3" => {}
         other => {
             panic!(
                 "unsupported [bench] security_target = {:?}; this workspace currently supports only \"level1\" and \"level3\"",
+                other
+            );
+        }
+    }
+    match stateful_capacity_class {
+        "pow2_10" | "pow2_20" => {}
+        other => {
+            panic!(
+                "unsupported [bench] stateful_capacity_class = {:?}; this workspace currently supports only \"pow2_10\" and \"pow2_20\"",
                 other
             );
         }
@@ -63,9 +77,15 @@ fn main() {
          /// Workspace-wide target security level from `bench_config.toml`.\n\
          ///\n\
          /// The current workspace normalization supports `\"level1\"` and `\"level3\"`.\n\
-         pub const BENCH_SECURITY_TARGET: &str = {:?};\n",
+         pub const BENCH_SECURITY_TARGET: &str = {:?};\n\
+         \n\
+         /// Workspace-wide stateful benchmark capacity class from `bench_config.toml`.\n\
+         ///\n\
+         /// The current workspace normalization supports `\"pow2_10\"` and `\"pow2_20\"`.\n\
+         pub const BENCH_STATEFUL_CAPACITY_CLASS: &str = {:?};\n",
         byte_literals.join(", "),
         security_target,
+        stateful_capacity_class,
     );
 
     fs::write(&dest, generated)

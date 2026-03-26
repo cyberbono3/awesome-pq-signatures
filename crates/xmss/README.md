@@ -14,6 +14,7 @@ Hash-based Merkle signature scheme (RFC 8391), using the [RustCrypto `xmss`](htt
 Notes:
 - XMSS is stateful; each signature updates the secret key state.
 - No C dependencies or OpenSSL required — pure Rust implementation.
+- The default benchmark profile follows [`bench_config.toml`](../../bench_config.toml) `stateful_capacity_class`; with the current `pow2_10` setting it selects `XMSS-SHA2_10_256`.
 
 ## XMSS vs XMSS^MT
 
