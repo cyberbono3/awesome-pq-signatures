@@ -1,9 +1,9 @@
 use leansig::signature::generalized_xmss::instantiations_poseidon::lifetime_2_to_the_18::target_sum::SIGTargetSumLifetime18W4NoOff;
 use leansig_bench::benchmark_once;
 use pq_bench::{
-    benchmark_message, duration_ns, emit_benchmark_report,
-    BenchmarkBinaryConfig, BenchmarkBinaryReport, BenchmarkSizeReport,
-    HumanBenchmarkLine, HumanBenchmarkReport, print_human_benchmark_report,
+    benchmark_message, build_standard_binary_report, emit_benchmark_report,
+    BenchmarkBinaryConfig, HumanBenchmarkLine, HumanBenchmarkReport,
+    print_human_benchmark_report, StandardBinaryBenchmarkSpec,
 };
 
 const ALGORITHM: &str = "LeanSig";
@@ -29,23 +29,21 @@ fn main() {
             eprintln!("{err}");
             std::process::exit(1);
         });
-    let report = BenchmarkBinaryReport {
-        algorithm: ALGORITHM.to_string(),
-        backend: Some(BACKEND.to_string()),
-        param_set: Some(PARAM_SET.to_string()),
-        keygen_ns: duration_ns(benchmark.keygen_duration),
-        sign_ns: duration_ns(benchmark.sign_duration),
-        verify_ns: duration_ns(benchmark.verify_duration),
+    let report = build_standard_binary_report(StandardBinaryBenchmarkSpec {
+        algorithm: ALGORITHM,
+        backend: Some(BACKEND),
+        param_set: Some(PARAM_SET),
+        keygen_duration: benchmark.keygen_duration,
+        sign_duration: benchmark.sign_duration,
+        verify_duration: benchmark.verify_duration,
         verified: benchmark.verified,
-        sizes: BenchmarkSizeReport {
-            public_key_bytes: benchmark.public_key_bytes,
-            secret_key_bytes: benchmark.secret_key_bytes,
-            signature_bytes: benchmark.signature_bytes,
-            signed_message_bytes: None,
-        },
+        public_key_bytes: benchmark.public_key_bytes,
+        secret_key_bytes: benchmark.secret_key_bytes,
+        signature_bytes: benchmark.signature_bytes,
+        signed_message_bytes: None,
         sign_peak_bytes: None,
         verify_peak_bytes: None,
-    };
+    });
 
     emit_benchmark_report(&config, &report, |_| {
         print_human_benchmark_report(&HumanBenchmarkReport {

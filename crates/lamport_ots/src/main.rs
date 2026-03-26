@@ -1,9 +1,8 @@
 use lamport_ots::{benchmark_once, LAMPORT_OTS_SCHEME};
 use pq_bench::{
-    benchmark_message, duration_ns, emit_benchmark_report,
+    benchmark_message, build_standard_binary_report, emit_benchmark_report,
     print_human_benchmark_report, signed_message_size, BenchmarkBinaryConfig,
-    BenchmarkBinaryReport, BenchmarkSizeReport, HumanBenchmarkLine,
-    HumanBenchmarkReport,
+    HumanBenchmarkLine, HumanBenchmarkReport, StandardBinaryBenchmarkSpec,
 };
 
 fn main() {
@@ -18,26 +17,24 @@ fn main() {
         eprintln!("{err}");
         std::process::exit(1);
     });
-    let report = BenchmarkBinaryReport {
-        algorithm: scheme.algorithm_name().to_string(),
-        backend: Some(scheme.backend_name().to_string()),
-        param_set: Some(scheme.param_set_name().to_string()),
-        keygen_ns: duration_ns(benchmark.keygen_duration),
-        sign_ns: duration_ns(benchmark.sign_duration),
-        verify_ns: duration_ns(benchmark.verify_duration),
+    let report = build_standard_binary_report(StandardBinaryBenchmarkSpec {
+        algorithm: scheme.algorithm_name(),
+        backend: Some(scheme.backend_name()),
+        param_set: Some(scheme.param_set_name()),
+        keygen_duration: benchmark.keygen_duration,
+        sign_duration: benchmark.sign_duration,
+        verify_duration: benchmark.verify_duration,
         verified: benchmark.verified,
-        sizes: BenchmarkSizeReport {
-            public_key_bytes: benchmark.sizes.public_key_bytes,
-            secret_key_bytes: benchmark.sizes.secret_key_bytes,
-            signature_bytes: benchmark.sizes.signature_bytes,
-            signed_message_bytes: Some(signed_message_size(
-                message.len(),
-                benchmark.sizes.signature_bytes,
-            )),
-        },
+        public_key_bytes: benchmark.sizes.public_key_bytes,
+        secret_key_bytes: benchmark.sizes.secret_key_bytes,
+        signature_bytes: benchmark.sizes.signature_bytes,
+        signed_message_bytes: Some(signed_message_size(
+            message.len(),
+            benchmark.sizes.signature_bytes,
+        )),
         sign_peak_bytes: None,
         verify_peak_bytes: None,
-    };
+    });
 
     emit_benchmark_report(&config, &report, |_| {
         print_human_benchmark_report(&HumanBenchmarkReport {

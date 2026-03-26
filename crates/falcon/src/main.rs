@@ -3,10 +3,9 @@ use falcon::{
     ALLOCATION_TRACKER, FALCON512,
 };
 use pq_bench::{
-    build_standard_human_benchmark_report, duration_ns,
-    run_human_benchmark_binary, BenchmarkBinaryExecution,
-    BenchmarkBinaryReport, BenchmarkSizeReport, HumanBenchmarkLine,
-    StandardHumanBenchmarkSpec,
+    build_standard_binary_report, build_standard_human_benchmark_report,
+    run_human_benchmark_binary, BenchmarkBinaryExecution, HumanBenchmarkLine,
+    StandardBinaryBenchmarkSpec, StandardHumanBenchmarkSpec,
 };
 use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
 pq_bench::install_system_tracking_allocator!(
@@ -44,23 +43,21 @@ fn main() {
         ];
 
         BenchmarkBinaryExecution {
-            report: BenchmarkBinaryReport {
-                algorithm: scheme.algorithm_name().to_string(),
+            report: build_standard_binary_report(StandardBinaryBenchmarkSpec {
+                algorithm: scheme.algorithm_name(),
                 backend: None,
-                param_set: Some(scheme.algorithm_name().to_string()),
-                keygen_ns: duration_ns(keygen_duration),
-                sign_ns: duration_ns(sign_duration),
-                verify_ns: duration_ns(verify_duration),
+                param_set: Some(scheme.algorithm_name()),
+                keygen_duration,
+                sign_duration,
+                verify_duration,
                 verified,
-                sizes: BenchmarkSizeReport {
-                    public_key_bytes: pk_size,
-                    secret_key_bytes: sk_size,
-                    signature_bytes: sig_size,
-                    signed_message_bytes: Some(signed_message.as_bytes().len()),
-                },
+                public_key_bytes: pk_size,
+                secret_key_bytes: sk_size,
+                signature_bytes: sig_size,
+                signed_message_bytes: Some(signed_message.as_bytes().len()),
                 sign_peak_bytes: Some(sign_peak_mem),
                 verify_peak_bytes: Some(verify_peak_mem),
-            },
+            }),
             human: build_standard_human_benchmark_report(
                 StandardHumanBenchmarkSpec {
                     banner_lines: &[],

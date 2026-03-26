@@ -1,8 +1,7 @@
 use pq_bench::{
-    build_standard_human_benchmark_report, duration_ns,
-    run_human_benchmark_binary, BenchmarkBinaryExecution,
-    BenchmarkBinaryReport, BenchmarkSizeReport, HumanBenchmarkLine,
-    StandardHumanBenchmarkSpec,
+    build_standard_binary_report, build_standard_human_benchmark_report,
+    run_human_benchmark_binary, BenchmarkBinaryExecution, HumanBenchmarkLine,
+    StandardBinaryBenchmarkSpec, StandardHumanBenchmarkSpec,
 };
 use winternitz_ots::{
     measure_time, memory, SignatureScheme, TrackingAllocator,
@@ -31,23 +30,21 @@ fn main() {
         let signed_input_size = scheme.signed_input_size(&signature);
 
         BenchmarkBinaryExecution {
-            report: BenchmarkBinaryReport {
-                algorithm: scheme.algorithm_name().to_string(),
-                backend: Some(scheme.backend_name().to_string()),
-                param_set: Some(scheme.param_set_name().to_string()),
-                keygen_ns: duration_ns(keygen_duration),
-                sign_ns: duration_ns(sign_duration),
-                verify_ns: duration_ns(verify_duration),
+            report: build_standard_binary_report(StandardBinaryBenchmarkSpec {
+                algorithm: scheme.algorithm_name(),
+                backend: Some(scheme.backend_name()),
+                param_set: Some(scheme.param_set_name()),
+                keygen_duration,
+                sign_duration,
+                verify_duration,
                 verified,
-                sizes: BenchmarkSizeReport {
-                    public_key_bytes: pk_size,
-                    secret_key_bytes: sk_size,
-                    signature_bytes: sig_size,
-                    signed_message_bytes: None,
-                },
+                public_key_bytes: pk_size,
+                secret_key_bytes: sk_size,
+                signature_bytes: sig_size,
+                signed_message_bytes: None,
                 sign_peak_bytes: Some(sign_peak_mem),
                 verify_peak_bytes: Some(verify_peak_mem),
-            },
+            }),
             human: build_standard_human_benchmark_report(
                 StandardHumanBenchmarkSpec {
                     banner_lines: &[],

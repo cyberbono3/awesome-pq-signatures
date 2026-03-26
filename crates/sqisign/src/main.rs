@@ -1,7 +1,7 @@
 use pq_bench::{
-    benchmark_message, duration_ns, emit_standard_benchmark_report,
-    BenchmarkBinaryConfig, BenchmarkBinaryReport, BenchmarkSizeReport,
-    StandardBenchmarkHumanReport,
+    benchmark_message, build_standard_binary_report,
+    emit_standard_benchmark_report, BenchmarkBinaryConfig,
+    StandardBenchmarkHumanReport, StandardBinaryBenchmarkSpec,
 };
 use sqisign::{
     measure_time, memory, signed_message_size, TrackingAllocator,
@@ -40,26 +40,24 @@ fn main() {
     });
     let verify_peak_mem = memory::peak_bytes();
     let sizes = scheme.sizes(&keypair, &signature);
-    let report = BenchmarkBinaryReport {
-        algorithm: "SQISign".to_string(),
+    let report = build_standard_binary_report(StandardBinaryBenchmarkSpec {
+        algorithm: "SQISign",
         backend: None,
-        param_set: Some("SQISign-lvl1".to_string()),
-        keygen_ns: duration_ns(keygen_duration),
-        sign_ns: duration_ns(sign_duration),
-        verify_ns: duration_ns(verify_duration),
+        param_set: Some("SQISign-lvl1"),
+        keygen_duration,
+        sign_duration,
+        verify_duration,
         verified,
-        sizes: BenchmarkSizeReport {
-            public_key_bytes: sizes.public_key,
-            secret_key_bytes: sizes.secret_key,
-            signature_bytes: sizes.signature,
-            signed_message_bytes: Some(signed_message_size(
-                message.len(),
-                sizes.signature,
-            )),
-        },
+        public_key_bytes: sizes.public_key,
+        secret_key_bytes: sizes.secret_key,
+        signature_bytes: sizes.signature,
+        signed_message_bytes: Some(signed_message_size(
+            message.len(),
+            sizes.signature,
+        )),
         sign_peak_bytes: Some(sign_peak_mem),
         verify_peak_bytes: Some(verify_peak_mem),
-    };
+    });
 
     emit_standard_benchmark_report(
         &config,

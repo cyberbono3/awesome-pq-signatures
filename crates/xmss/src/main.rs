@@ -1,8 +1,7 @@
 use pq_bench::{
-    build_standard_human_benchmark_report, duration_ns,
-    run_human_benchmark_binary, BenchmarkBinaryExecution,
-    BenchmarkBinaryReport, BenchmarkSizeReport, HumanBenchmarkLine,
-    StandardHumanBenchmarkSpec,
+    build_standard_binary_report, build_standard_human_benchmark_report,
+    run_human_benchmark_binary, BenchmarkBinaryExecution, HumanBenchmarkLine,
+    StandardBinaryBenchmarkSpec, StandardHumanBenchmarkSpec,
 };
 use xmss_bench::default_benchmark_scheme;
 
@@ -21,23 +20,21 @@ fn main() {
         ];
 
         BenchmarkBinaryExecution {
-            report: BenchmarkBinaryReport {
-                algorithm: "XMSS".to_string(),
-                backend: Some(scheme.backend_name().to_string()),
-                param_set: Some(report.param_set.as_str().to_string()),
-                keygen_ns: duration_ns(report.keygen_duration),
-                sign_ns: duration_ns(report.sign_duration),
-                verify_ns: duration_ns(report.verify_duration),
+            report: build_standard_binary_report(StandardBinaryBenchmarkSpec {
+                algorithm: "XMSS",
+                backend: Some(scheme.backend_name()),
+                param_set: Some(report.param_set.as_str()),
+                keygen_duration: report.keygen_duration,
+                sign_duration: report.sign_duration,
+                verify_duration: report.verify_duration,
                 verified: report.verified,
-                sizes: BenchmarkSizeReport {
-                    public_key_bytes: report.public_key_size,
-                    secret_key_bytes: report.secret_key_size,
-                    signature_bytes: report.signature_size,
-                    signed_message_bytes: None,
-                },
+                public_key_bytes: report.public_key_size,
+                secret_key_bytes: report.secret_key_size,
+                signature_bytes: report.signature_size,
+                signed_message_bytes: None,
                 sign_peak_bytes: None,
                 verify_peak_bytes: None,
-            },
+            }),
             human: build_standard_human_benchmark_report(
                 StandardHumanBenchmarkSpec {
                     banner_lines: &BANNER,
