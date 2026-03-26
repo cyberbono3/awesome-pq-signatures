@@ -1,34 +1,31 @@
 pub use pq_bench::{
-    bench_message, ffi_keypair, ffi_sign, ffi_verify, measure_time,
-    signed_message_size, with_deterministic_rng, with_ffi_lock,
-    AllocationTracker, AllocationTrackingAllocator, FfiSignedMessageDimensions,
-    BENCH_MESSAGE, BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
+    bench_message, ffi_deterministic_keypair, ffi_deterministic_sign,
+    ffi_keypair, ffi_locked_verify, ffi_sign, ffi_verify, measure_time,
+    signed_message_size, AllocationTracker, AllocationTrackingAllocator,
+    DeterministicRngProfile, FfiSignedMessageDimensions, BENCH_MESSAGE,
+    BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
 };
 use std::ffi::{c_int, c_uchar, c_ulonglong};
 use std::sync::Mutex;
 pub const CROSS_VARIANT: &str = "CROSS-RSDPG-192-BALANCED";
 
 const CROSS_SEED_BYTES: usize = 16;
-const KEYGEN_PROFILE: DeterministicRngProfile = DeterministicRngProfile {
-    seed: *b"cross-keygenseed",
-    domain_separator: 0,
-};
-const SIGN_PROFILE: DeterministicRngProfile = DeterministicRngProfile {
-    seed: *b"cross-signing-se",
-    domain_separator: 1,
-};
+const KEYGEN_PROFILE: DeterministicRngProfile<CROSS_SEED_BYTES> =
+    DeterministicRngProfile {
+        seed: *b"cross-keygenseed",
+        domain_separator: 0,
+    };
+const SIGN_PROFILE: DeterministicRngProfile<CROSS_SEED_BYTES> =
+    DeterministicRngProfile {
+        seed: *b"cross-signing-se",
+        domain_separator: 1,
+    };
 
 static CROSS_FFI_LOCK: Mutex<()> = Mutex::new(());
 pq_bench::declare_tracking_allocator!();
 pq_bench::declare_peak_memory_api!();
 
-type CrossSeed = [u8; 16];
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-struct DeterministicRngProfile {
-    seed: CrossSeed,
-    domain_separator: u16,
-}
+type CrossSeed = [u8; CROSS_SEED_BYTES];
 
 struct NativeCross;
 
@@ -116,7 +113,21 @@ impl CrossScheme {
             seed,
             domain_separator: KEYGEN_PROFILE.domain_separator,
         };
-        NativeCross::with_rng(profile, |_| NativeCross::keypair())
+        ffi_deterministic_keypair(
+            &CROSS_FFI_LOCK,
+            profile,
+            init_rng,
+            NativeCross::dimensions(),
+            |public_key, secret_key| unsafe {
+                crypto_sign_keypair(public_key, secret_key)
+            },
+            |public_key, secret_key| CrossKeyPair {
+                public_key,
+                secret_key,
+            },
+            || CrossError::FfiLockPoisoned,
+            CrossError::KeygenFailed,
+        )
     }
 
     /// # Errors
@@ -128,9 +139,32 @@ impl CrossScheme {
         keypair: &CrossKeyPair,
         message: &[u8],
     ) -> Result<CrossSignature, CrossError> {
-        NativeCross::with_rng(SIGN_PROFILE, |_| {
-            NativeCross::sign(keypair, message)
-        })
+        ffi_deterministic_sign(
+            &CROSS_FFI_LOCK,
+            SIGN_PROFILE,
+            init_rng,
+            NativeCross::dimensions(),
+            message,
+            &keypair.secret_key,
+            |signed_message,
+             signed_message_len,
+             message,
+             message_len,
+             secret_key| unsafe {
+                crypto_sign(
+                    signed_message,
+                    signed_message_len,
+                    message,
+                    message_len,
+                    secret_key,
+                )
+            },
+            CrossSignature,
+            || CrossError::FfiLockPoisoned,
+            CrossError::SignFailed,
+            || CrossError::LengthOverflow,
+            || CrossError::InvalidSignedMessage,
+        )
     }
 
     /// # Errors
@@ -155,7 +189,28 @@ impl CrossScheme {
         message: &[u8],
         signature: &CrossSignature,
     ) -> Result<bool, CrossError> {
-        NativeCross::verify(keypair, message, signature)
+        ffi_locked_verify(
+            &CROSS_FFI_LOCK,
+            message,
+            signature.as_bytes(),
+            &keypair.public_key,
+            |opened_message,
+             opened_message_len,
+             signed_message,
+             signed_message_len,
+             public_key| unsafe {
+                crypto_sign_open(
+                    opened_message,
+                    opened_message_len,
+                    signed_message,
+                    signed_message_len,
+                    public_key,
+                )
+            },
+            || CrossError::FfiLockPoisoned,
+            CrossError::VerifyFailed,
+            || CrossError::LengthOverflow,
+        )
     }
 
     /// # Errors
@@ -208,99 +263,9 @@ impl NativeCross {
             signature: unsafe { cross_rs_signature_bytes() },
         }
     }
-
-    fn with_rng<T, F>(
-        profile: DeterministicRngProfile,
-        operation: F,
-    ) -> Result<T, CrossError>
-    where
-        F: FnOnce(&Self) -> Result<T, CrossError>,
-    {
-        with_deterministic_rng(
-            &CROSS_FFI_LOCK,
-            || CrossError::FfiLockPoisoned,
-            || init_rng(&profile),
-            || operation(&Self),
-        )
-    }
-
-    fn keypair() -> Result<CrossKeyPair, CrossError> {
-        ffi_keypair(
-            Self::dimensions(),
-            |public_key, secret_key| unsafe {
-                crypto_sign_keypair(public_key, secret_key)
-            },
-            |public_key, secret_key| CrossKeyPair {
-                public_key,
-                secret_key,
-            },
-            CrossError::KeygenFailed,
-        )
-    }
-
-    fn sign(
-        keypair: &CrossKeyPair,
-        message: &[u8],
-    ) -> Result<CrossSignature, CrossError> {
-        ffi_sign(
-            Self::dimensions(),
-            message,
-            &keypair.secret_key,
-            |signed_message,
-             signed_message_len,
-             message,
-             message_len,
-             secret_key| unsafe {
-                crypto_sign(
-                    signed_message,
-                    signed_message_len,
-                    message,
-                    message_len,
-                    secret_key,
-                )
-            },
-            CrossSignature,
-            CrossError::SignFailed,
-            || CrossError::LengthOverflow,
-            || CrossError::InvalidSignedMessage,
-        )
-    }
-
-    fn verify(
-        keypair: &CrossKeyPair,
-        message: &[u8],
-        signature: &CrossSignature,
-    ) -> Result<bool, CrossError> {
-        with_ffi_lock(
-            &CROSS_FFI_LOCK,
-            || CrossError::FfiLockPoisoned,
-            || {
-                ffi_verify(
-                    message,
-                    signature.as_bytes(),
-                    &keypair.public_key,
-                    |opened_message,
-                     opened_message_len,
-                     signed_message,
-                     signed_message_len,
-                     public_key| unsafe {
-                        crypto_sign_open(
-                            opened_message,
-                            opened_message_len,
-                            signed_message,
-                            signed_message_len,
-                            public_key,
-                        )
-                    },
-                    CrossError::VerifyFailed,
-                    || CrossError::LengthOverflow,
-                )
-            },
-        )
-    }
 }
 
-fn init_rng(profile: &DeterministicRngProfile) {
+fn init_rng(profile: &DeterministicRngProfile<CROSS_SEED_BYTES>) {
     let seed_len =
         u32::try_from(CROSS_SEED_BYTES).expect("cross seed length fits in u32");
     unsafe {

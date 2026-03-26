@@ -10,6 +10,12 @@ pub struct FfiSignedMessageDimensions {
     pub signature: usize,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DeterministicRngProfile<const N: usize> {
+    pub seed: [u8; N],
+    pub domain_separator: u16,
+}
+
 pub fn with_ffi_lock<T, E>(
     lock: &Mutex<()>,
     poison_error: impl Fn() -> E,
@@ -46,6 +52,24 @@ pub fn ffi_keypair<K, E>(
     } else {
         Err(keygen_error(rc))
     }
+}
+
+pub fn ffi_deterministic_keypair<K, E, const N: usize>(
+    lock: &Mutex<()>,
+    profile: DeterministicRngProfile<N>,
+    init_rng: impl FnOnce(&DeterministicRngProfile<N>),
+    dimensions: FfiSignedMessageDimensions,
+    call_keypair: impl FnOnce(*mut c_uchar, *mut c_uchar) -> c_int,
+    build_keypair: impl FnOnce(Vec<u8>, Vec<u8>) -> K,
+    poison_error: impl Fn() -> E,
+    keygen_error: impl FnOnce(c_int) -> E,
+) -> Result<K, E> {
+    with_deterministic_rng(
+        lock,
+        poison_error,
+        || init_rng(&profile),
+        || ffi_keypair(dimensions, call_keypair, build_keypair, keygen_error),
+    )
 }
 
 pub fn ffi_sign<S, E>(
@@ -91,6 +115,45 @@ pub fn ffi_sign<S, E>(
     )
 }
 
+pub fn ffi_deterministic_sign<S, E, const N: usize>(
+    lock: &Mutex<()>,
+    profile: DeterministicRngProfile<N>,
+    init_rng: impl FnOnce(&DeterministicRngProfile<N>),
+    dimensions: FfiSignedMessageDimensions,
+    message: &[u8],
+    secret_key: &[u8],
+    call_sign: impl FnOnce(
+        *mut c_uchar,
+        *mut c_ulonglong,
+        *const c_uchar,
+        c_ulonglong,
+        *const c_uchar,
+    ) -> c_int,
+    build_signature: impl FnOnce(Vec<u8>) -> S,
+    poison_error: impl Fn() -> E,
+    sign_error: impl FnOnce(c_int) -> E,
+    length_overflow: impl Fn() -> E,
+    invalid_signed_message: impl Fn() -> E,
+) -> Result<S, E> {
+    with_deterministic_rng(
+        lock,
+        poison_error,
+        || init_rng(&profile),
+        || {
+            ffi_sign(
+                dimensions,
+                message,
+                secret_key,
+                call_sign,
+                build_signature,
+                sign_error,
+                length_overflow,
+                invalid_signed_message,
+            )
+        },
+    )
+}
+
 pub fn ffi_verify<E>(
     message: &[u8],
     signature: &[u8],
@@ -132,6 +195,34 @@ pub fn ffi_verify<E>(
         -1 => Ok(false),
         _ => Err(verify_error(rc)),
     }
+}
+
+pub fn ffi_locked_verify<E>(
+    lock: &Mutex<()>,
+    message: &[u8],
+    signature: &[u8],
+    public_key: &[u8],
+    call_open: impl FnOnce(
+        *mut c_uchar,
+        *mut c_ulonglong,
+        *const c_uchar,
+        c_ulonglong,
+        *const c_uchar,
+    ) -> c_int,
+    poison_error: impl Fn() -> E,
+    verify_error: impl FnOnce(c_int) -> E,
+    length_overflow: impl Fn() -> E,
+) -> Result<bool, E> {
+    with_ffi_lock(lock, poison_error, || {
+        ffi_verify(
+            message,
+            signature,
+            public_key,
+            call_open,
+            verify_error,
+            length_overflow,
+        )
+    })
 }
 
 fn ulonglong_len<E>(

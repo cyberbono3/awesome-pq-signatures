@@ -14,8 +14,9 @@ mod reporting;
 mod timing;
 
 pub use ffi_signed_message::{
-    ffi_keypair, ffi_sign, ffi_verify, with_deterministic_rng, with_ffi_lock,
-    FfiSignedMessageDimensions,
+    ffi_deterministic_keypair, ffi_deterministic_sign, ffi_keypair,
+    ffi_locked_verify, ffi_sign, ffi_verify, with_deterministic_rng,
+    with_ffi_lock, DeterministicRngProfile, FfiSignedMessageDimensions,
 };
 pub use {
     alloc::{AllocationTracker, AllocationTrackingAllocator},
