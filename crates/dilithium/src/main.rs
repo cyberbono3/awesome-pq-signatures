@@ -1,6 +1,6 @@
 use dilithium::{
     default_seed, measure_time, memory, signed_message_size, SignatureScheme, TrackingAllocator,
-    BENCH_MESSAGE, ML_DSA_65,
+    BENCH_MESSAGE, ML_DSA_44,
 };
 use std::alloc::System;
 use std::time::Duration;
@@ -19,7 +19,7 @@ fn print_timing(label: &str, duration: Duration) {
 }
 
 fn main() {
-    let scheme = ML_DSA_65;
+    let scheme = ML_DSA_44;
     let seed = default_seed();
     println!(
         "=== Dilithium ({}) Benchmark ===\n",

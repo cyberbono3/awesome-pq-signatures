@@ -603,6 +603,7 @@ dependencies = [
  "cc",
  "divan",
  "pq_bench",
+ "toml",
 ]
 
 [[package]]

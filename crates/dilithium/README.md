@@ -8,7 +8,7 @@ Lattice-based signature scheme based on ML-DSA.
 
 ## `src/main.rs` (`dilithium` binary)
 
-`src/main.rs` is a single-run benchmark/report binary for ML-DSA-65. It performs:
+`src/main.rs` is a single-run benchmark/report binary for ML-DSA-44. It performs:
 - key generation timing
 - sign timing + peak heap allocation tracking
 - verify timing + peak heap allocation tracking
@@ -20,31 +20,31 @@ Run it with:
 cargo run -p dilithium --bin dilithium
 ```
 
-Latest run result (captured on 2026-02-18 17:52:13 UTC):
+Latest run result (captured on 2026-03-26 07:51:41 UTC):
 
 ```text
-=== Dilithium (ML-DSA-65) Benchmark ===
+=== Dilithium (ML-DSA-44) Benchmark ===
 
 --- Key Generation ---
-Time to generate keys: 19.49975ms
-Time to generate keys (ns): 19499750
+Time to generate keys: 157.209us
+Time to generate keys (ns): 157209
 
 --- Signing ---
-Time to sign: 33.311834ms
-Time to sign (ns): 33311834
+Time to sign: 612.208us
+Time to sign (ns): 612208
 Peak memory during signing: 0 bytes
 
 --- Verification ---
-Time to verify: 2.323ms
-Time to verify (ns): 2323000
+Time to verify: 34us
+Time to verify (ns): 34000
 Peak memory during verification: 0 bytes
 Signature verification: SUCCESS
 
 --- Size Measurements ---
-Public key size: 1952 bytes
-Secret key size: 4032 bytes
-Signature size: 3309 bytes
-Signed message size: 3375 bytes
+Public key size: 1312 bytes
+Secret key size: 2560 bytes
+Signature size: 2420 bytes
+Signed message size: 2452 bytes
 ```
 
 ## `benches/dilithium_divan.rs` (Divan benchmark suite)
@@ -62,33 +62,33 @@ Run it with:
 cargo bench -p dilithium --bench dilithium_divan
 ```
 
-Latest run result (captured on 2026-02-18 17:52:13 UTC):
+Latest run result (captured on 2026-03-26 07:51:41 UTC):
 
 ```text
-ML-DSA-65 sizes:
-  Public key: 1952 bytes
-  Secret key: 4032 bytes
-  Signature (message 32 bytes): 3309 bytes
-  Signature (message 256 bytes): 3309 bytes
-  Signature (message 1024 bytes): 3309 bytes
-  Signature (message 4096 bytes): 3309 bytes
+ML-DSA-44 sizes:
+  Public key: 1312 bytes
+  Secret key: 2560 bytes
+  Signature (message 32 bytes): 2420 bytes
+  Signature (message 256 bytes): 2420 bytes
+  Signature (message 1024 bytes): 2420 bytes
+  Signature (message 4096 bytes): 2420 bytes
 
-ML-DSA-65 peak heap usage:
+ML-DSA-44 peak heap usage:
   Message 32 bytes: sign=0 bytes, verify=0 bytes
   Message 256 bytes: sign=0 bytes, verify=0 bytes
   Message 1024 bytes: sign=0 bytes, verify=0 bytes
   Message 4096 bytes: sign=0 bytes, verify=0 bytes
 
 Divan timing summary (median):
-  keygen: 201.3 us
-  sign(32): 569.5 us
-  sign(256): 100.7 us
-  sign(1024): 102.2 us
-  sign(4096): 342.1 us
-  verify(32): 44.58 us
-  verify(256): 44.91 us
-  verify(1024): 46.41 us
-  verify(4096): 51.04 us
+  keygen: 124.4 us
+  sign(32): 425.6 us
+  sign(256): 403.2 us
+  sign(1024): 198.9 us
+  sign(4096): 519.9 us
+  verify(32): 33.54 us
+  verify(256): 33.49 us
+  verify(1024): 35.16 us
+  verify(4096): 38.14 us
 ```
 
 Note: benchmark timings and allocation metrics vary by machine, compiler version, and system load.
