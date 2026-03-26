@@ -1,9 +1,10 @@
 use leansig::signature::generalized_xmss::instantiations_poseidon::lifetime_2_to_the_18::target_sum::SIGTargetSumLifetime18W4NoOff;
 use leansig_bench::benchmark_once;
 use pq_bench::{
-    benchmark_message, build_standard_binary_report, emit_benchmark_report,
-    BenchmarkBinaryConfig, HumanBenchmarkLine, HumanBenchmarkReport,
-    print_human_benchmark_report, StandardBinaryBenchmarkSpec,
+    build_standard_binary_report, build_standard_human_benchmark_report,
+    run_human_benchmark_binary, BenchmarkBinaryExecution,
+    HumanBenchmarkLine, StandardBinaryBenchmarkSpec,
+    StandardHumanBenchmarkSpec,
 };
 
 const ALGORITHM: &str = "LeanSig";
@@ -18,76 +19,78 @@ const BANNER: [&str; 4] = [
 ];
 
 fn main() {
-    let config = BenchmarkBinaryConfig::parse(std::env::args().skip(1))
-        .unwrap_or_else(|err| {
-            eprintln!("{err}");
-            std::process::exit(1);
-        });
-    let message = benchmark_message(config.message_size);
-    let benchmark = benchmark_once::<SIGTargetSumLifetime18W4NoOff>(&message)
-        .unwrap_or_else(|err| {
-            eprintln!("{err}");
-            std::process::exit(1);
-        });
-    let report = build_standard_binary_report(StandardBinaryBenchmarkSpec {
-        algorithm: ALGORITHM,
-        backend: Some(BACKEND),
-        param_set: Some(PARAM_SET),
-        keygen_duration: benchmark.keygen_duration,
-        sign_duration: benchmark.sign_duration,
-        verify_duration: benchmark.verify_duration,
-        verified: benchmark.verified,
-        public_key_bytes: benchmark.public_key_bytes,
-        secret_key_bytes: benchmark.secret_key_bytes,
-        signature_bytes: benchmark.signature_bytes,
-        signed_message_bytes: None,
-        sign_peak_bytes: None,
-        verify_peak_bytes: None,
-    });
+    run_human_benchmark_binary(std::env::args().skip(1), |message| {
+        let benchmark =
+            benchmark_once::<SIGTargetSumLifetime18W4NoOff>(message)
+                .unwrap_or_else(|err| {
+                    eprintln!("{err}");
+                    std::process::exit(1);
+                });
 
-    emit_benchmark_report(&config, &report, |_| {
-        print_human_benchmark_report(&HumanBenchmarkReport {
-            banner_lines: &BANNER,
-            heading: DISPLAY_NAME.into(),
-            intro_lines: vec![HumanBenchmarkLine::new("Backend", BACKEND)],
-            summary_algorithm: ALGORITHM.into(),
-            summary_intro_lines: vec![
-                HumanBenchmarkLine::new("Backend", BACKEND),
-                HumanBenchmarkLine::new("Param set", PARAM_SET),
-            ],
-            keygen_duration: benchmark.keygen_duration,
-            sign_duration: benchmark.sign_duration,
-            verify_duration: benchmark.verify_duration,
-            verified: benchmark.verified,
-            size_lines: vec![
-                HumanBenchmarkLine::bytes(
-                    "Public key size",
-                    benchmark.public_key_bytes,
-                ),
-                HumanBenchmarkLine::bytes(
-                    "Secret key size",
-                    benchmark.secret_key_bytes,
-                ),
-                HumanBenchmarkLine::bytes(
-                    "Signature size",
-                    benchmark.signature_bytes,
-                ),
-            ],
-            summary_size_lines: vec![
-                HumanBenchmarkLine::bytes(
-                    "Public Key",
-                    benchmark.public_key_bytes,
-                ),
-                HumanBenchmarkLine::bytes(
-                    "Secret Key",
-                    benchmark.secret_key_bytes,
-                ),
-                HumanBenchmarkLine::bytes(
-                    "Signature",
-                    benchmark.signature_bytes,
-                ),
-            ],
-            ..HumanBenchmarkReport::default()
-        });
+        BenchmarkBinaryExecution {
+            report: build_standard_binary_report(StandardBinaryBenchmarkSpec {
+                algorithm: ALGORITHM,
+                backend: Some(BACKEND),
+                param_set: Some(PARAM_SET),
+                keygen_duration: benchmark.keygen_duration,
+                sign_duration: benchmark.sign_duration,
+                verify_duration: benchmark.verify_duration,
+                verified: benchmark.verified,
+                public_key_bytes: benchmark.public_key_bytes,
+                secret_key_bytes: benchmark.secret_key_bytes,
+                signature_bytes: benchmark.signature_bytes,
+                signed_message_bytes: None,
+                sign_peak_bytes: None,
+                verify_peak_bytes: None,
+            }),
+            human: build_standard_human_benchmark_report(
+                StandardHumanBenchmarkSpec {
+                    banner_lines: &BANNER,
+                    heading: DISPLAY_NAME.into(),
+                    intro_lines: vec![HumanBenchmarkLine::new(
+                        "Backend", BACKEND,
+                    )],
+                    summary_algorithm: ALGORITHM.into(),
+                    summary_intro_lines: vec![
+                        HumanBenchmarkLine::new("Backend", BACKEND),
+                        HumanBenchmarkLine::new("Param set", PARAM_SET),
+                    ],
+                    keygen_duration: benchmark.keygen_duration,
+                    sign_duration: benchmark.sign_duration,
+                    verify_duration: benchmark.verify_duration,
+                    verified: benchmark.verified,
+                    size_lines: vec![
+                        HumanBenchmarkLine::bytes(
+                            "Public key size",
+                            benchmark.public_key_bytes,
+                        ),
+                        HumanBenchmarkLine::bytes(
+                            "Secret key size",
+                            benchmark.secret_key_bytes,
+                        ),
+                        HumanBenchmarkLine::bytes(
+                            "Signature size",
+                            benchmark.signature_bytes,
+                        ),
+                    ],
+                    summary_size_lines: vec![
+                        HumanBenchmarkLine::bytes(
+                            "Public Key",
+                            benchmark.public_key_bytes,
+                        ),
+                        HumanBenchmarkLine::bytes(
+                            "Secret Key",
+                            benchmark.secret_key_bytes,
+                        ),
+                        HumanBenchmarkLine::bytes(
+                            "Signature",
+                            benchmark.signature_bytes,
+                        ),
+                    ],
+                    sign_peak_bytes: None,
+                    verify_peak_bytes: None,
+                },
+            ),
+        }
     });
 }
