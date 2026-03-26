@@ -427,6 +427,121 @@ macro_rules! run_standard_signed_message_scheme_main {
     }};
 }
 
+#[macro_export]
+macro_rules! declare_signed_message_divan_bench {
+    (
+        scheme = $scheme:expr,
+        keypair = $keypair:ty,
+        signature = $signature:ty,
+        message_sizes = $message_sizes:expr,
+        reset_peak = $reset_peak:path,
+        peak_bytes = $peak_bytes:path
+    ) => {
+        fn benchmark_keypair() -> $keypair {
+            $scheme
+                .benchmark_keypair()
+                .expect("key generation should succeed")
+        }
+
+        fn signed_fixture(
+            message_size: usize,
+        ) -> ($keypair, Vec<u8>, $signature) {
+            $crate::signed_fixture(
+                message_size,
+                benchmark_keypair,
+                |keypair, message| {
+                    $scheme
+                        .sign_message(keypair, message)
+                        .expect("benchmark setup should sign message")
+                },
+            )
+        }
+
+        #[divan::bench]
+        fn keygen(bencher: divan::Bencher) {
+            bencher.bench(|| {
+                divan::black_box(benchmark_keypair());
+            });
+        }
+
+        #[divan::bench(args = $message_sizes)]
+        fn sign(bencher: divan::Bencher, message_size: usize) {
+            let keypair = benchmark_keypair();
+            let message = $crate::bench_message(message_size);
+
+            bencher.bench(|| {
+                divan::black_box(
+                    $scheme
+                        .sign_message(
+                            divan::black_box(&keypair),
+                            divan::black_box(&message),
+                        )
+                        .expect("sign benchmark input should always be valid"),
+                );
+            });
+        }
+
+        #[divan::bench(args = $message_sizes)]
+        fn verify(bencher: divan::Bencher, message_size: usize) {
+            let (keypair, message, signature) = signed_fixture(message_size);
+
+            bencher.bench(|| {
+                divan::black_box(
+                    $scheme
+                        .verify_message(
+                            divan::black_box(&keypair),
+                            divan::black_box(&message),
+                            divan::black_box(&signature),
+                        )
+                        .expect("verification should succeed"),
+                );
+            });
+        }
+
+        fn print_sizes() {
+            $crate::print_signed_message_sizes(
+                $scheme.algorithm_name(),
+                &$message_sizes,
+                benchmark_keypair,
+                |keypair| $scheme.public_key_size(keypair),
+                |keypair| $scheme.secret_key_size(keypair),
+                |keypair, message| {
+                    $scheme
+                        .sign_message(keypair, message)
+                        .expect("size measurement should sign message")
+                },
+                |signature| $scheme.signature_size(signature),
+            );
+        }
+
+        fn print_memory_usage() {
+            $crate::print_signed_message_memory_usage(
+                $scheme.algorithm_name(),
+                &$message_sizes,
+                benchmark_keypair,
+                |keypair, message| {
+                    $scheme
+                        .sign_message(keypair, message)
+                        .expect("memory measurement should sign message")
+                },
+                |keypair, message, signature| {
+                    let _verified = $scheme
+                        .verify_message(keypair, message, signature)
+                        .expect("verification should succeed");
+                },
+                $reset_peak,
+                $peak_bytes,
+            );
+        }
+
+        fn main() {
+            print_sizes();
+            print_memory_usage();
+            divan::main();
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
