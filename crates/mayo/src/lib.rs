@@ -1,4 +1,4 @@
-use pq_mayo::{KeyPair, Mayo1, Signature as RawMayoSignature};
+use pq_mayo::{KeyPair, Signature as RawMayoSignature};
 use signature::{Error as SignatureError, Signer, Verifier};
 use std::alloc::{GlobalAlloc, Layout};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -6,6 +6,8 @@ use std::time::{Duration, Instant};
 
 /// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
 pub use pq_bench::BENCH_MESSAGE;
+
+include!(concat!(env!("OUT_DIR"), "/mayo_variant.rs"));
 
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
@@ -77,9 +79,8 @@ pub mod memory {
     }
 }
 
-pub type MayoSeed = [u8; 24];
-pub type MayoKeyPair = KeyPair<Mayo1>;
-pub type MayoSignature = RawMayoSignature<Mayo1>;
+pub type MayoKeyPair = KeyPair<SelectedMayoParam>;
+pub type MayoSignature = RawMayoSignature<SelectedMayoParam>;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MayoSizes {
@@ -101,7 +102,7 @@ pub const MAYO: MayoScheme = MayoScheme;
 
 impl MayoScheme {
     pub fn algorithm_name(&self) -> &'static str {
-        "MAYO"
+        MAYO_VARIANT
     }
 
     pub fn keypair(&self, seed: &MayoSeed) -> MayoKeyPair {
@@ -187,7 +188,7 @@ impl MayoScheme {
 }
 
 pub fn default_seed() -> MayoSeed {
-    [7_u8; 24]
+    [7_u8; MAYO_SEED_BYTES]
 }
 
 pub fn bench_message(size: usize) -> Vec<u8> {

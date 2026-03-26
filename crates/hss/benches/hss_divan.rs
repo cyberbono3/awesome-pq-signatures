@@ -1,7 +1,7 @@
 use divan::{black_box, AllocProfiler, Bencher};
 use hss::{
-    bench_message, default_seed, memory, signed_message_size, HssScheme, TrackingAllocator,
-    BENCH_MESSAGE_SIZES, DEFAULT_PARAM_SET_NAME, HSS_PARAM_SETS,
+    bench_message, default_param_set_name, default_seed, memory, signed_message_size, HssScheme,
+    TrackingAllocator, BENCH_MESSAGE_SIZES, HSS_PARAM_SETS,
 };
 
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
@@ -125,7 +125,7 @@ fn print_sizes() {
 }
 
 fn print_memory_usage() {
-    let scheme = HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+    let scheme = HssScheme::from_param_set_name(default_param_set_name())
         .expect("default HSS parameter set should exist");
     println!("{} peak heap usage:", scheme.algorithm_name());
 

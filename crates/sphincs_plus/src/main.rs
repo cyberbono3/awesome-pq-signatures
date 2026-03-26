@@ -1,7 +1,7 @@
 use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
 use sphincs_plus::{
     measure_time, memory, signature_size, SignatureScheme, TrackingAllocator, BENCH_MESSAGE,
-    SPHINCS_PLUS_SHAKE_128F_SIMPLE,
+    SPHINCS_PLUS_SELECTED,
 };
 use std::alloc::System;
 use std::time::Duration;
@@ -19,7 +19,7 @@ fn print_timing(label: &str, duration: Duration) {
 }
 
 fn main() {
-    let scheme = SPHINCS_PLUS_SHAKE_128F_SIMPLE;
+    let scheme = SPHINCS_PLUS_SELECTED;
     println!("=== {} Benchmark ===\n", scheme.algorithm_name());
 
     println!("--- Key Generation ---");

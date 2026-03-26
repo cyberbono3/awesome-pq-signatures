@@ -5,7 +5,7 @@
 ## Library
 
 - Rust: [pq-mayo](https://crates.io/crates/pq-mayo)
-- Default benchmark parameter set: `Mayo1`
+- Current benchmark parameter set from `bench_config.toml`: `MAYO-3`
 
 ## `src/main.rs` (`mayo` binary)
 
@@ -21,32 +21,32 @@ Run it with:
 cargo run -p mayo --release --bin mayo
 ```
 
-Representative local result from `cargo run -p mayo --release --bin mayo`:
-timings below use the median of 5 local release runs; size and memory fields are from a representative release run.
+Representative local result from `cargo run -p mayo --release --bin mayo`
+(captured on 2026-03-26 09:39:49 UTC):
 
 ```text
-=== MAYO (MAYO) Benchmark ===
+=== MAYO (MAYO-3) Benchmark ===
 
 --- Key Generation ---
-Time to generate keys: 948.458µs
-Time to generate keys (ns): 948458
+Time to generate keys: 2.523ms
+Time to generate keys (ns): 2523000
 
 --- Signing ---
-Time to sign: 2.2935ms
-Time to sign (ns): 2293500
-Peak memory during signing: 970287 bytes
+Time to sign: 5.806333ms
+Time to sign (ns): 5806333
+Peak memory during signing: 2168415 bytes
 
 --- Verification ---
-Time to verify: 1.243709ms
-Time to verify (ns): 1243709
-Peak memory during verification: 803629 bytes
+Time to verify: 2.104584ms
+Time to verify (ns): 2104584
+Peak memory during verification: 1745820 bytes
 Signature verification: SUCCESS
 
 --- Size Measurements ---
-Public key size: 1420 bytes
-Secret key size: 24 bytes
-Signature size: 454 bytes
-Signed message size: 515 bytes
+Public key size: 2986 bytes
+Secret key size: 32 bytes
+Signature size: 681 bytes
+Signed message size: 713 bytes
 ```
 
 ## `benches/mayo_divan.rs` (Divan benchmark suite)
@@ -64,30 +64,30 @@ Run it with:
 cargo bench -p mayo --bench mayo_divan
 ```
 
-Latest observed local run (`cargo bench -p mayo --bench mayo_divan`):
+Latest observed local run (`cargo bench -p mayo --bench mayo_divan`, captured on 2026-03-26 09:39:49 UTC):
 
 ```text
-MAYO sizes:
-  Public key: 1420 bytes
-  Secret key: 24 bytes
-  Signature (message 32 bytes): 454 bytes
-  Signature (message 256 bytes): 454 bytes
-  Signature (message 1024 bytes): 454 bytes
-  Signature (message 4096 bytes): 454 bytes
-MAYO peak heap usage:
-  Message 32 bytes: sign=969951 bytes, verify=803629 bytes
-  Message 256 bytes: sign=969951 bytes, verify=803629 bytes
-  Message 1024 bytes: sign=969951 bytes, verify=803629 bytes
-  Message 4096 bytes: sign=969951 bytes, verify=803629 bytes
+MAYO-3 sizes:
+  Public key: 2986 bytes
+  Secret key: 32 bytes
+  Signature (message 32 bytes): 681 bytes
+  Signature (message 256 bytes): 681 bytes
+  Signature (message 1024 bytes): 681 bytes
+  Signature (message 4096 bytes): 681 bytes
+MAYO-3 peak heap usage:
+  Message 32 bytes: sign=2168079 bytes, verify=1745820 bytes
+  Message 256 bytes: sign=2168079 bytes, verify=1745820 bytes
+  Message 1024 bytes: sign=2168079 bytes, verify=1745820 bytes
+  Message 4096 bytes: sign=2168079 bytes, verify=1745820 bytes
 
 Divan timing summary (median):
-  keygen: 844.4 µs
-  sign(32): 2.04 ms
-  sign(256): 2.042 ms
-  sign(1024): 2.045 ms
-  sign(4096): 2.052 ms
-  verify(32): 763.8 µs
-  verify(256): 761.9 µs
-  verify(1024): 762.6 µs
-  verify(4096): 765.9 µs
+  keygen: 2.402 ms
+  sign(32): 5.663 ms
+  sign(256): 5.595 ms
+  sign(1024): 5.619 ms
+  sign(4096): 5.623 ms
+  verify(32): 2.092 ms
+  verify(256): 2.069 ms
+  verify(1024): 2.043 ms
+  verify(4096): 2.108 ms
 ```

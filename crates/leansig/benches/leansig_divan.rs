@@ -1,11 +1,10 @@
 use divan::{black_box, Bencher};
 use leansig::serialization::Serializable;
-use leansig::signature::generalized_xmss::instantiations_poseidon::lifetime_2_to_the_18::target_sum::SIGTargetSumLifetime18W4NoOff;
 use leansig::signature::SignatureScheme;
 use leansig::MESSAGE_LENGTH;
-use leansig_bench::{prepare_sk_for_epoch, BENCH_MESSAGE};
+use leansig_bench::{prepare_sk_for_epoch, SelectedLeanSigScheme, BENCH_MESSAGE};
 
-type Scheme = SIGTargetSumLifetime18W4NoOff;
+type Scheme = SelectedLeanSigScheme;
 
 const EPOCH: u32 = 1;
 

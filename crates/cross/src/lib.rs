@@ -7,9 +7,10 @@ use std::time::{Duration, Instant};
 /// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
 pub use pq_bench::BENCH_MESSAGE;
 
+include!(concat!(env!("OUT_DIR"), "/cross_variant.rs"));
+
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
-pub const CROSS_VARIANT: &str = "CROSS-RSDPG-192-BALANCED";
 
 const CROSS_SEED_BYTES: usize = 16;
 const KEYGEN_PROFILE: DeterministicRngProfile = DeterministicRngProfile {

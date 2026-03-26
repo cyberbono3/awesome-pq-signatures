@@ -2,6 +2,7 @@
 name = "leansig-bench"
 version.workspace = true
 edition.workspace = true
+build = "build.rs"
 
 [[bin]]
 name = "leansig"
@@ -18,3 +19,6 @@ pq_bench = { path = "../pq_bench" }
 
 [dev-dependencies]
 divan = "0.1"
+
+[build-dependencies]
+toml = "0.8"

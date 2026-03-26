@@ -18,6 +18,7 @@ Benchmark crate for HSS.
 Notes:
 - HSS signing is stateful: every signature mutates the signing key.
 - This crate wraps `hbs-lms` with a small benchmark-oriented API.
+- The default benchmark profile follows [`bench_config.toml`](../../bench_config.toml) `stateful_capacity_class`; with the current `pow2_10` setting it selects `HSS-SHA256-H5-W2-L2`.
 
 ## `src/main.rs` (`hss` binary)
 
@@ -36,7 +37,7 @@ cargo run -p hss --release --bin hss
 
 Environment overrides:
 
-- `PARAM_SET` (default `HSS-SHA256-H5-W2-L1`)
+- `PARAM_SET` (default `HSS-SHA256-H5-W2-L2`)
 - `MESSAGE_SIZE` (default `1024`)
 
 ## `benches/hss_divan.rs` (Divan benchmark suite)
@@ -58,7 +59,7 @@ cargo bench -p hss --bench hss_divan
 
 ## Latest benchmark results
 
-Run timestamp (UTC): `2026-02-19 11:02:56 UTC`
+Run timestamp (UTC): `2026-03-26 11:18:00 UTC`
 
 Environment:
 - OS: `Darwin 25.1.0 arm64`
@@ -74,18 +75,18 @@ cargo run -p hss --release --bin hss
 ```
 
 Configuration used:
-- `PARAM_SET=HSS-SHA256-H5-W2-L1` (default)
+- `PARAM_SET=HSS-SHA256-H5-W2-L2` (default)
 - `MESSAGE_SIZE=1024` (default)
 
 Results:
-- Key generation: `7.881083 ms` (`7,881,083 ns`)
-- Signing: `7.372208 ms` (`7,372,208 ns`)
-- Verification: `108.375 µs` (`108,375 ns`)
+- Key generation: `3.884084 ms` (`3,884,084 ns`)
+- Signing: `11.501041 ms` (`11,501,041 ns`)
+- Verification: `114.542 µs` (`114,542 ns`)
 - Public key size: `60 bytes`
 - Secret key size: `48 bytes`
-- Signature size: `4464 bytes`
-- Signed message size: `5488 bytes`
-- Estimated signatures per key: `31`
+- Signature size: `8980 bytes`
+- Signed message size: `9012 bytes`
+- Estimated signatures per key: `1023`
 
 ### `hss_divan` (`benches/hss_divan.rs`)
 
@@ -99,30 +100,30 @@ Reported sizes:
 - `HSS-SHA256-H5-W2-L1`: `pk=60`, `sk=48`, `sig(32B)=4464`, `signed(32B)=4496`, `lifetime=31`
 - `HSS-SHA256-H5-W2-L2`: `pk=60`, `sk=48`, `sig(32B)=8980`, `signed(32B)=9012`, `lifetime=1023`
 
-Divan timing summary (median, from latest run):
+Divan timing summary (median, from latest run on `2026-03-26`):
 - `keygen`
-  - `HSS-SHA256-H5-W2-L1`: `3.822 ms`
-  - `HSS-SHA256-H5-W2-L2`: `3.820 ms`
+  - `HSS-SHA256-H5-W2-L1`: `3.775 ms`
+  - `HSS-SHA256-H5-W2-L2`: `3.876 ms`
 - `sign_l1`
-  - `32B`: `3.824 ms`
-  - `256B`: `3.782 ms`
-  - `1024B`: `3.832 ms`
-  - `4096B`: `3.842 ms`
+  - `32B`: `3.92 ms`
+  - `256B`: `3.932 ms`
+  - `1024B`: `3.844 ms`
+  - `4096B`: `3.823 ms`
 - `sign_l2`
-  - `32B`: `11.43 ms`
-  - `256B`: `11.43 ms`
-  - `1024B`: `11.43 ms`
-  - `4096B`: `11.44 ms`
+  - `32B`: `11.65 ms`
+  - `256B`: `11.55 ms`
+  - `1024B`: `11.64 ms`
+  - `4096B`: `11.53 ms`
 - `verify_l1`
-  - `32B`: `54.08 µs`
-  - `256B`: `54.87 µs`
-  - `1024B`: `56.45 µs`
-  - `4096B`: `67.10 µs`
+  - `32B`: `59.24 µs`
+  - `256B`: `61.54 µs`
+  - `1024B`: `57.14 µs`
+  - `4096B`: `66.77 µs`
 - `verify_l2`
-  - `32B`: `107.4 µs`
-  - `256B`: `114.1 µs`
-  - `1024B`: `112.4 µs`
-  - `4096B`: `119.5 µs`
+  - `32B`: `110.5 µs`
+  - `256B`: `106.6 µs`
+  - `1024B`: `109.9 µs`
+  - `4096B`: `123 µs`
 
 ## Library
 

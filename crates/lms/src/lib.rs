@@ -15,9 +15,8 @@ pub use pq_bench::BENCH_MESSAGE;
 
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
-pub const DEFAULT_PARAM_SET_NAME: &str = "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4";
 
-const LMS_PUBLIC_KEY_BYTES: usize = 56;
+const LMS_PUBLIC_KEY_BYTES: usize = 60;
 const LMS_SECRET_KEY_BYTES: usize = 48;
 const SHA256_OUTPUT_BYTES: usize = 32;
 const LMOTS_W4_CHAIN_COUNT: usize = 67;
@@ -70,11 +69,26 @@ impl LmsParamSet {
 
 pub const LMS_PARAM_SETS: [LmsParamSet; 2] = [LmsParamSet::H5W4, LmsParamSet::H10W4];
 
+pub fn default_param_set() -> LmsParamSet {
+    match pq_bench::BENCH_STATEFUL_CAPACITY_CLASS {
+        "pow2_10" | "pow2_20" => LmsParamSet::H10W4,
+        other => panic!("unsupported stateful capacity class for LMS: {other}"),
+    }
+}
+
+pub fn default_param_set_name() -> &'static str {
+    default_param_set().name()
+}
+
 pub fn param_set_by_name(name: &str) -> Option<LmsParamSet> {
     LMS_PARAM_SETS
         .iter()
         .copied()
         .find(|param_set| param_set.name() == name)
+}
+
+pub fn default_benchmark_scheme() -> LmsScheme {
+    LmsScheme::new(default_param_set())
 }
 
 pub struct LmsPublicKey {
@@ -450,19 +464,19 @@ pub mod memory {
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, param_set_by_name, LmsScheme, BENCH_MESSAGE_BYTE, DEFAULT_PARAM_SET_NAME,
+        bench_message, default_param_set_name, param_set_by_name, LmsScheme, BENCH_MESSAGE_BYTE,
     };
 
     #[test]
     fn param_set_lookup_works() {
         let found =
-            param_set_by_name(DEFAULT_PARAM_SET_NAME).expect("known param set should resolve");
-        assert_eq!(found.name(), DEFAULT_PARAM_SET_NAME);
+            param_set_by_name(default_param_set_name()).expect("known param set should resolve");
+        assert_eq!(found.name(), default_param_set_name());
     }
 
     #[test]
     fn sign_verify_roundtrip() {
-        let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+        let scheme = LmsScheme::from_param_set_name(default_param_set_name())
             .expect("param set should resolve");
         let message = b"lms-roundtrip";
         let (public_key, mut secret_key) =
@@ -479,7 +493,7 @@ mod tests {
 
     #[test]
     fn verify_fails_for_other_message() {
-        let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+        let scheme = LmsScheme::from_param_set_name(default_param_set_name())
             .expect("param set should resolve");
         let (public_key, mut secret_key) = scheme
             .keypair_with_seed(11)

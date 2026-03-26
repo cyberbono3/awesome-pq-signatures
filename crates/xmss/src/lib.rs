@@ -11,7 +11,6 @@ use xmss::{
 /// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
 pub use pq_bench::BENCH_MESSAGE;
 
-pub const DEFAULT_XMSS_PARAM_SET: XmssParamSet = XmssParamSet::XmssSha2_10_256;
 pub const DIVAN_BENCH_MESSAGE_SIZES: [usize; 2] = [32, 1024];
 
 macro_rules! dispatch_param_set {
@@ -75,6 +74,15 @@ impl XmssParamSet {
             Self::XmssSha2_16_256,
             Self::XmssSha2_20_256,
         ]
+    }
+}
+
+#[must_use]
+pub fn default_xmss_param_set() -> XmssParamSet {
+    match pq_bench::BENCH_STATEFUL_CAPACITY_CLASS {
+        "pow2_10" => XmssParamSet::XmssSha2_10_256,
+        "pow2_20" => XmssParamSet::XmssSha2_20_256,
+        other => panic!("unsupported stateful capacity class for XMSS: {other}"),
     }
 }
 
@@ -187,7 +195,7 @@ pub struct XmssScheme {
 
 impl Default for XmssScheme {
     fn default() -> Self {
-        Self::new(DEFAULT_XMSS_PARAM_SET)
+        Self::new(default_xmss_param_set())
     }
 }
 
@@ -337,8 +345,8 @@ impl XmssScheme {
 }
 
 #[must_use]
-pub const fn default_benchmark_scheme() -> XmssScheme {
-    XmssScheme::new(DEFAULT_XMSS_PARAM_SET)
+pub fn default_benchmark_scheme() -> XmssScheme {
+    XmssScheme::new(default_xmss_param_set())
 }
 
 #[must_use]

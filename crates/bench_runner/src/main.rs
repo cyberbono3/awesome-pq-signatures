@@ -14,7 +14,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-use pq_bench::BENCH_MESSAGE;
+use pq_bench::{BENCH_MESSAGE, BENCH_SECURITY_TARGET};
 
 // ---------------------------------------------------------------------------
 // Common types
@@ -71,6 +71,22 @@ fn time_op<T, F: FnOnce() -> T>(f: F) -> (T, Duration) {
     let start = Instant::now();
     let val = f();
     (val, start.elapsed())
+}
+
+fn cross_param_for_target() -> &'static str {
+    match BENCH_SECURITY_TARGET {
+        "level1" => "CROSS-RSDPG-128-BALANCED",
+        "level3" => "CROSS-RSDPG-192-BALANCED",
+        other => panic!("unsupported benchmark security target for CROSS: {other}"),
+    }
+}
+
+fn less_param_for_target() -> &'static str {
+    match BENCH_SECURITY_TARGET {
+        "level1" => "LESS-252-45",
+        "level3" => "LESS-400-102",
+        other => panic!("unsupported benchmark security target for LESS: {other}"),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -130,17 +146,17 @@ impl DsaBenchmark for FalconAdapter {
 struct SphincsPlusAdapter;
 impl DsaBenchmark for SphincsPlusAdapter {
     fn name(&self) -> &str {
-        "SPHINCS+-SHAKE-128f"
+        sphincs_plus::SPHINCS_PLUS_VARIANT
     }
     fn param_set(&self) -> &str {
-        "SPHINCS+-SHAKE-128f-simple"
+        sphincs_plus::SPHINCS_PLUS_VARIANT
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         use pqcrypto_traits::sign::{PublicKey, SecretKey};
-        use sphincs_plus::{signature_size, SignatureScheme as _, SPHINCS_PLUS_SHAKE_128F_SIMPLE};
-        let ((pk, sk), kg) = time_op(|| SPHINCS_PLUS_SHAKE_128F_SIMPLE.keypair());
-        let (sm, s) = time_op(|| SPHINCS_PLUS_SHAKE_128F_SIMPLE.sign(message, &sk));
-        let (_, v) = time_op(|| SPHINCS_PLUS_SHAKE_128F_SIMPLE.open(&sm, &pk));
+        use sphincs_plus::{signature_size, SignatureScheme as _, SPHINCS_PLUS_SELECTED};
+        let ((pk, sk), kg) = time_op(|| SPHINCS_PLUS_SELECTED.keypair());
+        let (sm, s) = time_op(|| SPHINCS_PLUS_SELECTED.sign(message, &sk));
+        let (_, v) = time_op(|| SPHINCS_PLUS_SELECTED.open(&sm, &pk));
         Ok(BenchRun {
             keygen_ns: kg.as_nanos(),
             sign_ns: s.as_nanos(),
@@ -155,10 +171,10 @@ impl DsaBenchmark for SphincsPlusAdapter {
 struct MayoAdapter;
 impl DsaBenchmark for MayoAdapter {
     fn name(&self) -> &str {
-        "MAYO-1"
+        mayo::MAYO_VARIANT
     }
     fn param_set(&self) -> &str {
-        "MAYO-1"
+        mayo::MAYO_VARIANT
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         use mayo::MAYO;
@@ -183,12 +199,11 @@ impl DsaBenchmark for LmsAdapter {
         "LMS"
     }
     fn param_set(&self) -> &str {
-        "LMS-SHA256-M32-H5"
+        lms::default_param_set_name()
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
-        use lms::{default_seed, LmsScheme, DEFAULT_PARAM_SET_NAME};
-        let scheme =
-            LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME).map_err(|e| format!("{e:?}"))?;
+        use lms::{default_benchmark_scheme, default_seed};
+        let scheme = default_benchmark_scheme();
         let ((pk, mut sk), kg) = time_op(|| scheme.keypair_with_seed(default_seed()).expect("kg"));
         let (sig, s) = time_op(|| scheme.sign(message, &mut sk).expect("sign"));
         let (_, v) = time_op(|| scheme.verify(message, &sig, &pk).expect("verify"));
@@ -209,12 +224,11 @@ impl DsaBenchmark for HssAdapter {
         "HSS"
     }
     fn param_set(&self) -> &str {
-        "HSS-SHA256-H5-W2-L1"
+        hss::default_param_set_name()
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
-        use hss::{default_seed, HssScheme, DEFAULT_PARAM_SET_NAME};
-        let scheme =
-            HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME).map_err(|e| format!("{e:?}"))?;
+        use hss::{default_benchmark_scheme, default_seed};
+        let scheme = default_benchmark_scheme();
         let ((pk, mut sk), kg) = time_op(|| scheme.keypair_with_seed(default_seed()).expect("kg"));
         let (sig, s) = time_op(|| scheme.sign(message, &mut sk).expect("sign"));
         let (_, v) = time_op(|| scheme.verify(message, &sig, &pk).expect("verify"));
@@ -235,7 +249,7 @@ impl DsaBenchmark for XmssAdapter {
         "XMSS"
     }
     fn param_set(&self) -> &str {
-        "XMSS-SHA2_10_256"
+        xmss_bench::default_benchmark_scheme().param_set().as_str()
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         let scheme = xmss_bench::default_benchmark_scheme();
@@ -259,7 +273,7 @@ impl DsaBenchmark for XmssmtAdapter {
         "XMSS^MT"
     }
     fn param_set(&self) -> &str {
-        "XMSSMT-SHA2_20/2_256"
+        xmssmt_bench::default_benchmark_scheme().param_set().as_str()
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         let scheme = xmssmt_bench::default_benchmark_scheme();
@@ -285,15 +299,14 @@ impl DsaBenchmark for LeansigAdapter {
         "LeanSig"
     }
     fn param_set(&self) -> &str {
-        "Poseidon-L2^18-TS-w4"
+        leansig_bench::LEANSIG_VARIANT
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         use leansig::serialization::Serializable;
-        use leansig::signature::generalized_xmss::instantiations_poseidon::lifetime_2_to_the_18::target_sum::SIGTargetSumLifetime18W4NoOff;
         use leansig::signature::SignatureScheme;
         use leansig::MESSAGE_LENGTH;
-        use leansig_bench::prepare_sk_for_epoch;
-        type S = SIGTargetSumLifetime18W4NoOff;
+        use leansig_bench::{prepare_sk_for_epoch, SelectedLeanSigScheme};
+        type S = SelectedLeanSigScheme;
         let mut msg = [0u8; MESSAGE_LENGTH];
         let n = message.len().min(MESSAGE_LENGTH);
         msg[..n].copy_from_slice(&message[..n]);
@@ -591,12 +604,12 @@ fn main() {
         }),
         Box::new(SubprocessAdapter {
             algo_name: "LESS",
-            param: "LESS-252-45",
+            param: less_param_for_target(),
             bin_name: "less",
         }),
         Box::new(SubprocessAdapter {
             algo_name: "CROSS",
-            param: "CROSS-RSDPG-192-BAL",
+            param: cross_param_for_target(),
             bin_name: "cross",
         }),
     ];

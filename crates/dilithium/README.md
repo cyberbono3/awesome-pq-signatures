@@ -20,23 +20,23 @@ Run it with:
 cargo run -p dilithium --bin dilithium
 ```
 
-Latest run result (captured on 2026-02-18 17:52:13 UTC):
+Latest run result (captured on 2026-03-26 09:23:53 UTC):
 
 ```text
 === Dilithium (ML-DSA-65) Benchmark ===
 
 --- Key Generation ---
-Time to generate keys: 19.49975ms
-Time to generate keys (ns): 19499750
+Time to generate keys: 294.792µs
+Time to generate keys (ns): 294792
 
 --- Signing ---
-Time to sign: 33.311834ms
-Time to sign (ns): 33311834
+Time to sign: 531.625µs
+Time to sign (ns): 531625
 Peak memory during signing: 0 bytes
 
 --- Verification ---
-Time to verify: 2.323ms
-Time to verify (ns): 2323000
+Time to verify: 48.542µs
+Time to verify (ns): 48542
 Peak memory during verification: 0 bytes
 Signature verification: SUCCESS
 
@@ -44,7 +44,7 @@ Signature verification: SUCCESS
 Public key size: 1952 bytes
 Secret key size: 4032 bytes
 Signature size: 3309 bytes
-Signed message size: 3375 bytes
+Signed message size: 3341 bytes
 ```
 
 ## `benches/dilithium_divan.rs` (Divan benchmark suite)
@@ -62,7 +62,7 @@ Run it with:
 cargo bench -p dilithium --bench dilithium_divan
 ```
 
-Latest run result (captured on 2026-02-18 17:52:13 UTC):
+Latest run result (captured on 2026-03-26 08:07:08 UTC):
 
 ```text
 ML-DSA-65 sizes:
@@ -80,15 +80,15 @@ ML-DSA-65 peak heap usage:
   Message 4096 bytes: sign=0 bytes, verify=0 bytes
 
 Divan timing summary (median):
-  keygen: 201.3 us
-  sign(32): 569.5 us
-  sign(256): 100.7 us
-  sign(1024): 102.2 us
-  sign(4096): 342.1 us
-  verify(32): 44.58 us
-  verify(256): 44.91 us
-  verify(1024): 46.41 us
-  verify(4096): 51.04 us
+  keygen: 333 us
+  sign(32): 669.9 us
+  sign(256): 119.1 us
+  sign(1024): 127.6 us
+  sign(4096): 388.8 us
+  verify(32): 49.16 us
+  verify(256): 156.6 us
+  verify(1024): 49.45 us
+  verify(4096): 54.16 us
 ```
 
 Note: benchmark timings and allocation metrics vary by machine, compiler version, and system load.

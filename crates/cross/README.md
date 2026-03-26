@@ -65,14 +65,14 @@ Run it with:
 cargo run -p cross --bin cross
 ```
 
-A recent local run produced:
+A recent local run produced (captured on 2026-03-26 08:07:08 UTC):
 
 ```text
 === CROSS (CROSS-RSDPG-192-BALANCED) Benchmark ===
 
-Key generation: 115.208 us
-Signing:        7.2055 ms
-Verification:   4.929625 ms
+Key generation: 37.459 us
+Signing:        1.639 ms
+Verification:   1.117125 ms
 Public key:     83 bytes
 Secret key:     48 bytes
 Signature:      22464 bytes
@@ -93,7 +93,7 @@ Run it with:
 cargo bench -p cross --bench cross_divan
 ```
 
-Median result (captured on 2026-03-18 09:34:25 UTC):
+Median result (captured on 2026-03-26 09:23:53 UTC):
 
 ```text
 CROSS-RSDPG-192-BALANCED sizes:
@@ -111,15 +111,15 @@ CROSS-RSDPG-192-BALANCED peak heap usage:
   Message 4096 bytes: sign=49024 bytes, verify=30656 bytes
 
 Divan timing summary (median):
-  keygen: 12.44 us
-  sign(32): 1.371 ms
-  sign(256): 1.41 ms
-  sign(1024): 1.377 ms
-  sign(4096): 1.404 ms
-  verify(32): 786.8 us
-  verify(256): 794.5 us
-  verify(1024): 795.7 us
-  verify(4096): 806.2 us
+  keygen: 13.67 us
+  sign(32): 1.476 ms
+  sign(256): 2.87 ms
+  sign(1024): 1.431 ms
+  sign(4096): 1.454 ms
+  verify(32): 815 us
+  verify(256): 829.4 us
+  verify(1024): 852.5 us
+  verify(4096): 845.8 us
 ```
 
 ## Files

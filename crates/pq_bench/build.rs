@@ -30,20 +30,62 @@ fn main() {
         .and_then(|v| v.as_str())
         .expect("bench_config.toml must contain [bench] message = \"...\"");
 
+    let security_target = config
+        .get("bench")
+        .and_then(|v| v.get("security_target"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("level1");
+    let stateful_capacity_class = config
+        .get("bench")
+        .and_then(|v| v.get("stateful_capacity_class"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("pow2_10");
+
+    match security_target {
+        "level1" | "level3" => {}
+        other => {
+            panic!(
+                "unsupported [bench] security_target = {:?}; this workspace currently supports only \"level1\" and \"level3\"",
+                other
+            );
+        }
+    }
+    match stateful_capacity_class {
+        "pow2_10" | "pow2_20" => {}
+        other => {
+            panic!(
+                "unsupported [bench] stateful_capacity_class = {:?}; this workspace currently supports only \"pow2_10\" and \"pow2_20\"",
+                other
+            );
+        }
+    }
+
     let hash = Sha256::digest(message.as_bytes());
 
     let byte_literals: Vec<String> = hash.iter().map(|b| format!("0x{b:02x}")).collect();
 
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR must be set");
-    let dest = Path::new(&out_dir).join("bench_message.rs");
+    let dest = Path::new(&out_dir).join("bench_config.rs");
 
     let generated = format!(
         "/// SHA-256 digest of the `[bench] message` value in `bench_config.toml`.\n\
          ///\n\
          /// Every DSA crate in the workspace signs this exact 32-byte value so\n\
          /// that benchmark results are directly comparable.\n\
-         pub const BENCH_MESSAGE: [u8; 32] = [{}];\n",
-        byte_literals.join(", ")
+         pub const BENCH_MESSAGE: [u8; 32] = [{}];\n\
+         \n\
+         /// Workspace-wide target security level from `bench_config.toml`.\n\
+         ///\n\
+         /// The current workspace normalization supports `\"level1\"` and `\"level3\"`.\n\
+         pub const BENCH_SECURITY_TARGET: &str = {:?};\n\
+         \n\
+         /// Workspace-wide stateful benchmark capacity class from `bench_config.toml`.\n\
+         ///\n\
+         /// The current workspace normalization supports `\"pow2_10\"` and `\"pow2_20\"`.\n\
+         pub const BENCH_STATEFUL_CAPACITY_CLASS: &str = {:?};\n",
+        byte_literals.join(", "),
+        security_target,
+        stateful_capacity_class,
     );
 
     fs::write(&dest, generated)

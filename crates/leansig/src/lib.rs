@@ -7,6 +7,8 @@ use std::time::{Duration, Instant};
 /// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
 pub use pq_bench::BENCH_MESSAGE;
 
+include!(concat!(env!("OUT_DIR"), "/leansig_variant.rs"));
+
 /// Measure wall-clock time of a closure.
 pub fn measure_time<T, F>(operation: F) -> (T, Duration)
 where
