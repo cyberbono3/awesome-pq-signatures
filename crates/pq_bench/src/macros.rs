@@ -189,6 +189,44 @@ macro_rules! declare_signed_message_divan_bench {
 // Scheme/binary wiring macros
 
 #[macro_export]
+macro_rules! declare_ffi_signed_message_backend {
+    (
+        native_type = $native_type:ident,
+        init_rng = $init_rng:ident,
+        seed_bytes = $seed_bytes:expr,
+        seed_length_error = $seed_length_error:expr,
+        init_rng_fn = $init_rng_fn:path,
+        public_key_bytes_fn = $public_key_bytes_fn:path,
+        secret_key_bytes_fn = $secret_key_bytes_fn:path,
+        signature_bytes_fn = $signature_bytes_fn:path
+    ) => {
+        struct $native_type;
+
+        impl $native_type {
+            fn dimensions() -> $crate::FfiSignedMessageDimensions {
+                $crate::FfiSignedMessageDimensions {
+                    public_key: unsafe { $public_key_bytes_fn() },
+                    secret_key: unsafe { $secret_key_bytes_fn() },
+                    signature: unsafe { $signature_bytes_fn() },
+                }
+            }
+        }
+
+        fn $init_rng(profile: &$crate::DeterministicRngProfile<$seed_bytes>) {
+            let seed_len =
+                u32::try_from($seed_bytes).expect($seed_length_error);
+            unsafe {
+                $init_rng_fn(
+                    profile.seed.as_ptr(),
+                    seed_len,
+                    profile.domain_separator,
+                );
+            }
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! declare_ffi_signed_message_scheme {
     (
         seed_type = $seed_type:ident,

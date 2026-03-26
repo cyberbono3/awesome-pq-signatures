@@ -24,7 +24,16 @@ const SIGN_PROFILE: DeterministicRngProfile<CROSS_SEED_BYTES> =
 static CROSS_FFI_LOCK: Mutex<()> = Mutex::new(());
 pq_bench::declare_tracking_allocator!();
 pq_bench::declare_peak_memory_api!();
-struct NativeCross;
+pq_bench::declare_ffi_signed_message_backend!(
+    native_type = NativeCross,
+    init_rng = init_rng,
+    seed_bytes = CROSS_SEED_BYTES,
+    seed_length_error = "cross seed length fits in u32",
+    init_rng_fn = cross_rs_init_rng,
+    public_key_bytes_fn = cross_rs_public_key_bytes,
+    secret_key_bytes_fn = cross_rs_secret_key_bytes,
+    signature_bytes_fn = cross_rs_signature_bytes
+);
 
 pq_bench::declare_ffi_signed_message_scheme!(
     seed_type = CrossSeed,
@@ -45,28 +54,6 @@ pq_bench::declare_ffi_signed_message_scheme!(
     sign_fn = crypto_sign,
     verify_fn = crypto_sign_open
 );
-
-impl NativeCross {
-    fn dimensions() -> FfiSignedMessageDimensions {
-        FfiSignedMessageDimensions {
-            public_key: unsafe { cross_rs_public_key_bytes() },
-            secret_key: unsafe { cross_rs_secret_key_bytes() },
-            signature: unsafe { cross_rs_signature_bytes() },
-        }
-    }
-}
-
-fn init_rng(profile: &DeterministicRngProfile<CROSS_SEED_BYTES>) {
-    let seed_len =
-        u32::try_from(CROSS_SEED_BYTES).expect("cross seed length fits in u32");
-    unsafe {
-        cross_rs_init_rng(
-            profile.seed.as_ptr(),
-            seed_len,
-            profile.domain_separator,
-        );
-    }
-}
 
 unsafe extern "C" {
     fn crypto_sign_keypair(pk: *mut c_uchar, sk: *mut c_uchar) -> c_int;
