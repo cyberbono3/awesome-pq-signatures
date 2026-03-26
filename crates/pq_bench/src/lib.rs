@@ -374,6 +374,59 @@ macro_rules! declare_ffi_signed_message_scheme {
     };
 }
 
+#[macro_export]
+macro_rules! run_standard_signed_message_scheme_main {
+    (
+        scheme = $scheme:expr,
+        algorithm = $algorithm:expr,
+        param_set = $param_set:expr,
+        heading_algorithm = $heading_algorithm:expr,
+        heading_param_set = $heading_param_set:expr,
+        summary_algorithm = $summary_algorithm:expr,
+        backend = $backend:expr,
+        reset_peak = $reset_peak:path,
+        peak_bytes = $peak_bytes:path
+    ) => {{
+        let scheme = $scheme;
+        $crate::run_standard_signed_message_benchmark_binary(
+            std::env::args().skip(1),
+            $crate::StandardSignedMessageBinaryLabels {
+                algorithm: $algorithm,
+                param_set: $param_set,
+                heading_algorithm: $heading_algorithm,
+                heading_param_set: $heading_param_set,
+                summary_algorithm: $summary_algorithm,
+                backend: $backend,
+            },
+            || {
+                scheme
+                    .benchmark_keypair()
+                    .expect("key generation should succeed")
+            },
+            |keypair, message| {
+                scheme
+                    .sign_message(keypair, message)
+                    .expect("signing should succeed")
+            },
+            |keypair, message, signature| {
+                scheme
+                    .verify_message(keypair, message, signature)
+                    .expect("verification should succeed")
+            },
+            |keypair, signature| {
+                let sizes = scheme.sizes(keypair, signature);
+                $crate::StandardBenchmarkSizes {
+                    public_key_bytes: sizes.public_key,
+                    secret_key_bytes: sizes.secret_key,
+                    signature_bytes: sizes.signature,
+                }
+            },
+            $reset_peak,
+            $peak_bytes,
+        );
+    }};
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
