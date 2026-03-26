@@ -3,38 +3,16 @@ use std::sync::Mutex;
 
 use crate::signed_message_size;
 
+use super::{
+    locking::with_ffi_lock,
+    rng::{with_deterministic_rng, DeterministicRngProfile},
+};
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct FfiSignedMessageDimensions {
     pub public_key: usize,
     pub secret_key: usize,
     pub signature: usize,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct DeterministicRngProfile<const N: usize> {
-    pub seed: [u8; N],
-    pub domain_separator: u16,
-}
-
-pub fn with_ffi_lock<T, E>(
-    lock: &Mutex<()>,
-    poison_error: impl Fn() -> E,
-    operation: impl FnOnce() -> Result<T, E>,
-) -> Result<T, E> {
-    let _guard = lock.lock().map_err(|_| poison_error())?;
-    operation()
-}
-
-pub fn with_deterministic_rng<T, E>(
-    lock: &Mutex<()>,
-    poison_error: impl Fn() -> E,
-    init_rng: impl FnOnce(),
-    operation: impl FnOnce() -> Result<T, E>,
-) -> Result<T, E> {
-    with_ffi_lock(lock, poison_error, || {
-        init_rng();
-        operation()
-    })
 }
 
 pub fn ffi_keypair<K, E>(
