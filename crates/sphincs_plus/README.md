@@ -8,7 +8,7 @@ Stateless hash-based signature benchmarking crate.
 
 ## `src/main.rs` (`sphincs-plus-bench` binary)
 
-`src/main.rs` is a single-run benchmark/report binary for `SPHINCS+-SHAKE-128f-simple`. It performs:
+`src/main.rs` is a single-run benchmark/report binary for `SPHINCS+-SHAKE-192f-simple`. It performs:
 - key generation timing
 - sign timing + peak heap allocation tracking
 - verify timing + peak heap allocation tracking
@@ -20,31 +20,31 @@ Run it with:
 cargo run -p sphincs_plus --bin sphincs-plus-bench
 ```
 
-Latest run result (captured on 2026-02-18 18:56:27 UTC):
+Latest run result (captured on 2026-03-26 09:39:49 UTC):
 
 ```text
-=== SPHINCS+-SHAKE-128f-simple Benchmark ===
+=== SPHINCS+-SHAKE-192f-simple Benchmark ===
 
 --- Key Generation ---
-Time to generate keys: 7.854833ms
-Time to generate keys (ns): 7854833
+Time to generate keys: 2.194917ms
+Time to generate keys (ns): 2194917
 
 --- Signing ---
-Time to sign: 193.986458ms
-Time to sign (ns): 193986458
-Peak memory during signing: 17153 bytes
+Time to sign: 42.58625ms
+Time to sign (ns): 42586250
+Peak memory during signing: 35696 bytes
 
 --- Verification ---
-Time to verify: 10.147625ms
-Time to verify (ns): 10147625
-Peak memory during verification: 17153 bytes
+Time to verify: 3.434791ms
+Time to verify (ns): 3434791
+Peak memory during verification: 35696 bytes
 Signature verification: SUCCESS
 
 --- Size Measurements ---
-Public key size: 32 bytes
-Secret key size: 64 bytes
-Signature size: 17088 bytes
-Signed message size: 17153 bytes
+Public key size: 48 bytes
+Secret key size: 96 bytes
+Signature size: 35664 bytes
+Signed message size: 35696 bytes
 ```
 
 ## `benches/sphincs_plus_divan.rs` (Divan benchmark suite)
@@ -62,33 +62,33 @@ Run it with:
 cargo bench -p sphincs_plus --bench sphincs_plus_divan
 ```
 
-Latest run result (captured on 2026-02-18 18:56:27 UTC):
+Latest run result (captured on 2026-03-26 09:39:49 UTC):
 
 ```text
-SPHINCS+-SHAKE-128f-simple sizes:
-  Public key: 32 bytes
-  Secret key: 64 bytes
-  Signature (message 32 bytes): 17088 bytes
-  Signature (message 256 bytes): 17088 bytes
-  Signature (message 1024 bytes): 17088 bytes
-  Signature (message 4096 bytes): 17088 bytes
+SPHINCS+-SHAKE-192f-simple sizes:
+  Public key: 48 bytes
+  Secret key: 96 bytes
+  Signature (message 32 bytes): 35664 bytes
+  Signature (message 256 bytes): 35664 bytes
+  Signature (message 1024 bytes): 35664 bytes
+  Signature (message 4096 bytes): 35664 bytes
 
-SPHINCS+-SHAKE-128f-simple peak heap usage:
-  Message 32 bytes: sign=17120 bytes, verify=17120 bytes
-  Message 256 bytes: sign=17344 bytes, verify=17344 bytes
-  Message 1024 bytes: sign=18112 bytes, verify=18112 bytes
-  Message 4096 bytes: sign=21184 bytes, verify=21184 bytes
+SPHINCS+-SHAKE-192f-simple peak heap usage:
+  Message 32 bytes: sign=35696 bytes, verify=35696 bytes
+  Message 256 bytes: sign=35920 bytes, verify=35920 bytes
+  Message 1024 bytes: sign=36688 bytes, verify=36688 bytes
+  Message 4096 bytes: sign=39760 bytes, verify=39760 bytes
 
 Divan timing summary (median):
-  keygen: 1.498 ms
-  sign(32): 24.98 ms
-  sign(256): 24.48 ms
-  sign(1024): 24.42 ms
-  sign(4096): 24.47 ms
-  verify(32): 1.507 ms
-  verify(256): 1.48 ms
-  verify(1024): 1.427 ms
-  verify(4096): 1.515 ms
+  keygen: 1.681 ms
+  sign(32): 45.23 ms
+  sign(256): 41.47 ms
+  sign(1024): 41.59 ms
+  sign(4096): 41.65 ms
+  verify(32): 2.256 ms
+  verify(256): 2.777 ms
+  verify(1024): 2.165 ms
+  verify(4096): 2.326 ms
 ```
 
 Note: benchmark timings and allocation metrics vary by machine, compiler version, and system load.

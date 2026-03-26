@@ -20,16 +20,16 @@ Unlike stateful hash-based schemes such as LMS or XMSS, LESS does not consume on
 
 ## Variant
 
-This crate vendors the upstream NEON-optimized C implementation and builds the `CATEGORY=252, TARGET=45` parameter set as `LESS-252-45`.
+This crate vendors the upstream NEON-optimized C implementation and builds the `CATEGORY=400, TARGET=102` parameter set as `LESS-400-102`.
 
 For this variant, the upstream parameter header fixes:
-- security category: `1` (CATEGORY 252)
-- optimization target: `45`
-- `N = 252`
-- `K = 126`
-- `NUM_KEYPAIRS = 8`
-- `T = 45`
-- `W = 34`
+- security category: `3` (CATEGORY 400)
+- optimization target: `102`
+- `N = 400`
+- `K = 200`
+- `NUM_KEYPAIRS = 4`
+- `T = 102`
+- `W = 61`
 
 ## Implementation Notes
 
@@ -73,27 +73,27 @@ cargo bench -p less --bench less_divan
 ```
 
 Observed size output from the latest `less_divan` run:
-- `LESS-252-45`: `pk=97484`, `sk=32`
-- `sig(32B)=1329`
-- `sig(256B)=1329`
-- `sig(1024B)=1329`
-- `sig(4096B)=1329`
+- `LESS-400-102`: `pk=105174`, `sk=48`
+- `sig(32B)=4131`
+- `sig(256B)=4131`
+- `sig(1024B)=4131`
+- `sig(4096B)=4131`
 
 Observed peak heap usage from the latest `less_divan` run:
-- `32B`: `sign=2642`, `verify=1345`
-- `256B`: `sign=2898`, `verify=1825`
-- `1024B`: `sign=3650`, `verify=3345`
-- `4096B`: `sign=6722`, `verify=9489`
+- `32B`: `sign=7982`, `verify=3883`
+- `256B`: `sign=8302`, `verify=4427`
+- `1024B`: `sign=8998`, `verify=5891`
+- `4096B`: `sign=12142`, `verify=12107`
 
-Median timings from `cargo bench -p less --bench less_divan` on `2026-03-18 11:24:28 UTC`:
-- `keygen`: `2.072 ms`
+Median timings from `cargo bench -p less --bench less_divan` on `2026-03-26 09:39:49 UTC`:
+- `keygen`: `2.657 ms`
 - `sign`
-  - `32B`: `19.06 ms`
-  - `256B`: `19.07 ms`
-  - `1024B`: `19.06 ms`
-  - `4096B`: `19.03 ms`
+  - `32B`: `118.2 ms`
+  - `256B`: `115.2 ms`
+  - `1024B`: `117.9 ms`
+  - `4096B`: `117.7 ms`
 - `verify`
-  - `32B`: `18.69 ms`
-  - `256B`: `18.58 ms`
-  - `1024B`: `18.81 ms`
-  - `4096B`: `18.24 ms`
+  - `32B`: `116.7 ms`
+  - `256B`: `117 ms`
+  - `1024B`: `112.9 ms`
+  - `4096B`: `116 ms`

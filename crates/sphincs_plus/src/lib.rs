@@ -1,4 +1,3 @@
-use pqcrypto_sphincsplus::sphincsshake128fsimple;
 use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
 use std::alloc::{GlobalAlloc, Layout};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -6,6 +5,8 @@ use std::time::{Duration, Instant};
 
 /// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
 pub use pq_bench::BENCH_MESSAGE;
+
+include!(concat!(env!("OUT_DIR"), "/sphincs_variant.rs"));
 
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
@@ -92,26 +93,25 @@ pub trait SignatureScheme {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct SphincsPlusShake128fSimpleScheme;
+pub struct SphincsPlusSelectedScheme;
 
-pub const SPHINCS_PLUS_SHAKE_128F_SIMPLE: SphincsPlusShake128fSimpleScheme =
-    SphincsPlusShake128fSimpleScheme;
+pub const SPHINCS_PLUS_SELECTED: SphincsPlusSelectedScheme = SphincsPlusSelectedScheme;
 
-impl SignatureScheme for SphincsPlusShake128fSimpleScheme {
-    type PublicKey = sphincsshake128fsimple::PublicKey;
-    type SecretKey = sphincsshake128fsimple::SecretKey;
-    type SignedMessage = sphincsshake128fsimple::SignedMessage;
+impl SignatureScheme for SphincsPlusSelectedScheme {
+    type PublicKey = selected::PublicKey;
+    type SecretKey = selected::SecretKey;
+    type SignedMessage = selected::SignedMessage;
 
     fn algorithm_name(&self) -> &'static str {
-        "SPHINCS+-SHAKE-128f-simple"
+        SPHINCS_PLUS_VARIANT
     }
 
     fn keypair(&self) -> (Self::PublicKey, Self::SecretKey) {
-        sphincsshake128fsimple::keypair()
+        selected::keypair()
     }
 
     fn sign(&self, message: &[u8], secret_key: &Self::SecretKey) -> Self::SignedMessage {
-        sphincsshake128fsimple::sign(message, secret_key)
+        selected::sign(message, secret_key)
     }
 
     fn open(
@@ -119,7 +119,7 @@ impl SignatureScheme for SphincsPlusShake128fSimpleScheme {
         signed_message: &Self::SignedMessage,
         public_key: &Self::PublicKey,
     ) -> Option<Vec<u8>> {
-        sphincsshake128fsimple::open(signed_message, public_key).ok()
+        selected::open(signed_message, public_key).ok()
     }
 }
 
@@ -144,7 +144,7 @@ where
 mod tests {
     use super::{
         bench_message, signature_size, SignatureScheme, BENCH_MESSAGE_BYTE,
-        SPHINCS_PLUS_SHAKE_128F_SIMPLE,
+        SPHINCS_PLUS_SELECTED,
     };
 
     #[test]
@@ -174,7 +174,7 @@ mod tests {
 
     #[test]
     fn sphincs_plus_sign_verify_roundtrip() {
-        let scheme = SPHINCS_PLUS_SHAKE_128F_SIMPLE;
+        let scheme = SPHINCS_PLUS_SELECTED;
         let message = b"sphincs-plus";
         let (public_key, secret_key) = scheme.keypair();
         let signed = scheme.sign(message, &secret_key);

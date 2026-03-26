@@ -81,6 +81,14 @@ fn cross_param_for_target() -> &'static str {
     }
 }
 
+fn less_param_for_target() -> &'static str {
+    match BENCH_SECURITY_TARGET {
+        "level1" => "LESS-252-45",
+        "level3" => "LESS-400-102",
+        other => panic!("unsupported benchmark security target for LESS: {other}"),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // In-process adapters (pure Rust)
 // ---------------------------------------------------------------------------
@@ -138,17 +146,17 @@ impl DsaBenchmark for FalconAdapter {
 struct SphincsPlusAdapter;
 impl DsaBenchmark for SphincsPlusAdapter {
     fn name(&self) -> &str {
-        "SPHINCS+-SHAKE-128f"
+        sphincs_plus::SPHINCS_PLUS_VARIANT
     }
     fn param_set(&self) -> &str {
-        "SPHINCS+-SHAKE-128f-simple"
+        sphincs_plus::SPHINCS_PLUS_VARIANT
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         use pqcrypto_traits::sign::{PublicKey, SecretKey};
-        use sphincs_plus::{signature_size, SignatureScheme as _, SPHINCS_PLUS_SHAKE_128F_SIMPLE};
-        let ((pk, sk), kg) = time_op(|| SPHINCS_PLUS_SHAKE_128F_SIMPLE.keypair());
-        let (sm, s) = time_op(|| SPHINCS_PLUS_SHAKE_128F_SIMPLE.sign(message, &sk));
-        let (_, v) = time_op(|| SPHINCS_PLUS_SHAKE_128F_SIMPLE.open(&sm, &pk));
+        use sphincs_plus::{signature_size, SignatureScheme as _, SPHINCS_PLUS_SELECTED};
+        let ((pk, sk), kg) = time_op(|| SPHINCS_PLUS_SELECTED.keypair());
+        let (sm, s) = time_op(|| SPHINCS_PLUS_SELECTED.sign(message, &sk));
+        let (_, v) = time_op(|| SPHINCS_PLUS_SELECTED.open(&sm, &pk));
         Ok(BenchRun {
             keygen_ns: kg.as_nanos(),
             sign_ns: s.as_nanos(),
@@ -163,10 +171,10 @@ impl DsaBenchmark for SphincsPlusAdapter {
 struct MayoAdapter;
 impl DsaBenchmark for MayoAdapter {
     fn name(&self) -> &str {
-        "MAYO-1"
+        mayo::MAYO_VARIANT
     }
     fn param_set(&self) -> &str {
-        "MAYO-1"
+        mayo::MAYO_VARIANT
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
         use mayo::MAYO;
@@ -599,7 +607,7 @@ fn main() {
         }),
         Box::new(SubprocessAdapter {
             algo_name: "LESS",
-            param: "LESS-252-45",
+            param: less_param_for_target(),
             bin_name: "less",
         }),
         Box::new(SubprocessAdapter {

@@ -7,10 +7,10 @@ use std::time::{Duration, Instant};
 /// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
 pub use pq_bench::BENCH_MESSAGE;
 
+include!(concat!(env!("OUT_DIR"), "/less_variant.rs"));
+
 pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
-pub const LESS_VARIANT: &str = "LESS-252-45";
-
 const LESS_SEED_BYTES: usize = 16;
 const KEYGEN_PROFILE: DeterministicRngProfile = DeterministicRngProfile {
     seed: *b"less--keygenseed",

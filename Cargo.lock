@@ -1331,6 +1331,7 @@ dependencies = [
  "cc",
  "divan",
  "pq_bench",
+ "toml",
 ]
 
 [[package]]
@@ -1393,6 +1394,7 @@ dependencies = [
  "pq-mayo",
  "pq_bench",
  "signature 2.2.0",
+ "toml",
 ]
 
 [[package]]
@@ -2327,6 +2329,7 @@ dependencies = [
  "pq_bench",
  "pqcrypto-sphincsplus",
  "pqcrypto-traits",
+ "toml",
 ]
 
 [[package]]

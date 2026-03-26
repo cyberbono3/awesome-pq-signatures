@@ -66,7 +66,7 @@ Run it with:
 cargo bench -p sqisign --bench sqisign_divan
 ```
 
-Latest observed local median run (captured on 2026-03-17):
+Latest observed local median run (captured on 2026-03-26 09:23:53 UTC):
 
 ```text
 SQISign sizes:
@@ -83,15 +83,15 @@ SQISign peak heap usage:
   Message 4096 bytes: sign=4392 bytes, verify=8340 bytes
 Timer precision: 41 ns
 sqisign_divan  median
-├─ keygen      18.56 ms
+├─ keygen      19.96 ms
 ├─ sign
-│  ├─ 32       41.45 ms
-│  ├─ 256      41.7 ms
-│  ├─ 1024     41.62 ms
-│  ╰─ 4096     41.85 ms
+│  ├─ 32       44.69 ms
+│  ├─ 256      44.48 ms
+│  ├─ 1024     46.92 ms
+│  ╰─ 4096     46.1 ms
 ╰─ verify
-   ├─ 32       2.896 ms
-   ├─ 256      2.911 ms
-   ├─ 1024     2.942 ms
-   ╰─ 4096     2.916 ms
+   ├─ 32       3.091 ms
+   ├─ 256      3.15 ms
+   ├─ 1024     3.05 ms
+   ╰─ 4096     3.091 ms
 ```

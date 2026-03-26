@@ -16,6 +16,7 @@ pq_bench = { path = "../pq_bench" }
 
 [build-dependencies]
 cc = "1"
+toml = "0.8"
 
 [dev-dependencies]
 divan = "0.1"

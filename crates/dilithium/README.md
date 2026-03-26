@@ -20,7 +20,7 @@ Run it with:
 cargo run -p dilithium --bin dilithium
 ```
 
-Latest run result (captured on 2026-03-26 08:07:08 UTC):
+Latest run result (captured on 2026-03-26 09:23:53 UTC):
 
 ```text
 === Dilithium (ML-DSA-65) Benchmark ===
@@ -80,15 +80,15 @@ ML-DSA-65 peak heap usage:
   Message 4096 bytes: sign=0 bytes, verify=0 bytes
 
 Divan timing summary (median):
-  keygen: 201.1 us
-  sign(32): 584.9 us
-  sign(256): 104 us
-  sign(1024): 102.3 us
-  sign(4096): 337.5 us
-  verify(32): 47.06 us
-  verify(256): 47.72 us
-  verify(1024): 48.87 us
-  verify(4096): 52.37 us
+  keygen: 333 us
+  sign(32): 669.9 us
+  sign(256): 119.1 us
+  sign(1024): 127.6 us
+  sign(4096): 388.8 us
+  verify(32): 49.16 us
+  verify(256): 156.6 us
+  verify(1024): 49.45 us
+  verify(4096): 54.16 us
 ```
 
 Note: benchmark timings and allocation metrics vary by machine, compiler version, and system load.

@@ -7,8 +7,9 @@
 
 [bench]
 message = "awesome-pq-signatures benchmark message"
-# Workspace-wide security target for benchmarked parameter selections.
-# This applies to schemes with comparable parameter categories.
-# Stateful hash-based tree parameters are often capacity/lifetime knobs instead.
+# Workspace-wide security cohort for stateless schemes with comparable
+# published parameter categories (for example ML-DSA, CROSS, LESS, MAYO, SPHINCS+).
+# This scalar does not normalize stateful hash-based schemes. Those should be
+# compared separately by security strength plus signing capacity/lifetime.
 # Currently supported: "level1", "level3"
 security_target = "level3"

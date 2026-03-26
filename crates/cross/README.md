@@ -93,7 +93,7 @@ Run it with:
 cargo bench -p cross --bench cross_divan
 ```
 
-Median result (captured on 2026-03-26 08:07:08 UTC):
+Median result (captured on 2026-03-26 09:23:53 UTC):
 
 ```text
 CROSS-RSDPG-192-BALANCED sizes:
@@ -111,15 +111,15 @@ CROSS-RSDPG-192-BALANCED peak heap usage:
   Message 4096 bytes: sign=49024 bytes, verify=30656 bytes
 
 Divan timing summary (median):
-  keygen: 13.29 us
-  sign(32): 1.456 ms
-  sign(256): 1.43 ms
-  sign(1024): 1.446 ms
-  sign(4096): 1.476 ms
-  verify(32): 813.2 us
-  verify(256): 815.5 us
-  verify(1024): 838.6 us
-  verify(4096): 912.1 us
+  keygen: 13.67 us
+  sign(32): 1.476 ms
+  sign(256): 2.87 ms
+  sign(1024): 1.431 ms
+  sign(4096): 1.454 ms
+  verify(32): 815 us
+  verify(256): 829.4 us
+  verify(1024): 852.5 us
+  verify(4096): 845.8 us
 ```
 
 ## Files

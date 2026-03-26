@@ -20,7 +20,7 @@ Run it with:
 cargo run -p falcon --bin falcon-bench
 ```
 
-Latest run result (captured on 2026-02-18 17:34:51 UTC):
+Latest run result (captured on 2026-03-26 09:23:53 UTC):
 
 ```text
 === Falcon-512 Benchmark ===
@@ -68,27 +68,27 @@ Latest run result (captured on 2026-02-18 17:34:51 UTC):
 Falcon-512 sizes:
   Public key: 897 bytes
   Secret key: 1281 bytes
-  Signature (message 32 bytes): 653 bytes
-  Signature (message 256 bytes): 655 bytes
+  Signature (message 32 bytes): 659 bytes
+  Signature (message 256 bytes): 658 bytes
   Signature (message 1024 bytes): 657 bytes
-  Signature (message 4096 bytes): 658 bytes
+  Signature (message 4096 bytes): 660 bytes
 
 Falcon-512 peak heap usage:
-  Message 32 bytes: sign=784 bytes, verify=695 bytes
-  Message 256 bytes: sign=1008 bytes, verify=916 bytes
-  Message 1024 bytes: sign=1776 bytes, verify=1679 bytes
+  Message 32 bytes: sign=784 bytes, verify=689 bytes
+  Message 256 bytes: sign=1008 bytes, verify=910 bytes
+  Message 1024 bytes: sign=1776 bytes, verify=1680 bytes
   Message 4096 bytes: sign=4848 bytes, verify=4754 bytes
 
 Divan timing summary (median):
-  keygen: 5.264 ms
-  sign(32): 151 us
-  sign(256): 153.9 us
-  sign(1024): 156.2 us
-  sign(4096): 165.4 us
-  verify(32): 21.61 us
-  verify(256): 22.55 us
-  verify(1024): 25.07 us
-  verify(4096): 37.24 us
+  keygen: 4.886 ms
+  sign(32): 154.2 us
+  sign(256): 158.6 us
+  sign(1024): 161.8 us
+  sign(4096): 169.9 us
+  verify(32): 66.95 us
+  verify(256): 24.97 us
+  verify(1024): 26.18 us
+  verify(4096): 36.8 us
 ```
 
 Note: benchmark timings and allocation metrics vary by machine, compiler version, and system load.

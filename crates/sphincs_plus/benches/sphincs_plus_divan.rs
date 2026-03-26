@@ -2,7 +2,7 @@ use divan::{black_box, AllocProfiler, Bencher};
 use pqcrypto_traits::sign::{PublicKey, SecretKey};
 use sphincs_plus::{
     bench_message, memory, signature_size, SignatureScheme, TrackingAllocator, BENCH_MESSAGE_SIZES,
-    SPHINCS_PLUS_SHAKE_128F_SIMPLE,
+    SPHINCS_PLUS_SELECTED,
 };
 
 static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
@@ -12,7 +12,7 @@ static ALLOC: TrackingAllocator<AllocProfiler> = TrackingAllocator::new(&DIVAN_A
 
 #[divan::bench]
 fn keygen(bencher: Bencher) {
-    let scheme = SPHINCS_PLUS_SHAKE_128F_SIMPLE;
+    let scheme = SPHINCS_PLUS_SELECTED;
     bencher.bench(|| {
         black_box(scheme.keypair());
     });
@@ -20,7 +20,7 @@ fn keygen(bencher: Bencher) {
 
 #[divan::bench(args = BENCH_MESSAGE_SIZES)]
 fn sign(bencher: Bencher, message_size: usize) {
-    let scheme = SPHINCS_PLUS_SHAKE_128F_SIMPLE;
+    let scheme = SPHINCS_PLUS_SELECTED;
     let message = bench_message(message_size);
     let (_, secret_key) = scheme.keypair();
 
@@ -31,7 +31,7 @@ fn sign(bencher: Bencher, message_size: usize) {
 
 #[divan::bench(args = BENCH_MESSAGE_SIZES)]
 fn verify(bencher: Bencher, message_size: usize) {
-    let scheme = SPHINCS_PLUS_SHAKE_128F_SIMPLE;
+    let scheme = SPHINCS_PLUS_SELECTED;
     let message = bench_message(message_size);
     let (public_key, secret_key) = scheme.keypair();
     let signed_message = scheme.sign(&message, &secret_key);
@@ -45,7 +45,7 @@ fn verify(bencher: Bencher, message_size: usize) {
 }
 
 fn print_sizes() {
-    let scheme = SPHINCS_PLUS_SHAKE_128F_SIMPLE;
+    let scheme = SPHINCS_PLUS_SELECTED;
     let (public_key, secret_key) = scheme.keypair();
     println!("{} sizes:", scheme.algorithm_name());
     println!("  Public key: {} bytes", public_key.as_bytes().len());
@@ -63,7 +63,7 @@ fn print_sizes() {
 }
 
 fn print_memory_usage() {
-    let scheme = SPHINCS_PLUS_SHAKE_128F_SIMPLE;
+    let scheme = SPHINCS_PLUS_SELECTED;
     println!("{} peak heap usage:", scheme.algorithm_name());
     let (public_key, secret_key) = scheme.keypair();
 
