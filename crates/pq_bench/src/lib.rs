@@ -6,6 +6,7 @@
 //! file.
 
 mod alloc;
+mod bench_support;
 mod binary;
 mod config;
 mod ffi_signed_message;
@@ -20,6 +21,10 @@ pub use ffi_signed_message::{
 };
 pub use {
     alloc::{AllocationTracker, AllocationTrackingAllocator},
+    bench_support::{
+        print_signed_message_memory_usage, print_signed_message_sizes,
+        signed_fixture,
+    },
     binary::{
         parse_benchmark_binary_config_or_exit, run_human_benchmark_binary,
         BenchmarkBinaryExecution,

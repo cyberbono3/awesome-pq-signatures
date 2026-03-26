@@ -3,6 +3,7 @@ use less::{
     bench_message, memory, LessKeyPair, LessSignature, TrackingAllocator,
     ALLOCATION_TRACKER, BENCH_MESSAGE_SIZES, LESS,
 };
+use pq_bench::{print_signed_message_memory_usage, print_signed_message_sizes};
 pq_bench::install_divan_tracking_allocator!(
     TrackingAllocator,
     ALLOCATION_TRACKER
@@ -16,12 +17,14 @@ fn benchmark_keypair() -> LessKeyPair {
 fn signed_fixture(
     message_size: usize,
 ) -> (LessKeyPair, Vec<u8>, LessSignature) {
-    let keypair = benchmark_keypair();
-    let message = bench_message(message_size);
-    let signature = LESS
-        .sign_message(&keypair, &message)
-        .expect("benchmark setup should sign message");
-    (keypair, message, signature)
+    pq_bench::signed_fixture(
+        message_size,
+        benchmark_keypair,
+        |keypair, message| {
+            LESS.sign_message(keypair, message)
+                .expect("benchmark setup should sign message")
+        },
+    )
 }
 
 #[divan::bench]
@@ -61,47 +64,37 @@ fn verify(bencher: Bencher, message_size: usize) {
 }
 
 fn print_sizes() {
-    let keypair = benchmark_keypair();
-    println!("{} sizes:", LESS.algorithm_name());
-    println!("  Public key: {} bytes", LESS.public_key_size(&keypair));
-    println!("  Secret key: {} bytes", LESS.secret_key_size(&keypair));
-
-    for message_size in BENCH_MESSAGE_SIZES {
-        let message = bench_message(message_size);
-        let signature = LESS
-            .sign_message(&keypair, &message)
-            .expect("size measurement should sign message");
-        println!(
-            "  Signature (message {} bytes): {} bytes",
-            message_size,
-            LESS.signature_size(&signature)
-        );
-    }
+    print_signed_message_sizes(
+        LESS.algorithm_name(),
+        &BENCH_MESSAGE_SIZES,
+        benchmark_keypair,
+        |keypair| LESS.public_key_size(keypair),
+        |keypair| LESS.secret_key_size(keypair),
+        |keypair, message| {
+            LESS.sign_message(keypair, message)
+                .expect("size measurement should sign message")
+        },
+        |signature| LESS.signature_size(signature),
+    );
 }
 
 fn print_memory_usage() {
-    let keypair = benchmark_keypair();
-    println!("{} peak heap usage:", LESS.algorithm_name());
-
-    for message_size in BENCH_MESSAGE_SIZES {
-        let message = bench_message(message_size);
-
-        memory::reset_peak();
-        let signature = LESS
-            .sign_message(&keypair, &message)
-            .expect("memory measurement should sign message");
-        let sign_peak = memory::peak_bytes();
-
-        memory::reset_peak();
-        let _verified = LESS
-            .verify_message(&keypair, &message, &signature)
-            .expect("verification should succeed");
-        let verify_peak = memory::peak_bytes();
-
-        println!(
-            "  Message {message_size} bytes: sign={sign_peak} bytes, verify={verify_peak} bytes"
-        );
-    }
+    print_signed_message_memory_usage(
+        LESS.algorithm_name(),
+        &BENCH_MESSAGE_SIZES,
+        benchmark_keypair,
+        |keypair, message| {
+            LESS.sign_message(keypair, message)
+                .expect("memory measurement should sign message")
+        },
+        |keypair, message, signature| {
+            let _verified = LESS
+                .verify_message(keypair, message, signature)
+                .expect("verification should succeed");
+        },
+        memory::reset_peak,
+        memory::peak_bytes,
+    );
 }
 
 fn main() {
