@@ -24,236 +24,27 @@ const SIGN_PROFILE: DeterministicRngProfile<LESS_SEED_BYTES> =
 static LESS_FFI_LOCK: Mutex<()> = Mutex::new(());
 pq_bench::declare_tracking_allocator!();
 pq_bench::declare_peak_memory_api!();
-
-type LessSeed = [u8; LESS_SEED_BYTES];
-
 struct NativeLess;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct LessKeyPair {
-    public_key: Vec<u8>,
-    secret_key: Vec<u8>,
-}
-
-impl LessKeyPair {
-    #[must_use]
-    pub fn public_key(&self) -> &[u8] {
-        &self.public_key
-    }
-
-    #[must_use]
-    pub fn secret_key(&self) -> &[u8] {
-        &self.secret_key
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct LessSignature(Vec<u8>);
-
-impl LessSignature {
-    #[must_use]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct LessSizes {
-    pub public_key: usize,
-    pub secret_key: usize,
-    pub signature: usize,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum LessError {
-    FfiLockPoisoned,
-    KeygenFailed(i32),
-    SignFailed(i32),
-    VerifyFailed(i32),
-    InvalidSignedMessage,
-    LengthOverflow,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LessScheme;
-
-pub const LESS: LessScheme = LessScheme;
-
-impl LessScheme {
-    #[must_use]
-    pub fn algorithm_name(&self) -> &'static str {
-        LESS_VARIANT
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if the native LESS key generation call fails or if
-    /// the native runtime lock is poisoned.
-    pub fn keypair(&self) -> Result<LessKeyPair, LessError> {
-        self.keypair_with_seed(KEYGEN_PROFILE.seed)
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if the native LESS key generation call fails or if
-    /// the native runtime lock is poisoned.
-    pub fn benchmark_keypair(&self) -> Result<LessKeyPair, LessError> {
-        self.keypair()
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if the native LESS key generation call fails or if
-    /// the native runtime lock is poisoned.
-    pub fn keypair_with_seed(
-        &self,
-        seed: LessSeed,
-    ) -> Result<LessKeyPair, LessError> {
-        let profile = DeterministicRngProfile {
-            seed,
-            domain_separator: KEYGEN_PROFILE.domain_separator,
-        };
-        ffi_deterministic_keypair(
-            &LESS_FFI_LOCK,
-            profile,
-            init_rng,
-            NativeLess::dimensions(),
-            |public_key, secret_key| unsafe {
-                crypto_sign_keypair(public_key, secret_key)
-            },
-            |public_key, secret_key| LessKeyPair {
-                public_key,
-                secret_key,
-            },
-            || LessError::FfiLockPoisoned,
-            LessError::KeygenFailed,
-        )
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if signing fails, the message length exceeds the native
-    /// API width, or if the native runtime lock is poisoned.
-    pub fn sign(
-        &self,
-        keypair: &LessKeyPair,
-        message: &[u8],
-    ) -> Result<LessSignature, LessError> {
-        ffi_deterministic_sign(
-            &LESS_FFI_LOCK,
-            SIGN_PROFILE,
-            init_rng,
-            NativeLess::dimensions(),
-            message,
-            &keypair.secret_key,
-            |signed_message,
-             signed_message_len,
-             message,
-             message_len,
-             secret_key| unsafe {
-                crypto_sign(
-                    signed_message,
-                    signed_message_len,
-                    message,
-                    message_len,
-                    secret_key,
-                )
-            },
-            LessSignature,
-            || LessError::FfiLockPoisoned,
-            LessError::SignFailed,
-            || LessError::LengthOverflow,
-            || LessError::InvalidSignedMessage,
-        )
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if signing fails, the message length exceeds the native
-    /// API width, or if the native runtime lock is poisoned.
-    pub fn sign_message(
-        &self,
-        keypair: &LessKeyPair,
-        message: &[u8],
-    ) -> Result<LessSignature, LessError> {
-        self.sign(keypair, message)
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if verification fails unexpectedly, the message length
-    /// exceeds the native API width, or if the native runtime lock is poisoned.
-    pub fn verify(
-        &self,
-        keypair: &LessKeyPair,
-        message: &[u8],
-        signature: &LessSignature,
-    ) -> Result<bool, LessError> {
-        ffi_locked_verify(
-            &LESS_FFI_LOCK,
-            message,
-            signature.as_bytes(),
-            &keypair.public_key,
-            |opened_message,
-             opened_message_len,
-             signed_message,
-             signed_message_len,
-             public_key| unsafe {
-                crypto_sign_open(
-                    opened_message,
-                    opened_message_len,
-                    signed_message,
-                    signed_message_len,
-                    public_key,
-                )
-            },
-            || LessError::FfiLockPoisoned,
-            LessError::VerifyFailed,
-            || LessError::LengthOverflow,
-        )
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if verification fails unexpectedly, the message length
-    /// exceeds the native API width, or if the native runtime lock is poisoned.
-    pub fn verify_message(
-        &self,
-        keypair: &LessKeyPair,
-        message: &[u8],
-        signature: &LessSignature,
-    ) -> Result<bool, LessError> {
-        self.verify(keypair, message, signature)
-    }
-
-    #[must_use]
-    pub fn public_key_size(&self, _keypair: &LessKeyPair) -> usize {
-        NativeLess::dimensions().public_key
-    }
-
-    #[must_use]
-    pub fn secret_key_size(&self, _keypair: &LessKeyPair) -> usize {
-        NativeLess::dimensions().secret_key
-    }
-
-    #[must_use]
-    pub fn signature_size(&self, _signature: &LessSignature) -> usize {
-        NativeLess::dimensions().signature
-    }
-
-    #[must_use]
-    pub fn sizes(
-        &self,
-        keypair: &LessKeyPair,
-        signature: &LessSignature,
-    ) -> LessSizes {
-        LessSizes {
-            public_key: self.public_key_size(keypair),
-            secret_key: self.secret_key_size(keypair),
-            signature: self.signature_size(signature),
-        }
-    }
-}
+pq_bench::declare_ffi_signed_message_scheme!(
+    seed_type = LessSeed,
+    scheme_type = LessScheme,
+    scheme_const = LESS,
+    keypair_type = LessKeyPair,
+    signature_type = LessSignature,
+    sizes_type = LessSizes,
+    error_type = LessError,
+    variant = LESS_VARIANT,
+    seed_bytes = LESS_SEED_BYTES,
+    keygen_profile = KEYGEN_PROFILE,
+    sign_profile = SIGN_PROFILE,
+    ffi_lock = LESS_FFI_LOCK,
+    dimensions = NativeLess::dimensions(),
+    init_rng = init_rng,
+    keypair_fn = crypto_sign_keypair,
+    sign_fn = crypto_sign,
+    verify_fn = crypto_sign_open
+);
 
 impl NativeLess {
     fn dimensions() -> FfiSignedMessageDimensions {

@@ -24,236 +24,27 @@ const SIGN_PROFILE: DeterministicRngProfile<CROSS_SEED_BYTES> =
 static CROSS_FFI_LOCK: Mutex<()> = Mutex::new(());
 pq_bench::declare_tracking_allocator!();
 pq_bench::declare_peak_memory_api!();
-
-type CrossSeed = [u8; CROSS_SEED_BYTES];
-
 struct NativeCross;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct CrossKeyPair {
-    public_key: Vec<u8>,
-    secret_key: Vec<u8>,
-}
-
-impl CrossKeyPair {
-    #[must_use]
-    pub fn public_key(&self) -> &[u8] {
-        &self.public_key
-    }
-
-    #[must_use]
-    pub fn secret_key(&self) -> &[u8] {
-        &self.secret_key
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct CrossSignature(Vec<u8>);
-
-impl CrossSignature {
-    #[must_use]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct CrossSizes {
-    pub public_key: usize,
-    pub secret_key: usize,
-    pub signature: usize,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum CrossError {
-    FfiLockPoisoned,
-    KeygenFailed(i32),
-    SignFailed(i32),
-    VerifyFailed(i32),
-    InvalidSignedMessage,
-    LengthOverflow,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct CrossScheme;
-
-pub const CROSS: CrossScheme = CrossScheme;
-
-impl CrossScheme {
-    #[must_use]
-    pub fn algorithm_name(&self) -> &'static str {
-        CROSS_VARIANT
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if the native CROSS key generation call fails or if
-    /// the native runtime lock is poisoned.
-    pub fn keypair(&self) -> Result<CrossKeyPair, CrossError> {
-        self.keypair_with_seed(KEYGEN_PROFILE.seed)
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if the native CROSS key generation call fails or if
-    /// the native runtime lock is poisoned.
-    pub fn benchmark_keypair(&self) -> Result<CrossKeyPair, CrossError> {
-        self.keypair()
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if the native CROSS key generation call fails or if
-    /// the native runtime lock is poisoned.
-    pub fn keypair_with_seed(
-        &self,
-        seed: CrossSeed,
-    ) -> Result<CrossKeyPair, CrossError> {
-        let profile = DeterministicRngProfile {
-            seed,
-            domain_separator: KEYGEN_PROFILE.domain_separator,
-        };
-        ffi_deterministic_keypair(
-            &CROSS_FFI_LOCK,
-            profile,
-            init_rng,
-            NativeCross::dimensions(),
-            |public_key, secret_key| unsafe {
-                crypto_sign_keypair(public_key, secret_key)
-            },
-            |public_key, secret_key| CrossKeyPair {
-                public_key,
-                secret_key,
-            },
-            || CrossError::FfiLockPoisoned,
-            CrossError::KeygenFailed,
-        )
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if signing fails, the message length exceeds the native
-    /// API width, or if the native runtime lock is poisoned.
-    pub fn sign(
-        &self,
-        keypair: &CrossKeyPair,
-        message: &[u8],
-    ) -> Result<CrossSignature, CrossError> {
-        ffi_deterministic_sign(
-            &CROSS_FFI_LOCK,
-            SIGN_PROFILE,
-            init_rng,
-            NativeCross::dimensions(),
-            message,
-            &keypair.secret_key,
-            |signed_message,
-             signed_message_len,
-             message,
-             message_len,
-             secret_key| unsafe {
-                crypto_sign(
-                    signed_message,
-                    signed_message_len,
-                    message,
-                    message_len,
-                    secret_key,
-                )
-            },
-            CrossSignature,
-            || CrossError::FfiLockPoisoned,
-            CrossError::SignFailed,
-            || CrossError::LengthOverflow,
-            || CrossError::InvalidSignedMessage,
-        )
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if signing fails, the message length exceeds the native
-    /// API width, or if the native runtime lock is poisoned.
-    pub fn sign_message(
-        &self,
-        keypair: &CrossKeyPair,
-        message: &[u8],
-    ) -> Result<CrossSignature, CrossError> {
-        self.sign(keypair, message)
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if verification fails unexpectedly, the message length
-    /// exceeds the native API width, or if the native runtime lock is poisoned.
-    pub fn verify(
-        &self,
-        keypair: &CrossKeyPair,
-        message: &[u8],
-        signature: &CrossSignature,
-    ) -> Result<bool, CrossError> {
-        ffi_locked_verify(
-            &CROSS_FFI_LOCK,
-            message,
-            signature.as_bytes(),
-            &keypair.public_key,
-            |opened_message,
-             opened_message_len,
-             signed_message,
-             signed_message_len,
-             public_key| unsafe {
-                crypto_sign_open(
-                    opened_message,
-                    opened_message_len,
-                    signed_message,
-                    signed_message_len,
-                    public_key,
-                )
-            },
-            || CrossError::FfiLockPoisoned,
-            CrossError::VerifyFailed,
-            || CrossError::LengthOverflow,
-        )
-    }
-
-    /// # Errors
-    ///
-    /// Returns an error if verification fails unexpectedly, the message length
-    /// exceeds the native API width, or if the native runtime lock is poisoned.
-    pub fn verify_message(
-        &self,
-        keypair: &CrossKeyPair,
-        message: &[u8],
-        signature: &CrossSignature,
-    ) -> Result<bool, CrossError> {
-        self.verify(keypair, message, signature)
-    }
-
-    #[must_use]
-    pub fn public_key_size(&self, _keypair: &CrossKeyPair) -> usize {
-        NativeCross::dimensions().public_key
-    }
-
-    #[must_use]
-    pub fn secret_key_size(&self, _keypair: &CrossKeyPair) -> usize {
-        NativeCross::dimensions().secret_key
-    }
-
-    #[must_use]
-    pub fn signature_size(&self, _signature: &CrossSignature) -> usize {
-        NativeCross::dimensions().signature
-    }
-
-    #[must_use]
-    pub fn sizes(
-        &self,
-        keypair: &CrossKeyPair,
-        signature: &CrossSignature,
-    ) -> CrossSizes {
-        CrossSizes {
-            public_key: self.public_key_size(keypair),
-            secret_key: self.secret_key_size(keypair),
-            signature: self.signature_size(signature),
-        }
-    }
-}
+pq_bench::declare_ffi_signed_message_scheme!(
+    seed_type = CrossSeed,
+    scheme_type = CrossScheme,
+    scheme_const = CROSS,
+    keypair_type = CrossKeyPair,
+    signature_type = CrossSignature,
+    sizes_type = CrossSizes,
+    error_type = CrossError,
+    variant = CROSS_VARIANT,
+    seed_bytes = CROSS_SEED_BYTES,
+    keygen_profile = KEYGEN_PROFILE,
+    sign_profile = SIGN_PROFILE,
+    ffi_lock = CROSS_FFI_LOCK,
+    dimensions = NativeCross::dimensions(),
+    init_rng = init_rng,
+    keypair_fn = crypto_sign_keypair,
+    sign_fn = crypto_sign,
+    verify_fn = crypto_sign_open
+);
 
 impl NativeCross {
     fn dimensions() -> FfiSignedMessageDimensions {

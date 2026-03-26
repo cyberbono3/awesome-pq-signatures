@@ -116,6 +116,264 @@ macro_rules! declare_param_message_benches {
     };
 }
 
+#[macro_export]
+macro_rules! declare_ffi_signed_message_scheme {
+    (
+        seed_type = $seed_type:ident,
+        scheme_type = $scheme_type:ident,
+        scheme_const = $scheme_const:ident,
+        keypair_type = $keypair_type:ident,
+        signature_type = $signature_type:ident,
+        sizes_type = $sizes_type:ident,
+        error_type = $error_type:ident,
+        variant = $variant:expr,
+        seed_bytes = $seed_bytes:expr,
+        keygen_profile = $keygen_profile:ident,
+        sign_profile = $sign_profile:ident,
+        ffi_lock = $ffi_lock:ident,
+        dimensions = $dimensions:expr,
+        init_rng = $init_rng:path,
+        keypair_fn = $keypair_fn:path,
+        sign_fn = $sign_fn:path,
+        verify_fn = $verify_fn:path
+    ) => {
+        type $seed_type = [u8; $seed_bytes];
+
+        #[derive(Clone, Debug, Eq, PartialEq)]
+        pub struct $keypair_type {
+            public_key: Vec<u8>,
+            secret_key: Vec<u8>,
+        }
+
+        impl $keypair_type {
+            #[must_use]
+            pub fn public_key(&self) -> &[u8] {
+                &self.public_key
+            }
+
+            #[must_use]
+            pub fn secret_key(&self) -> &[u8] {
+                &self.secret_key
+            }
+        }
+
+        #[derive(Clone, Debug, Eq, PartialEq)]
+        pub struct $signature_type(Vec<u8>);
+
+        impl $signature_type {
+            #[must_use]
+            pub fn as_bytes(&self) -> &[u8] {
+                &self.0
+            }
+        }
+
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        pub struct $sizes_type {
+            pub public_key: usize,
+            pub secret_key: usize,
+            pub signature: usize,
+        }
+
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        pub enum $error_type {
+            FfiLockPoisoned,
+            KeygenFailed(i32),
+            SignFailed(i32),
+            VerifyFailed(i32),
+            InvalidSignedMessage,
+            LengthOverflow,
+        }
+
+        #[derive(Clone, Copy, Debug, Default)]
+        pub struct $scheme_type;
+
+        pub const $scheme_const: $scheme_type = $scheme_type;
+
+        impl $scheme_type {
+            #[must_use]
+            pub fn algorithm_name(&self) -> &'static str {
+                $variant
+            }
+
+            /// # Errors
+            ///
+            /// Returns an error if the native key generation call fails or if
+            /// the native runtime lock is poisoned.
+            pub fn keypair(&self) -> Result<$keypair_type, $error_type> {
+                self.keypair_with_seed($keygen_profile.seed)
+            }
+
+            /// # Errors
+            ///
+            /// Returns an error if the native key generation call fails or if
+            /// the native runtime lock is poisoned.
+            pub fn benchmark_keypair(
+                &self,
+            ) -> Result<$keypair_type, $error_type> {
+                self.keypair()
+            }
+
+            /// # Errors
+            ///
+            /// Returns an error if the native key generation call fails or if
+            /// the native runtime lock is poisoned.
+            pub fn keypair_with_seed(
+                &self,
+                seed: $seed_type,
+            ) -> Result<$keypair_type, $error_type> {
+                let profile = $crate::DeterministicRngProfile {
+                    seed,
+                    domain_separator: $keygen_profile.domain_separator,
+                };
+                $crate::ffi_deterministic_keypair(
+                    &$ffi_lock,
+                    profile,
+                    $init_rng,
+                    $dimensions,
+                    |public_key, secret_key| unsafe {
+                        $keypair_fn(public_key, secret_key)
+                    },
+                    |public_key, secret_key| $keypair_type {
+                        public_key,
+                        secret_key,
+                    },
+                    || $error_type::FfiLockPoisoned,
+                    $error_type::KeygenFailed,
+                )
+            }
+
+            /// # Errors
+            ///
+            /// Returns an error if signing fails, the message length exceeds
+            /// the native API width, or if the native runtime lock is poisoned.
+            pub fn sign(
+                &self,
+                keypair: &$keypair_type,
+                message: &[u8],
+            ) -> Result<$signature_type, $error_type> {
+                $crate::ffi_deterministic_sign(
+                    &$ffi_lock,
+                    $sign_profile,
+                    $init_rng,
+                    $dimensions,
+                    message,
+                    &keypair.secret_key,
+                    |signed_message,
+                     signed_message_len,
+                     message,
+                     message_len,
+                     secret_key| unsafe {
+                        $sign_fn(
+                            signed_message,
+                            signed_message_len,
+                            message,
+                            message_len,
+                            secret_key,
+                        )
+                    },
+                    $signature_type,
+                    || $error_type::FfiLockPoisoned,
+                    $error_type::SignFailed,
+                    || $error_type::LengthOverflow,
+                    || $error_type::InvalidSignedMessage,
+                )
+            }
+
+            /// # Errors
+            ///
+            /// Returns an error if signing fails, the message length exceeds
+            /// the native API width, or if the native runtime lock is poisoned.
+            pub fn sign_message(
+                &self,
+                keypair: &$keypair_type,
+                message: &[u8],
+            ) -> Result<$signature_type, $error_type> {
+                self.sign(keypair, message)
+            }
+
+            /// # Errors
+            ///
+            /// Returns an error if verification fails unexpectedly, the
+            /// message length exceeds the native API width, or if the native
+            /// runtime lock is poisoned.
+            pub fn verify(
+                &self,
+                keypair: &$keypair_type,
+                message: &[u8],
+                signature: &$signature_type,
+            ) -> Result<bool, $error_type> {
+                $crate::ffi_locked_verify(
+                    &$ffi_lock,
+                    message,
+                    signature.as_bytes(),
+                    &keypair.public_key,
+                    |opened_message,
+                     opened_message_len,
+                     signed_message,
+                     signed_message_len,
+                     public_key| unsafe {
+                        $verify_fn(
+                            opened_message,
+                            opened_message_len,
+                            signed_message,
+                            signed_message_len,
+                            public_key,
+                        )
+                    },
+                    || $error_type::FfiLockPoisoned,
+                    $error_type::VerifyFailed,
+                    || $error_type::LengthOverflow,
+                )
+            }
+
+            /// # Errors
+            ///
+            /// Returns an error if verification fails unexpectedly, the
+            /// message length exceeds the native API width, or if the native
+            /// runtime lock is poisoned.
+            pub fn verify_message(
+                &self,
+                keypair: &$keypair_type,
+                message: &[u8],
+                signature: &$signature_type,
+            ) -> Result<bool, $error_type> {
+                self.verify(keypair, message, signature)
+            }
+
+            #[must_use]
+            pub fn public_key_size(&self, _keypair: &$keypair_type) -> usize {
+                $dimensions.public_key
+            }
+
+            #[must_use]
+            pub fn secret_key_size(&self, _keypair: &$keypair_type) -> usize {
+                $dimensions.secret_key
+            }
+
+            #[must_use]
+            pub fn signature_size(
+                &self,
+                _signature: &$signature_type,
+            ) -> usize {
+                $dimensions.signature
+            }
+
+            #[must_use]
+            pub fn sizes(
+                &self,
+                keypair: &$keypair_type,
+                signature: &$signature_type,
+            ) -> $sizes_type {
+                $sizes_type {
+                    public_key: self.public_key_size(keypair),
+                    secret_key: self.secret_key_size(keypair),
+                    signature: self.signature_size(signature),
+                }
+            }
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
