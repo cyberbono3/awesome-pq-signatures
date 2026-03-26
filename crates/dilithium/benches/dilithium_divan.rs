@@ -1,6 +1,6 @@
 use dilithium::{
     bench_message, default_seed, memory, SignatureScheme, TrackingAllocator, BENCH_MESSAGE_SIZES,
-    ML_DSA_44,
+    ML_DSA_65,
 };
 use divan::{black_box, AllocProfiler, Bencher};
 
@@ -13,7 +13,7 @@ const CONTEXT: &[u8] = &[];
 
 #[divan::bench]
 fn keygen(bencher: Bencher) {
-    let scheme = ML_DSA_44;
+    let scheme = ML_DSA_65;
     let seed = default_seed();
 
     bencher.bench(|| {
@@ -23,7 +23,7 @@ fn keygen(bencher: Bencher) {
 
 #[divan::bench(args = BENCH_MESSAGE_SIZES)]
 fn sign(bencher: Bencher, message_size: usize) {
-    let scheme = ML_DSA_44;
+    let scheme = ML_DSA_65;
     let seed = default_seed();
     let keypair = scheme.keypair(&seed);
     let message = bench_message(message_size);
@@ -39,7 +39,7 @@ fn sign(bencher: Bencher, message_size: usize) {
 
 #[divan::bench(args = BENCH_MESSAGE_SIZES)]
 fn verify(bencher: Bencher, message_size: usize) {
-    let scheme = ML_DSA_44;
+    let scheme = ML_DSA_65;
     let seed = default_seed();
     let keypair = scheme.keypair(&seed);
     let message = bench_message(message_size);
@@ -58,7 +58,7 @@ fn verify(bencher: Bencher, message_size: usize) {
 }
 
 fn print_sizes() {
-    let scheme = ML_DSA_44;
+    let scheme = ML_DSA_65;
     let seed = default_seed();
     let keypair = scheme.keypair(&seed);
     println!("{} sizes:", scheme.algorithm_name());
@@ -79,7 +79,7 @@ fn print_sizes() {
 }
 
 fn print_memory_usage() {
-    let scheme = ML_DSA_44;
+    let scheme = ML_DSA_65;
     let seed = default_seed();
     let keypair = scheme.keypair(&seed);
     println!("{} peak heap usage:", scheme.algorithm_name());

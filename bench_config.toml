@@ -10,5 +10,5 @@ message = "awesome-pq-signatures benchmark message"
 # Workspace-wide security target for benchmarked parameter selections.
 # This applies to schemes with comparable parameter categories.
 # Stateful hash-based tree parameters are often capacity/lifetime knobs instead.
-# Currently supported: "level1"
-security_target = "level1"
+# Currently supported: "level1", "level3"
+security_target = "level3"

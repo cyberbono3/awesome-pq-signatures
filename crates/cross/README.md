@@ -20,22 +20,22 @@ Unlike stateful hash-based schemes such as LMS or XMSS, CROSS does not consume o
 
 ## Variant
 
-This crate vendors the upstream portable C reference implementation and builds the `CATEGORY_1 + BALANCED + RSDPG` parameter set as `CROSS-RSDPG-128-BALANCED`.
+This crate vendors the upstream portable C reference implementation and builds the `CATEGORY_3 + BALANCED + RSDPG` parameter set as `CROSS-RSDPG-192-BALANCED`.
 
 For this variant, the upstream parameter header fixes:
-- security margin: `128`
+- security margin: `192`
 - problem family: `RSDPG`
 - optimization target: `BALANCED`
-- `N = 43`
-- `K = 32`
-- `M = 26`
-- `T = 130`
-- `W = 71`
+- `N = 79`
+- `K = 48`
+- `M = 40`
+- `T = 268`
+- `W = 196`
 
 In practice, this gives this workspace build very small keys and a large signature:
-- public key: `54` bytes
-- secret key: `32` bytes
-- signature: `9120` bytes
+- public key: `83` bytes
+- secret key: `48` bytes
+- signature: `22464` bytes
 
 Those sizes come from the compiled reference implementation used by this crate.
 
@@ -65,17 +65,17 @@ Run it with:
 cargo run -p cross --bin cross
 ```
 
-A recent local run produced (captured on 2026-03-26 07:51:41 UTC):
+A recent local run produced (captured on 2026-03-26 08:07:08 UTC):
 
 ```text
-=== CROSS (CROSS-RSDPG-128-BALANCED) Benchmark ===
+=== CROSS (CROSS-RSDPG-192-BALANCED) Benchmark ===
 
-Key generation: 31.375 us
-Signing:        953.458 us
-Verification:   525.75 us
-Public key:     54 bytes
-Secret key:     32 bytes
-Signature:      9120 bytes
+Key generation: 37.459 us
+Signing:        1.639 ms
+Verification:   1.117125 ms
+Public key:     83 bytes
+Secret key:     48 bytes
+Signature:      22464 bytes
 ```
 
 ## `benches/cross_divan.rs` (Divan benchmark suite)
@@ -93,33 +93,33 @@ Run it with:
 cargo bench -p cross --bench cross_divan
 ```
 
-Median result (captured on 2026-03-26 07:51:41 UTC):
+Median result (captured on 2026-03-26 08:07:08 UTC):
 
 ```text
-CROSS-RSDPG-128-BALANCED sizes:
-  Public key: 54 bytes
-  Secret key: 32 bytes
-  Signature (message 32 bytes): 9120 bytes
-  Signature (message 256 bytes): 9120 bytes
-  Signature (message 1024 bytes): 9120 bytes
-  Signature (message 4096 bytes): 9120 bytes
+CROSS-RSDPG-192-BALANCED sizes:
+  Public key: 83 bytes
+  Secret key: 48 bytes
+  Signature (message 32 bytes): 22464 bytes
+  Signature (message 256 bytes): 22464 bytes
+  Signature (message 1024 bytes): 22464 bytes
+  Signature (message 4096 bytes): 22464 bytes
 
-CROSS-RSDPG-128-BALANCED peak heap usage:
-  Message 32 bytes: sign=18240 bytes, verify=9152 bytes
-  Message 256 bytes: sign=18464 bytes, verify=9600 bytes
-  Message 1024 bytes: sign=19232 bytes, verify=11136 bytes
-  Message 4096 bytes: sign=22304 bytes, verify=17280 bytes
+CROSS-RSDPG-192-BALANCED peak heap usage:
+  Message 32 bytes: sign=44960 bytes, verify=22528 bytes
+  Message 256 bytes: sign=45184 bytes, verify=22976 bytes
+  Message 1024 bytes: sign=45952 bytes, verify=24512 bytes
+  Message 4096 bytes: sign=49024 bytes, verify=30656 bytes
 
 Divan timing summary (median):
-  keygen: 6.695 us
-  sign(32): 912.9 us
-  sign(256): 958.8 us
-  sign(1024): 918.6 us
-  sign(4096): 946.1 us
-  verify(32): 520.7 us
-  verify(256): 525.1 us
-  verify(1024): 524.7 us
-  verify(4096): 549.6 us
+  keygen: 13.29 us
+  sign(32): 1.456 ms
+  sign(256): 1.43 ms
+  sign(1024): 1.446 ms
+  sign(4096): 1.476 ms
+  verify(32): 813.2 us
+  verify(256): 815.5 us
+  verify(1024): 838.6 us
+  verify(4096): 912.1 us
 ```
 
 ## Files

@@ -1,4 +1,4 @@
-use ml_dsa::{KeyGen, KeyPair, MlDsa44, Signature, B32};
+use ml_dsa::{KeyGen, KeyPair, MlDsa65, Signature, B32};
 use std::alloc::{GlobalAlloc, Layout};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
@@ -102,22 +102,22 @@ pub trait SignatureScheme {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct MlDsa44Scheme;
+pub struct MlDsa65Scheme;
 
-pub const ML_DSA_44: MlDsa44Scheme = MlDsa44Scheme;
+pub const ML_DSA_65: MlDsa65Scheme = MlDsa65Scheme;
 
-impl SignatureScheme for MlDsa44Scheme {
+impl SignatureScheme for MlDsa65Scheme {
     type Seed = B32;
-    type KeyPair = KeyPair<MlDsa44>;
-    type Signature = Signature<MlDsa44>;
+    type KeyPair = KeyPair<MlDsa65>;
+    type Signature = Signature<MlDsa65>;
     type Error = ml_dsa::Error;
 
     fn algorithm_name(&self) -> &'static str {
-        "ML-DSA-44"
+        "ML-DSA-65"
     }
 
     fn keypair(&self, seed: &Self::Seed) -> Self::KeyPair {
-        MlDsa44::key_gen_internal(seed)
+        MlDsa65::key_gen_internal(seed)
     }
 
     fn sign(
@@ -179,7 +179,7 @@ where
 mod tests {
     use super::{
         bench_message, default_seed, signed_message_size, SignatureScheme, BENCH_MESSAGE_BYTE,
-        ML_DSA_44,
+        ML_DSA_65,
     };
 
     #[test]
@@ -195,8 +195,8 @@ mod tests {
     }
 
     #[test]
-    fn ml_dsa_44_sign_verify_roundtrip() {
-        let scheme = ML_DSA_44;
+    fn ml_dsa_65_sign_verify_roundtrip() {
+        let scheme = ML_DSA_65;
         let seed = default_seed();
         let message = b"dilithium";
         let context: &[u8] = &[];

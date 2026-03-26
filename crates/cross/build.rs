@@ -38,8 +38,9 @@ fn main() {
 
     let (category_define, variant_name, security_margin) = match security_target {
         "level1" => ("CATEGORY_1", "CROSS-RSDPG-128-BALANCED", "128"),
+        "level3" => ("CATEGORY_3", "CROSS-RSDPG-192-BALANCED", "192"),
         other => panic!(
-            "unsupported [bench] security_target = {:?} for CROSS; only \"level1\" is supported",
+            "unsupported [bench] security_target = {:?} for CROSS; only \"level1\" and \"level3\" are supported",
             other
         ),
     };

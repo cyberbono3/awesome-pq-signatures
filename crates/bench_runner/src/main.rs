@@ -76,6 +76,7 @@ fn time_op<T, F: FnOnce() -> T>(f: F) -> (T, Duration) {
 fn cross_param_for_target() -> &'static str {
     match BENCH_SECURITY_TARGET {
         "level1" => "CROSS-RSDPG-128-BALANCED",
+        "level3" => "CROSS-RSDPG-192-BALANCED",
         other => panic!("unsupported benchmark security target for CROSS: {other}"),
     }
 }
@@ -87,24 +88,24 @@ fn cross_param_for_target() -> &'static str {
 struct DilithiumAdapter;
 impl DsaBenchmark for DilithiumAdapter {
     fn name(&self) -> &str {
-        "ML-DSA-44 (Dilithium)"
+        "ML-DSA-65 (Dilithium)"
     }
     fn param_set(&self) -> &str {
-        "ML-DSA-44"
+        "ML-DSA-65"
     }
     fn run_once(&self, message: &[u8]) -> Result<BenchRun, String> {
-        use dilithium::{default_seed, SignatureScheme as _, ML_DSA_44};
+        use dilithium::{default_seed, SignatureScheme as _, ML_DSA_65};
         let seed = default_seed();
-        let (kp, kg) = time_op(|| ML_DSA_44.keypair(&seed));
-        let (sig, s) = time_op(|| ML_DSA_44.sign(&kp, message, &[]).expect("sign"));
-        let (_, v) = time_op(|| ML_DSA_44.verify(&kp, message, &[], &sig));
+        let (kp, kg) = time_op(|| ML_DSA_65.keypair(&seed));
+        let (sig, s) = time_op(|| ML_DSA_65.sign(&kp, message, &[]).expect("sign"));
+        let (_, v) = time_op(|| ML_DSA_65.verify(&kp, message, &[], &sig));
         Ok(BenchRun {
             keygen_ns: kg.as_nanos(),
             sign_ns: s.as_nanos(),
             verify_ns: v.as_nanos(),
-            public_key_bytes: ML_DSA_44.public_key_size(&kp),
-            secret_key_bytes: ML_DSA_44.secret_key_size(&kp),
-            signature_bytes: ML_DSA_44.signature_size(&sig),
+            public_key_bytes: ML_DSA_65.public_key_size(&kp),
+            secret_key_bytes: ML_DSA_65.secret_key_size(&kp),
+            signature_bytes: ML_DSA_65.signature_size(&sig),
         })
     }
 }

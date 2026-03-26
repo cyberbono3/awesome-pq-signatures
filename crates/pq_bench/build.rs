@@ -36,11 +36,14 @@ fn main() {
         .and_then(|v| v.as_str())
         .unwrap_or("level1");
 
-    if security_target != "level1" {
-        panic!(
-            "unsupported [bench] security_target = {:?}; this workspace currently supports only \"level1\"",
-            security_target
-        );
+    match security_target {
+        "level1" | "level3" => {}
+        other => {
+            panic!(
+                "unsupported [bench] security_target = {:?}; this workspace currently supports only \"level1\" and \"level3\"",
+                other
+            );
+        }
     }
 
     let hash = Sha256::digest(message.as_bytes());
@@ -59,7 +62,7 @@ fn main() {
          \n\
          /// Workspace-wide target security level from `bench_config.toml`.\n\
          ///\n\
-         /// The current workspace normalization supports only `\"level1\"`.\n\
+         /// The current workspace normalization supports `\"level1\"` and `\"level3\"`.\n\
          pub const BENCH_SECURITY_TARGET: &str = {:?};\n",
         byte_literals.join(", "),
         security_target,
