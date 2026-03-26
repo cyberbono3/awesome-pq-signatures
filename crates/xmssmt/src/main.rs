@@ -1,7 +1,8 @@
 use pq_bench::{
-    duration_ns, run_human_benchmark_binary, BenchmarkBinaryExecution,
+    build_standard_human_benchmark_report, duration_ns,
+    run_human_benchmark_binary, BenchmarkBinaryExecution,
     BenchmarkBinaryReport, BenchmarkSizeReport, HumanBenchmarkLine,
-    HumanBenchmarkReport,
+    StandardHumanBenchmarkSpec,
 };
 use xmssmt_bench::default_benchmark_scheme;
 
@@ -37,44 +38,49 @@ fn main() {
                 sign_peak_bytes: None,
                 verify_peak_bytes: None,
             },
-            human: HumanBenchmarkReport {
-                banner_lines: &BANNER,
-                heading: report.display_name.clone().into(),
-                summary_algorithm: report.param_set.as_str().into(),
-                keygen_duration: report.keygen_duration,
-                sign_duration: report.sign_duration,
-                verify_duration: report.verify_duration,
-                verified: report.verified,
-                size_lines: vec![
-                    HumanBenchmarkLine::bytes(
-                        "Public key size",
-                        report.public_key_size,
-                    ),
-                    HumanBenchmarkLine::bytes(
-                        "Secret key size",
-                        report.secret_key_size,
-                    ),
-                    HumanBenchmarkLine::bytes(
-                        "Signature size",
-                        report.signature_size,
-                    ),
-                ],
-                summary_size_lines: vec![
-                    HumanBenchmarkLine::bytes(
-                        "Public Key",
-                        report.public_key_size,
-                    ),
-                    HumanBenchmarkLine::bytes(
-                        "Secret Key",
-                        report.secret_key_size,
-                    ),
-                    HumanBenchmarkLine::bytes(
-                        "Signature",
-                        report.signature_size,
-                    ),
-                ],
-                ..HumanBenchmarkReport::default()
-            },
+            human: build_standard_human_benchmark_report(
+                StandardHumanBenchmarkSpec {
+                    banner_lines: &BANNER,
+                    heading: report.display_name.clone().into(),
+                    intro_lines: Vec::new(),
+                    summary_algorithm: report.param_set.as_str().into(),
+                    summary_intro_lines: Vec::new(),
+                    keygen_duration: report.keygen_duration,
+                    sign_duration: report.sign_duration,
+                    verify_duration: report.verify_duration,
+                    verified: report.verified,
+                    size_lines: vec![
+                        HumanBenchmarkLine::bytes(
+                            "Public key size",
+                            report.public_key_size,
+                        ),
+                        HumanBenchmarkLine::bytes(
+                            "Secret key size",
+                            report.secret_key_size,
+                        ),
+                        HumanBenchmarkLine::bytes(
+                            "Signature size",
+                            report.signature_size,
+                        ),
+                    ],
+                    summary_size_lines: vec![
+                        HumanBenchmarkLine::bytes(
+                            "Public Key",
+                            report.public_key_size,
+                        ),
+                        HumanBenchmarkLine::bytes(
+                            "Secret Key",
+                            report.secret_key_size,
+                        ),
+                        HumanBenchmarkLine::bytes(
+                            "Signature",
+                            report.signature_size,
+                        ),
+                    ],
+                    sign_peak_bytes: None,
+                    verify_peak_bytes: None,
+                },
+            ),
         }
     });
 }

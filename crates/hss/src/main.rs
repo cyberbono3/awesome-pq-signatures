@@ -3,9 +3,10 @@ use hss::{
     DEFAULT_PARAM_SET_NAME,
 };
 use pq_bench::{
-    duration_ns, run_human_benchmark_binary, BenchmarkBinaryExecution,
+    build_standard_human_benchmark_report, duration_ns,
+    run_human_benchmark_binary, BenchmarkBinaryExecution,
     BenchmarkBinaryReport, BenchmarkSizeReport, HumanBenchmarkLine,
-    HumanBenchmarkReport,
+    StandardHumanBenchmarkSpec,
 };
 use std::env;
 
@@ -62,44 +63,52 @@ fn main() {
                 sign_peak_bytes: None,
                 verify_peak_bytes: None,
             },
-            human: HumanBenchmarkReport {
-                heading: format!("HSS ({})", scheme.param_set_name()).into(),
-                intro_lines: vec![
-                    HumanBenchmarkLine::new("Backend", scheme.backend_name()),
-                    HumanBenchmarkLine::new(
-                        "Hierarchy levels",
-                        scheme.levels().to_string(),
-                    ),
-                ],
-                summary_algorithm: scheme.algorithm_name().into(),
-                summary_intro_lines: vec![HumanBenchmarkLine::new(
-                    "Param set",
-                    scheme.param_set_name(),
-                )],
-                keygen_duration,
-                sign_duration,
-                verify_duration,
-                verified,
-                size_lines: vec![
-                    HumanBenchmarkLine::bytes("Public key size", pk_size),
-                    HumanBenchmarkLine::bytes("Secret key size", sk_size),
-                    HumanBenchmarkLine::bytes("Signature size", sig_size),
-                    HumanBenchmarkLine::bytes(
-                        "Signed message size",
-                        signed_message_size(message.len(), sig_size),
-                    ),
-                    HumanBenchmarkLine::new(
-                        "Estimated signatures per key",
-                        key_lifetime.to_string(),
-                    ),
-                ],
-                summary_size_lines: vec![
-                    HumanBenchmarkLine::bytes("Public Key", pk_size),
-                    HumanBenchmarkLine::bytes("Secret Key", sk_size),
-                    HumanBenchmarkLine::bytes("Signature", sig_size),
-                ],
-                ..HumanBenchmarkReport::default()
-            },
+            human: build_standard_human_benchmark_report(
+                StandardHumanBenchmarkSpec {
+                    banner_lines: &[],
+                    heading: format!("HSS ({})", scheme.param_set_name())
+                        .into(),
+                    intro_lines: vec![
+                        HumanBenchmarkLine::new(
+                            "Backend",
+                            scheme.backend_name(),
+                        ),
+                        HumanBenchmarkLine::new(
+                            "Hierarchy levels",
+                            scheme.levels().to_string(),
+                        ),
+                    ],
+                    summary_algorithm: scheme.algorithm_name().into(),
+                    summary_intro_lines: vec![HumanBenchmarkLine::new(
+                        "Param set",
+                        scheme.param_set_name(),
+                    )],
+                    keygen_duration,
+                    sign_duration,
+                    verify_duration,
+                    verified,
+                    size_lines: vec![
+                        HumanBenchmarkLine::bytes("Public key size", pk_size),
+                        HumanBenchmarkLine::bytes("Secret key size", sk_size),
+                        HumanBenchmarkLine::bytes("Signature size", sig_size),
+                        HumanBenchmarkLine::bytes(
+                            "Signed message size",
+                            signed_message_size(message.len(), sig_size),
+                        ),
+                        HumanBenchmarkLine::new(
+                            "Estimated signatures per key",
+                            key_lifetime.to_string(),
+                        ),
+                    ],
+                    summary_size_lines: vec![
+                        HumanBenchmarkLine::bytes("Public Key", pk_size),
+                        HumanBenchmarkLine::bytes("Secret Key", sk_size),
+                        HumanBenchmarkLine::bytes("Signature", sig_size),
+                    ],
+                    sign_peak_bytes: None,
+                    verify_peak_bytes: None,
+                },
+            ),
         }
     });
 }

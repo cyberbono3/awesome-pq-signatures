@@ -30,10 +30,11 @@ pub use {
         BENCH_MESSAGE, BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
     },
     reporting::{
-        emit_benchmark_report, emit_standard_benchmark_report,
-        print_human_benchmark_report, BenchmarkBinaryReport,
-        BenchmarkSizeReport, HumanBenchmarkLine, HumanBenchmarkReport,
-        HumanBenchmarkSection, StandardBenchmarkHumanReport,
+        build_standard_human_benchmark_report, emit_benchmark_report,
+        emit_standard_benchmark_report, print_human_benchmark_report,
+        BenchmarkBinaryReport, BenchmarkSizeReport, HumanBenchmarkLine,
+        HumanBenchmarkReport, HumanBenchmarkSection,
+        StandardBenchmarkHumanReport, StandardHumanBenchmarkSpec,
     },
     timing::{duration_ns, format_ns, measure_time, median, print_timing},
 };

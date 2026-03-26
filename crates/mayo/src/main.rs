@@ -3,9 +3,10 @@ use mayo::{
     ALLOCATION_TRACKER, MAYO,
 };
 use pq_bench::{
-    duration_ns, run_human_benchmark_binary, BenchmarkBinaryExecution,
+    build_standard_human_benchmark_report, duration_ns,
+    run_human_benchmark_binary, BenchmarkBinaryExecution,
     BenchmarkBinaryReport, BenchmarkSizeReport, HumanBenchmarkLine,
-    HumanBenchmarkReport, HumanBenchmarkSection,
+    StandardHumanBenchmarkSpec,
 };
 pq_bench::install_system_tracking_allocator!(
     TrackingAllocator,
@@ -68,48 +69,37 @@ fn main() {
                 sign_peak_bytes: Some(sign_peak_mem),
                 verify_peak_bytes: Some(verify_peak_mem),
             },
-            human: HumanBenchmarkReport {
-                heading: format!("MAYO ({})", scheme.algorithm_name()).into(),
-                summary_algorithm: scheme.algorithm_name().into(),
-                keygen_duration,
-                sign_duration,
-                verify_duration,
-                sign_detail_lines: vec![HumanBenchmarkLine::bytes(
-                    "Peak memory during signing",
-                    sign_peak_mem,
-                )],
-                verify_detail_lines: vec![HumanBenchmarkLine::bytes(
-                    "Peak memory during verification",
-                    verify_peak_mem,
-                )],
-                verified,
-                size_lines,
-                summary_size_lines: vec![
-                    HumanBenchmarkLine::bytes(
-                        "Public Key",
-                        sizes.public_key_bytes,
-                    ),
-                    HumanBenchmarkLine::bytes(
-                        "Secret Key",
-                        sizes.secret_key_bytes,
-                    ),
-                    HumanBenchmarkLine::bytes(
-                        "Signature",
-                        sizes.signature_bytes,
-                    ),
-                ],
-                summary_sections: vec![HumanBenchmarkSection {
-                    title: "Memory Usage (heap allocations)",
-                    lines: vec![
-                        HumanBenchmarkLine::bytes("Signing", sign_peak_mem),
+            human: build_standard_human_benchmark_report(
+                StandardHumanBenchmarkSpec {
+                    banner_lines: &[],
+                    heading: format!("MAYO ({})", scheme.algorithm_name())
+                        .into(),
+                    intro_lines: Vec::new(),
+                    summary_algorithm: scheme.algorithm_name().into(),
+                    summary_intro_lines: Vec::new(),
+                    keygen_duration,
+                    sign_duration,
+                    verify_duration,
+                    verified,
+                    size_lines,
+                    summary_size_lines: vec![
                         HumanBenchmarkLine::bytes(
-                            "Verification",
-                            verify_peak_mem,
+                            "Public Key",
+                            sizes.public_key_bytes,
+                        ),
+                        HumanBenchmarkLine::bytes(
+                            "Secret Key",
+                            sizes.secret_key_bytes,
+                        ),
+                        HumanBenchmarkLine::bytes(
+                            "Signature",
+                            sizes.signature_bytes,
                         ),
                     ],
-                }],
-                ..HumanBenchmarkReport::default()
-            },
+                    sign_peak_bytes: Some(sign_peak_mem),
+                    verify_peak_bytes: Some(verify_peak_mem),
+                },
+            ),
         }
     });
 }

@@ -93,6 +93,79 @@ pub struct HumanBenchmarkSection<'a> {
     pub lines: Vec<HumanBenchmarkLine<'a>>,
 }
 
+pub struct StandardHumanBenchmarkSpec<'a> {
+    pub banner_lines: &'a [&'a str],
+    pub heading: Cow<'a, str>,
+    pub intro_lines: Vec<HumanBenchmarkLine<'a>>,
+    pub summary_algorithm: Cow<'a, str>,
+    pub summary_intro_lines: Vec<HumanBenchmarkLine<'a>>,
+    pub keygen_duration: Duration,
+    pub sign_duration: Duration,
+    pub verify_duration: Duration,
+    pub verified: bool,
+    pub size_lines: Vec<HumanBenchmarkLine<'a>>,
+    pub summary_size_lines: Vec<HumanBenchmarkLine<'a>>,
+    pub sign_peak_bytes: Option<usize>,
+    pub verify_peak_bytes: Option<usize>,
+}
+
+pub fn build_standard_human_benchmark_report<'a>(
+    spec: StandardHumanBenchmarkSpec<'a>,
+) -> HumanBenchmarkReport<'a> {
+    let sign_detail_lines = spec
+        .sign_peak_bytes
+        .map(|bytes| {
+            vec![HumanBenchmarkLine::bytes(
+                "Peak memory during signing",
+                bytes,
+            )]
+        })
+        .unwrap_or_default();
+    let verify_detail_lines = spec
+        .verify_peak_bytes
+        .map(|bytes| {
+            vec![HumanBenchmarkLine::bytes(
+                "Peak memory during verification",
+                bytes,
+            )]
+        })
+        .unwrap_or_default();
+
+    let mut memory_lines = Vec::new();
+    if let Some(bytes) = spec.sign_peak_bytes {
+        memory_lines.push(HumanBenchmarkLine::bytes("Signing", bytes));
+    }
+    if let Some(bytes) = spec.verify_peak_bytes {
+        memory_lines.push(HumanBenchmarkLine::bytes("Verification", bytes));
+    }
+
+    let summary_sections = if memory_lines.is_empty() {
+        Vec::new()
+    } else {
+        vec![HumanBenchmarkSection {
+            title: "Memory Usage (heap allocations)",
+            lines: memory_lines,
+        }]
+    };
+
+    HumanBenchmarkReport {
+        banner_lines: spec.banner_lines,
+        heading: spec.heading,
+        intro_lines: spec.intro_lines,
+        summary_algorithm: spec.summary_algorithm,
+        summary_intro_lines: spec.summary_intro_lines,
+        keygen_duration: spec.keygen_duration,
+        sign_duration: spec.sign_duration,
+        verify_duration: spec.verify_duration,
+        sign_detail_lines,
+        verify_detail_lines,
+        verified: spec.verified,
+        size_lines: spec.size_lines,
+        summary_size_lines: spec.summary_size_lines,
+        summary_sections,
+    }
+}
+
 pub fn print_human_benchmark_report(report: &HumanBenchmarkReport<'_>) {
     for line in report.banner_lines {
         println!("{line}");

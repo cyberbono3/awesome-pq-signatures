@@ -1,7 +1,8 @@
 use pq_bench::{
-    duration_ns, run_human_benchmark_binary, BenchmarkBinaryExecution,
+    build_standard_human_benchmark_report, duration_ns,
+    run_human_benchmark_binary, BenchmarkBinaryExecution,
     BenchmarkBinaryReport, BenchmarkSizeReport, HumanBenchmarkLine,
-    HumanBenchmarkReport, HumanBenchmarkSection,
+    StandardHumanBenchmarkSpec,
 };
 use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
 use sphincs_plus::{
@@ -51,47 +52,35 @@ fn main() {
                 sign_peak_bytes: Some(sign_peak_mem),
                 verify_peak_bytes: Some(verify_peak_mem),
             },
-            human: HumanBenchmarkReport {
-                heading: scheme.algorithm_name().into(),
-                summary_algorithm: scheme.algorithm_name().into(),
-                keygen_duration,
-                sign_duration,
-                verify_duration,
-                sign_detail_lines: vec![HumanBenchmarkLine::bytes(
-                    "Peak memory during signing",
-                    sign_peak_mem,
-                )],
-                verify_detail_lines: vec![HumanBenchmarkLine::bytes(
-                    "Peak memory during verification",
-                    verify_peak_mem,
-                )],
-                verified,
-                size_lines: vec![
-                    HumanBenchmarkLine::bytes("Public key size", pk_size),
-                    HumanBenchmarkLine::bytes("Secret key size", sk_size),
-                    HumanBenchmarkLine::bytes("Signature size", sig_size),
-                    HumanBenchmarkLine::bytes(
-                        "Signed message size",
-                        signed_message.as_bytes().len(),
-                    ),
-                ],
-                summary_size_lines: vec![
-                    HumanBenchmarkLine::bytes("Public Key", pk_size),
-                    HumanBenchmarkLine::bytes("Secret Key", sk_size),
-                    HumanBenchmarkLine::bytes("Signature", sig_size),
-                ],
-                summary_sections: vec![HumanBenchmarkSection {
-                    title: "Memory Usage (heap allocations)",
-                    lines: vec![
-                        HumanBenchmarkLine::bytes("Signing", sign_peak_mem),
+            human: build_standard_human_benchmark_report(
+                StandardHumanBenchmarkSpec {
+                    banner_lines: &[],
+                    heading: scheme.algorithm_name().into(),
+                    intro_lines: Vec::new(),
+                    summary_algorithm: scheme.algorithm_name().into(),
+                    summary_intro_lines: Vec::new(),
+                    keygen_duration,
+                    sign_duration,
+                    verify_duration,
+                    verified,
+                    size_lines: vec![
+                        HumanBenchmarkLine::bytes("Public key size", pk_size),
+                        HumanBenchmarkLine::bytes("Secret key size", sk_size),
+                        HumanBenchmarkLine::bytes("Signature size", sig_size),
                         HumanBenchmarkLine::bytes(
-                            "Verification",
-                            verify_peak_mem,
+                            "Signed message size",
+                            signed_message.as_bytes().len(),
                         ),
                     ],
-                }],
-                ..HumanBenchmarkReport::default()
-            },
+                    summary_size_lines: vec![
+                        HumanBenchmarkLine::bytes("Public Key", pk_size),
+                        HumanBenchmarkLine::bytes("Secret Key", sk_size),
+                        HumanBenchmarkLine::bytes("Signature", sig_size),
+                    ],
+                    sign_peak_bytes: Some(sign_peak_mem),
+                    verify_peak_bytes: Some(verify_peak_mem),
+                },
+            ),
         }
     });
 }

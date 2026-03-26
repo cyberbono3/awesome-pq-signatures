@@ -3,9 +3,10 @@ use dilithium::{
     TrackingAllocator, ALLOCATION_TRACKER, ML_DSA_65,
 };
 use pq_bench::{
-    duration_ns, run_human_benchmark_binary, BenchmarkBinaryExecution,
+    build_standard_human_benchmark_report, duration_ns,
+    run_human_benchmark_binary, BenchmarkBinaryExecution,
     BenchmarkBinaryReport, BenchmarkSizeReport, HumanBenchmarkLine,
-    HumanBenchmarkReport, HumanBenchmarkSection,
+    StandardHumanBenchmarkSpec,
 };
 pq_bench::install_system_tracking_allocator!(
     TrackingAllocator,
@@ -66,40 +67,28 @@ fn main() {
                 sign_peak_bytes: Some(sign_peak_mem),
                 verify_peak_bytes: Some(verify_peak_mem),
             },
-            human: HumanBenchmarkReport {
-                heading: format!("Dilithium ({})", scheme.algorithm_name())
-                    .into(),
-                summary_algorithm: scheme.algorithm_name().into(),
-                keygen_duration,
-                sign_duration,
-                verify_duration,
-                sign_detail_lines: vec![HumanBenchmarkLine::bytes(
-                    "Peak memory during signing",
-                    sign_peak_mem,
-                )],
-                verify_detail_lines: vec![HumanBenchmarkLine::bytes(
-                    "Peak memory during verification",
-                    verify_peak_mem,
-                )],
-                verified,
-                size_lines: size_lines.clone(),
-                summary_size_lines: vec![
-                    HumanBenchmarkLine::bytes("Public Key", pk_size),
-                    HumanBenchmarkLine::bytes("Secret Key", sk_size),
-                    HumanBenchmarkLine::bytes("Signature", sig_size),
-                ],
-                summary_sections: vec![HumanBenchmarkSection {
-                    title: "Memory Usage (heap allocations)",
-                    lines: vec![
-                        HumanBenchmarkLine::bytes("Signing", sign_peak_mem),
-                        HumanBenchmarkLine::bytes(
-                            "Verification",
-                            verify_peak_mem,
-                        ),
+            human: build_standard_human_benchmark_report(
+                StandardHumanBenchmarkSpec {
+                    banner_lines: &[],
+                    heading: format!("Dilithium ({})", scheme.algorithm_name())
+                        .into(),
+                    intro_lines: Vec::new(),
+                    summary_algorithm: scheme.algorithm_name().into(),
+                    summary_intro_lines: Vec::new(),
+                    keygen_duration,
+                    sign_duration,
+                    verify_duration,
+                    verified,
+                    size_lines,
+                    summary_size_lines: vec![
+                        HumanBenchmarkLine::bytes("Public Key", pk_size),
+                        HumanBenchmarkLine::bytes("Secret Key", sk_size),
+                        HumanBenchmarkLine::bytes("Signature", sig_size),
                     ],
-                }],
-                ..HumanBenchmarkReport::default()
-            },
+                    sign_peak_bytes: Some(sign_peak_mem),
+                    verify_peak_bytes: Some(verify_peak_mem),
+                },
+            ),
         }
     });
 }
