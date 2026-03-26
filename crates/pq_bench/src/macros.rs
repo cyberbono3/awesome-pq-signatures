@@ -189,6 +189,116 @@ macro_rules! declare_signed_message_divan_bench {
 // Scheme/binary wiring macros
 
 #[macro_export]
+macro_rules! declare_simple_signed_message_scheme {
+    (
+        scheme_type = $scheme_type:ident,
+        scheme_const = $scheme_const:ident,
+        sizes_type = $sizes_type:ident,
+        keypair_type = $keypair_type:ty,
+        signature_type = $signature_type:ty,
+        error_type = $error_type:ty,
+        variant = $variant:expr,
+        keygen = $keygen:expr,
+        sign = $sign:expr,
+        verify = $verify:expr,
+        public_key_size = $public_key_size:expr,
+        secret_key_size = $secret_key_size:expr,
+        signature_size = $signature_size:expr
+    ) => {
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        pub struct $sizes_type {
+            pub public_key: usize,
+            pub secret_key: usize,
+            pub signature: usize,
+        }
+
+        #[derive(Clone, Copy, Debug, Default)]
+        pub struct $scheme_type;
+
+        pub const $scheme_const: $scheme_type = $scheme_type;
+
+        impl $scheme_type {
+            #[must_use]
+            pub fn algorithm_name(&self) -> &'static str {
+                $variant
+            }
+
+            pub fn keypair(&self) -> Result<$keypair_type, $error_type> {
+                ($keygen)()
+            }
+
+            pub fn benchmark_keypair(
+                &self,
+            ) -> Result<$keypair_type, $error_type> {
+                self.keypair()
+            }
+
+            pub fn sign(
+                &self,
+                keypair: &$keypair_type,
+                message: &[u8],
+            ) -> Result<$signature_type, $error_type> {
+                ($sign)(keypair, message)
+            }
+
+            pub fn sign_message(
+                &self,
+                keypair: &$keypair_type,
+                message: &[u8],
+            ) -> Result<$signature_type, $error_type> {
+                self.sign(keypair, message)
+            }
+
+            pub fn verify(
+                &self,
+                keypair: &$keypair_type,
+                message: &[u8],
+                signature: &$signature_type,
+            ) -> Result<bool, $error_type> {
+                ($verify)(keypair, message, signature)
+            }
+
+            pub fn verify_message(
+                &self,
+                keypair: &$keypair_type,
+                message: &[u8],
+                signature: &$signature_type,
+            ) -> Result<bool, $error_type> {
+                self.verify(keypair, message, signature)
+            }
+
+            #[must_use]
+            pub fn public_key_size(&self, keypair: &$keypair_type) -> usize {
+                ($public_key_size)(keypair)
+            }
+
+            #[must_use]
+            pub fn secret_key_size(&self, keypair: &$keypair_type) -> usize {
+                ($secret_key_size)(keypair)
+            }
+
+            #[must_use]
+            pub fn signature_size(&self, signature: &$signature_type) -> usize {
+                ($signature_size)(signature)
+            }
+
+            #[must_use]
+            pub fn sizes(
+                &self,
+                keypair: &$keypair_type,
+                signature: &$signature_type,
+            ) -> $sizes_type {
+                $sizes_type {
+                    public_key: self.public_key_size(keypair),
+                    secret_key: self.secret_key_size(keypair),
+                    signature: self.signature_size(signature),
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! declare_ffi_signed_message_backend {
     (
         native_type = $native_type:ident,
