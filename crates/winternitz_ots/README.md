@@ -14,6 +14,9 @@ One-time hash-based signature with Winternitz chaining.
 - verify timing + peak heap allocation tracking
 - key/signature size reporting
 
+The binary uses the shared `pq_bench` workspace contract and accepts
+`--format human|json --message-size N`.
+
 Run it with:
 
 ```bash
@@ -26,7 +29,7 @@ JSON output:
 cargo run -p winternitz_ots --bin winternitz_ots -- --format json --message-size 64
 ```
 
-Latest run result (captured on 2026-02-19 16:48:55 UTC):
+Representative local run:
 
 ```text
 === Winternitz OTS (W-OTS) Benchmark ===
@@ -64,7 +67,7 @@ Message size: 71 bytes
 - `sign` across multiple message sizes
 - `verify` across multiple message sizes
 
-It also prints key/signature size and peak heap allocation summaries before executing Divan benches.
+It also prints key/signature size and peak heap allocation summaries before executing Divan benches, using the shared `pq_bench` bench helpers.
 
 Run it with:
 
@@ -72,7 +75,7 @@ Run it with:
 cargo bench -p winternitz_ots --bench winternitz_ots_divan --offline
 ```
 
-Latest run result (captured on 2026-02-19 16:48:55 UTC):
+Representative local Divan run:
 
 ```text
 Winternitz OTS (W-OTS) sizes:
@@ -103,4 +106,4 @@ Divan timing summary (median):
   verify(4096): 98.74 us
 ```
 
-Note: benchmark timings and allocation metrics vary by machine, compiler version, and system load.
+Note: timings and allocation figures vary by machine, compiler version, and system load.

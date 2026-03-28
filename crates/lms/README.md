@@ -39,6 +39,9 @@ Notes:
 - verify timing
 - key/signature size and remaining-signature reporting
 
+The binary uses the shared `pq_bench` workspace contract and accepts
+`--format human|json --message-size N`.
+
 Run it with:
 
 ```bash
@@ -64,7 +67,8 @@ Environment overrides:
 - `verify` across message sizes and parameter sets
 
 It also prints key/signature sizes, signed-message size, key lifetime estimate,
-and peak heap usage before running Divan.
+and peak heap usage before running Divan, using shared `pq_bench` bench
+helpers where possible.
 
 Run it with:
 
@@ -72,11 +76,11 @@ Run it with:
 cargo bench -p lms --bench lms_divan
 ```
 
-Observed size output from the latest `lms_divan` run:
+Representative local Divan size output:
 - `LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4`: `pk=56`, `sk=48`, `sig(32B)=2352`, `signed(32B)=2384`, `lifetime=32`
 - `LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4`: `pk=56`, `sk=48`, `sig(32B)=2512`, `signed(32B)=2544`, `lifetime=1024`
 
-Median timings from `cargo bench -p lms --bench lms_divan` on `2026-03-17`:
+Representative local Divan timings:
 - `keygen`
   - `LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4`: `6.683 ms`
   - `LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4`: `211.1 ms`
