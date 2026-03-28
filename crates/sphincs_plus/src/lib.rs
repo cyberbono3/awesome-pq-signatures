@@ -5,63 +5,68 @@ pub use pq_bench::{
 };
 use pqcrypto_sphincsplus::sphincsshake128fsimple;
 use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
+use std::convert::Infallible;
 pq_bench::declare_tracking_allocator!();
 pq_bench::declare_peak_memory_api!();
 
-pub trait SignatureScheme {
-    type PublicKey: PublicKey;
-    type SecretKey: SecretKey;
-    type SignedMessage: SignedMessage;
+pub type SphincsPlusKeyPair = (
+    sphincsshake128fsimple::PublicKey,
+    sphincsshake128fsimple::SecretKey,
+);
 
-    fn algorithm_name(&self) -> &'static str;
-    fn keypair(&self) -> (Self::PublicKey, Self::SecretKey);
-    fn sign(
-        &self,
-        message: &[u8],
-        secret_key: &Self::SecretKey,
-    ) -> Self::SignedMessage;
-    fn open(
-        &self,
-        signed_message: &Self::SignedMessage,
-        public_key: &Self::PublicKey,
-    ) -> Option<Vec<u8>>;
+#[derive(Clone)]
+pub struct SphincsPlusSignature {
+    signed_message: sphincsshake128fsimple::SignedMessage,
+    message_len: usize,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SphincsPlusShake128fSimpleScheme;
-
-pub const SPHINCS_PLUS_SHAKE_128F_SIMPLE: SphincsPlusShake128fSimpleScheme =
-    SphincsPlusShake128fSimpleScheme;
-
-impl SignatureScheme for SphincsPlusShake128fSimpleScheme {
-    type PublicKey = sphincsshake128fsimple::PublicKey;
-    type SecretKey = sphincsshake128fsimple::SecretKey;
-    type SignedMessage = sphincsshake128fsimple::SignedMessage;
-
-    fn algorithm_name(&self) -> &'static str {
-        "SPHINCS+-SHAKE-128f-simple"
+impl SphincsPlusSignature {
+    #[must_use]
+    pub fn signed_message(&self) -> &sphincsshake128fsimple::SignedMessage {
+        &self.signed_message
     }
 
-    fn keypair(&self) -> (Self::PublicKey, Self::SecretKey) {
-        sphincsshake128fsimple::keypair()
+    #[must_use]
+    pub fn signed_message_len(&self) -> usize {
+        self.signed_message.as_bytes().len()
     }
 
-    fn sign(
-        &self,
-        message: &[u8],
-        secret_key: &Self::SecretKey,
-    ) -> Self::SignedMessage {
-        sphincsshake128fsimple::sign(message, secret_key)
-    }
-
-    fn open(
-        &self,
-        signed_message: &Self::SignedMessage,
-        public_key: &Self::PublicKey,
-    ) -> Option<Vec<u8>> {
-        sphincsshake128fsimple::open(signed_message, public_key).ok()
+    #[must_use]
+    pub fn detached_signature_len(&self) -> usize {
+        signature_size(&self.signed_message, self.message_len)
     }
 }
+
+pq_bench::declare_simple_signed_message_scheme!(
+    scheme_type = SphincsPlusShake128fSimpleScheme,
+    scheme_const = SPHINCS_PLUS_SHAKE_128F_SIMPLE,
+    sizes_type = SphincsPlusSizes,
+    keypair_type = SphincsPlusKeyPair,
+    signature_type = SphincsPlusSignature,
+    error_type = Infallible,
+    variant = "SPHINCS+-SHAKE-128f-simple",
+    keygen = || {
+        Ok::<SphincsPlusKeyPair, Infallible>(sphincsshake128fsimple::keypair())
+    },
+    sign = |keypair: &SphincsPlusKeyPair, message: &[u8]| {
+        Ok::<SphincsPlusSignature, Infallible>(SphincsPlusSignature {
+            signed_message: sphincsshake128fsimple::sign(message, &keypair.1),
+            message_len: message.len(),
+        })
+    },
+    verify = |keypair: &SphincsPlusKeyPair,
+              message: &[u8],
+              signature: &SphincsPlusSignature| {
+        Ok::<bool, Infallible>(matches!(
+            sphincsshake128fsimple::open(signature.signed_message(), &keypair.0),
+            Ok(opened) if opened == message
+        ))
+    },
+    public_key_size = |keypair: &SphincsPlusKeyPair| keypair.0.as_bytes().len(),
+    secret_key_size = |keypair: &SphincsPlusKeyPair| keypair.1.as_bytes().len(),
+    signature_size =
+        |signature: &SphincsPlusSignature| signature.detached_signature_len()
+);
 
 pub fn signature_size<S: SignedMessage>(
     signed_message: &S,
@@ -73,7 +78,7 @@ pub fn signature_size<S: SignedMessage>(
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, signature_size, SignatureScheme, BENCH_MESSAGE_BYTE,
+        bench_message, signature_size, BENCH_MESSAGE_BYTE,
         SPHINCS_PLUS_SHAKE_128F_SIMPLE,
     };
 
@@ -108,11 +113,19 @@ mod tests {
     fn sphincs_plus_sign_verify_roundtrip() {
         let scheme = SPHINCS_PLUS_SHAKE_128F_SIMPLE;
         let message = b"sphincs-plus";
-        let (public_key, secret_key) = scheme.keypair();
-        let signed = scheme.sign(message, &secret_key);
-        let opened = scheme
-            .open(&signed, &public_key)
-            .expect("verify should succeed");
-        assert_eq!(opened, message);
+        let keypair = scheme
+            .benchmark_keypair()
+            .expect("keypair generation should succeed");
+        let signature = scheme
+            .sign_message(&keypair, message)
+            .expect("signing should succeed");
+        assert!(scheme
+            .verify_message(&keypair, message, &signature)
+            .expect("verification should succeed"));
+
+        let sizes = scheme.sizes(&keypair, &signature);
+        assert!(sizes.public_key > 0);
+        assert!(sizes.secret_key > 0);
+        assert!(sizes.signature > 0);
     }
 }

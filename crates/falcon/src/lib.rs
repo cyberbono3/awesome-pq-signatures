@@ -1,5 +1,6 @@
 use pqcrypto_falcon::falcon512;
 use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
+use std::convert::Infallible;
 
 pub use pq_bench::{
     bench_message, measure_time, AllocationTracker,
@@ -9,59 +10,59 @@ pub use pq_bench::{
 pq_bench::declare_tracking_allocator!();
 pq_bench::declare_peak_memory_api!();
 
-pub trait SignatureScheme {
-    type PublicKey: PublicKey;
-    type SecretKey: SecretKey;
-    type SignedMessage: SignedMessage;
+pub type FalconKeyPair = (falcon512::PublicKey, falcon512::SecretKey);
 
-    fn algorithm_name(&self) -> &'static str;
-    fn keypair(&self) -> (Self::PublicKey, Self::SecretKey);
-    fn sign(
-        &self,
-        message: &[u8],
-        secret_key: &Self::SecretKey,
-    ) -> Self::SignedMessage;
-    fn open(
-        &self,
-        signed_message: &Self::SignedMessage,
-        public_key: &Self::PublicKey,
-    ) -> Option<Vec<u8>>;
+#[derive(Clone)]
+pub struct FalconSignature {
+    signed_message: falcon512::SignedMessage,
+    message_len: usize,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Falcon512Scheme;
-
-pub const FALCON512: Falcon512Scheme = Falcon512Scheme;
-
-impl SignatureScheme for Falcon512Scheme {
-    type PublicKey = falcon512::PublicKey;
-    type SecretKey = falcon512::SecretKey;
-    type SignedMessage = falcon512::SignedMessage;
-
-    fn algorithm_name(&self) -> &'static str {
-        "Falcon-512"
+impl FalconSignature {
+    #[must_use]
+    pub fn signed_message(&self) -> &falcon512::SignedMessage {
+        &self.signed_message
     }
 
-    fn keypair(&self) -> (Self::PublicKey, Self::SecretKey) {
-        falcon512::keypair()
+    #[must_use]
+    pub fn signed_message_len(&self) -> usize {
+        self.signed_message.as_bytes().len()
     }
 
-    fn sign(
-        &self,
-        message: &[u8],
-        secret_key: &Self::SecretKey,
-    ) -> Self::SignedMessage {
-        falcon512::sign(message, secret_key)
-    }
-
-    fn open(
-        &self,
-        signed_message: &Self::SignedMessage,
-        public_key: &Self::PublicKey,
-    ) -> Option<Vec<u8>> {
-        falcon512::open(signed_message, public_key).ok()
+    #[must_use]
+    pub fn detached_signature_len(&self) -> usize {
+        signature_size(&self.signed_message, self.message_len)
     }
 }
+
+pq_bench::declare_simple_signed_message_scheme!(
+    scheme_type = Falcon512Scheme,
+    scheme_const = FALCON512,
+    sizes_type = FalconSizes,
+    keypair_type = FalconKeyPair,
+    signature_type = FalconSignature,
+    error_type = Infallible,
+    variant = "Falcon-512",
+    keygen = || Ok::<FalconKeyPair, Infallible>(falcon512::keypair()),
+    sign = |keypair: &FalconKeyPair, message: &[u8]| {
+        Ok::<FalconSignature, Infallible>(FalconSignature {
+            signed_message: falcon512::sign(message, &keypair.1),
+            message_len: message.len(),
+        })
+    },
+    verify = |keypair: &FalconKeyPair,
+              message: &[u8],
+              signature: &FalconSignature| {
+        Ok::<bool, Infallible>(matches!(
+            falcon512::open(signature.signed_message(), &keypair.0),
+            Ok(opened) if opened == message
+        ))
+    },
+    public_key_size = |keypair: &FalconKeyPair| keypair.0.as_bytes().len(),
+    secret_key_size = |keypair: &FalconKeyPair| keypair.1.as_bytes().len(),
+    signature_size =
+        |signature: &FalconSignature| signature.detached_signature_len()
+);
 
 pub fn signature_size<S: SignedMessage>(
     signed_message: &S,
@@ -72,7 +73,7 @@ pub fn signature_size<S: SignedMessage>(
 
 #[cfg(test)]
 mod tests {
-    use super::{bench_message, signature_size, BENCH_MESSAGE_BYTE};
+    use super::{bench_message, signature_size, BENCH_MESSAGE_BYTE, FALCON512};
 
     #[test]
     fn bench_message_uses_expected_fill_byte() {
@@ -99,5 +100,26 @@ mod tests {
         let signed = FakeSigned(vec![0_u8; 42]);
         assert_eq!(signature_size(&signed, 10), 32);
         assert_eq!(signature_size(&signed, 100), 0);
+    }
+
+    #[test]
+    fn falcon_sign_verify_roundtrip() {
+        let scheme = FALCON512;
+        let message = b"falcon";
+        let keypair = scheme
+            .benchmark_keypair()
+            .expect("keypair generation should succeed");
+        let signature = scheme
+            .sign_message(&keypair, message)
+            .expect("signing should succeed");
+
+        assert!(scheme
+            .verify_message(&keypair, message, &signature)
+            .expect("verification should succeed"));
+
+        let sizes = scheme.sizes(&keypair, &signature);
+        assert!(sizes.public_key > 0);
+        assert!(sizes.secret_key > 0);
+        assert!(sizes.signature > 0);
     }
 }
