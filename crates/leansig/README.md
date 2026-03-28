@@ -15,6 +15,10 @@ Poseidon2-based XMSS signature scheme with Target Sum encoding, from the [leanSi
 - verify timing
 - key/signature size reporting (SSZ serialized)
 
+The binary uses the shared `pq_bench` workspace contract and accepts
+`--format human|json --message-size N`. In the aggregated runner it is executed
+as a subprocess and returns JSON back to `bench_runner`.
+
 Run it with:
 
 ```bash
