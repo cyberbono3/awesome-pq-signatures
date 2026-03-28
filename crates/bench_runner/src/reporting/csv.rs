@@ -48,3 +48,52 @@ impl CsvReporter {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::{BenchResult, SizeMetrics};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_csv_path() -> std::path::PathBuf {
+        std::env::temp_dir().join(format!(
+            "bench_runner_csv_{}_{}.csv",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system time should be after epoch")
+                .as_nanos()
+        ))
+    }
+
+    #[test]
+    fn csv_reporter_writes_header_and_result_rows() {
+        let path = temp_csv_path();
+        let mut reporter =
+            CsvReporter::new(&path).expect("csv reporter should initialize");
+
+        reporter
+            .write_result(&BenchResult {
+                algorithm: "Mock".to_string(),
+                param_set: "Mock-1".to_string(),
+                keygen_median_ns: 10,
+                sign_median_ns: 20,
+                verify_median_ns: 30,
+                sizes: SizeMetrics::new(40, 50, 60),
+            })
+            .expect("csv row should be written");
+
+        let contents = std::fs::read_to_string(&path)
+            .expect("csv file should be readable");
+
+        assert_eq!(
+            contents,
+            concat!(
+                "algorithm,param_set,keygen_median_ns,sign_median_ns,verify_median_ns,public_key_bytes,secret_key_bytes,signature_bytes\n",
+                "Mock,Mock-1,10,20,30,40,50,60\n"
+            )
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+}

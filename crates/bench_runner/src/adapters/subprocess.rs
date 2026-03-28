@@ -71,3 +71,90 @@ pub fn build_binary_adapter(
         message_size: context.message_size,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[cfg(unix)]
+    fn write_mock_executable(body: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "bench_runner_mock_{}_{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system time should be after epoch")
+                .as_nanos()
+        ));
+
+        let script = format!("#!/bin/sh\n{body}\n");
+        std::fs::write(&path, script)
+            .expect("mock executable should be written");
+
+        let mut permissions = std::fs::metadata(&path)
+            .expect("mock executable metadata should be readable")
+            .permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(&path, permissions)
+            .expect("mock executable should be made executable");
+
+        path
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn subprocess_adapter_parses_benchmark_json() {
+        let executable = write_mock_executable(
+            r#"printf '%s' '{"algorithm":"Mock","param_set":"Mock-1","keygen_ns":11,"sign_ns":22,"verify_ns":33,"verified":true,"sizes":{"public_key_bytes":44,"secret_key_bytes":55,"signature_bytes":66,"signed_message_bytes":77},"sign_peak_bytes":88,"verify_peak_bytes":99}'"#,
+        );
+
+        let adapter = SubprocessAdapter {
+            algorithm: "Mock",
+            param_set: "Mock-1",
+            executable: executable.clone(),
+            message_size: 64,
+        };
+
+        let run = adapter
+            .run_once(b"ignored-by-subprocess")
+            .expect("subprocess benchmark should succeed");
+
+        assert_eq!(
+            run,
+            BenchRun {
+                keygen_ns: 11,
+                sign_ns: 22,
+                verify_ns: 33,
+                sizes: crate::types::SizeMetrics::new(44, 55, 66),
+            }
+        );
+
+        let _ = std::fs::remove_file(executable);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn subprocess_adapter_reports_invalid_json() {
+        let executable = write_mock_executable("printf '%s' 'not-json'");
+
+        let adapter = SubprocessAdapter {
+            algorithm: "Mock",
+            param_set: "Mock-1",
+            executable: executable.clone(),
+            message_size: 64,
+        };
+
+        let err = adapter
+            .run_once(b"ignored-by-subprocess")
+            .expect_err("invalid JSON should fail");
+
+        assert!(err.contains("invalid benchmark JSON"));
+
+        let _ = std::fs::remove_file(executable);
+    }
+}
