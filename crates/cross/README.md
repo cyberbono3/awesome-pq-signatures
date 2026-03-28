@@ -48,6 +48,7 @@ Important local choices:
 - the wrapper exposes the NIST-style byte API and maps it into Rust `CrossKeyPair` and `CrossSignature` types
 - benchmark runs use deterministic RNG seeding inside the wrapper so repeated runs are reproducible
 - signing and verification are serialized behind a mutex because the vendored C code uses shared RNG state through the shim
+- the crate now uses shared `pq_bench` scaffolding for the FFI backend wrapper, standard signed-message scheme API, benchmark binary entrypoint, and Divan benchmark shape
 
 That makes the crate suitable for benchmarking and comparative inspection, but it is not yet a polished general-purpose Rust CROSS library API.
 
@@ -58,6 +59,8 @@ That makes the crate suitable for benchmarking and comparative inspection, but i
 - sign timing + peak heap allocation tracking
 - verify timing + peak heap allocation tracking
 - key/signature size reporting
+
+The binary is wired through the shared `pq_bench` signed-message runner rather than a crate-local reporting implementation.
 
 Run it with:
 
@@ -91,7 +94,7 @@ Signature:      22464 bytes
 - `sign` across multiple message sizes
 - `verify` across multiple message sizes
 
-It also prints key/signature size and peak heap allocation summaries before executing Divan benches.
+It also prints key/signature size and peak heap allocation summaries before executing Divan benches, using the shared `pq_bench` Divan benchmark scaffolding.
 
 Run it with:
 

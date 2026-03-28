@@ -10,6 +10,16 @@ Rust: [sqisign-lvl1](https://crates.io/crates/sqisign-lvl1)
 | --- | --- | --- | --- | --- |
 | `sqisign-lvl1` | NIST Level 1 (AES-128) | 65 bytes | 353 bytes | 148 bytes |
 
+## Implementation Notes
+
+This crate does not implement SQISign from scratch. It wraps the `sqisign-lvl1` Rust crate behind the common workspace signed-message scheme shape used by the benchmark tooling.
+
+Important local choices:
+- the wrapper exposes a small `SqisignScheme` API so the crate matches the same benchmark-facing shape as the other signed-message crates
+- the benchmark binary uses the shared `pq_bench` signed-message runner and JSON contract
+- the Divan benchmark suite uses the shared `pq_bench` signed-message bench scaffolding
+- peak heap tracking is provided through the shared `pq_bench` allocation helpers
+
 ## `src/main.rs` (`sqisign` binary)
 
 `src/main.rs` is the standard workspace benchmark binary for SQISign. It performs:
@@ -17,6 +27,8 @@ Rust: [sqisign-lvl1](https://crates.io/crates/sqisign-lvl1)
 - sign timing + peak heap allocation tracking
 - verify timing + peak heap allocation tracking
 - key/signature size reporting
+
+The binary is wired through the shared `pq_bench` signed-message runner rather than a crate-local reporting implementation.
 
 Run it with:
 
@@ -30,31 +42,17 @@ JSON output:
 cargo run -p sqisign --bin sqisign -- --format json --message-size 64
 ```
 
-Latest run result (captured on 2026-03-15 12:00:00 UTC):
+Representative local run:
 
 ```text
 === SQISign (SQISign) Benchmark ===
 
---- Key Generation ---
-Time to generate keys: 0ns
-Time to generate keys (ns): 0
-
---- Signing ---
-Time to sign: 83ns
-Time to sign (ns): 83
-Peak memory during signing: 0 bytes
-
---- Verification ---
-Time to verify: 0ns
-Time to verify (ns): 0
-Peak memory during verification: 0 bytes
-Signature verification: SUCCESS
-
---- Size Measurements ---
-Public key size: 64 bytes
-Secret key size: 64 bytes
-Signature size: 128 bytes
-Signed message size: 192 bytes
+Key generation: 21.98 ms
+Signing:        58.18 ms
+Verification:   3.0589 ms
+Public key:     65 bytes
+Secret key:     353 bytes
+Signature:      148 bytes
 ```
 
 ## `benches/sqisign_divan.rs` (Divan benchmark suite)
@@ -64,7 +62,7 @@ Signed message size: 192 bytes
 - `sign` across multiple message sizes
 - `verify` across multiple message sizes
 
-It also prints key/signature size and peak heap allocation summaries before executing Divan benches.
+It also prints key/signature size and peak heap allocation summaries before executing Divan benches, using the shared `pq_bench` Divan benchmark scaffolding.
 
 Run it with:
 
