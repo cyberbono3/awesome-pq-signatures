@@ -14,6 +14,9 @@ Lattice-based signature scheme with small signatures.
 - verify timing + peak heap allocation tracking
 - key/signature size reporting
 
+The binary uses the shared `pq_bench` workspace contract and accepts
+`--format human|json --message-size N`.
+
 Run it with:
 
 ```bash
@@ -26,31 +29,17 @@ JSON output:
 cargo run -p falcon --bin falcon-bench -- --format json --message-size 64
 ```
 
-Latest run result (captured on 2026-02-18 17:34:51 UTC):
+Representative local run:
 
 ```text
 === Falcon-512 Benchmark ===
 
---- Key Generation ---
-Time to generate keys: 21.445666ms
-Time to generate keys (ns): 21445666
-
---- Signing ---
-Time to sign: 1.45825ms
-Time to sign (ns): 1458250
-Peak memory during signing: 815 bytes
-
---- Verification ---
-Time to verify: 85.5us
-Time to verify (ns): 85500
-Peak memory during verification: 722 bytes
-Signature verification: SUCCESS
-
---- Size Measurements ---
-Public key size: 897 bytes
-Secret key size: 1281 bytes
-Signature size: 659 bytes
-Signed message size: 722 bytes
+Key generation: 21.445666 ms
+Signing:        1.45825 ms
+Verification:   85.5 us
+Public key:     897 bytes
+Secret key:     1281 bytes
+Signature:      659 bytes
 ```
 
 ## `benches/falcon_divan.rs` (Divan benchmark suite)
@@ -60,7 +49,7 @@ Signed message size: 722 bytes
 - `sign` across multiple message sizes
 - `verify` across multiple message sizes
 
-It also prints key/signature size and peak heap allocation summaries before executing Divan benches.
+It also prints key/signature size and peak heap allocation summaries before executing Divan benches, using the shared `pq_bench` bench helpers.
 
 Run it with:
 
@@ -68,7 +57,7 @@ Run it with:
 cargo bench -p falcon --bench falcon_divan
 ```
 
-Latest run result (captured on 2026-02-18 17:34:51 UTC):
+Representative local Divan run:
 
 ```text
 Falcon-512 sizes:
@@ -97,16 +86,4 @@ Divan timing summary (median):
   verify(4096): 37.24 us
 ```
 
-Note: benchmark timings and allocation metrics vary by machine, compiler version, and system load.
-
-## Benchmark Environment
-
-The benchmark results above were recorded on:
-
-- machine: MacBook Pro (`MacBookPro18,1`)
-- chip: Apple M1 Pro (10 cores: 8 performance + 2 efficiency)
-- memory: 16 GB
-- OS: macOS 26.1 (`25B78`)
-- kernel/arch: Darwin 25.1.0, `arm64`
-- rust toolchain: `rustc 1.87.0-nightly (f4a216d28 2025-03-02)`
-- cargo: `cargo 1.87.0-nightly (2622e844b 2025-02-28)`
+Note: timings and allocation figures vary by machine, compiler version, and system load.
