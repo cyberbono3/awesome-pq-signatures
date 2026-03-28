@@ -1,5 +1,14 @@
+//! Workspace macros for recurring benchmark crate patterns.
+//!
+//! These macros are intentionally narrow. They exist for repeated structural
+//! boilerplate such as allocator installation, standard signed-message scheme
+//! wrappers, and Divan benchmark entrypoint wiring. When behavior differs in a
+//! meaningful way, prefer normal functions over adding another macro layer.
+
 // Allocation macros
 
+/// Declares the allocation tracker and allocator alias used by benchmark
+/// binaries and benches that measure peak heap usage.
 #[macro_export]
 macro_rules! declare_tracking_allocator {
     () => {
@@ -9,6 +18,8 @@ macro_rules! declare_tracking_allocator {
     };
 }
 
+/// Declares a small `memory` module exposing peak-memory helpers backed by the
+/// crate-local `ALLOCATION_TRACKER`.
 #[macro_export]
 macro_rules! declare_peak_memory_api {
     () => {
@@ -24,6 +35,8 @@ macro_rules! declare_peak_memory_api {
     };
 }
 
+/// Installs the tracking allocator over `std::alloc::System` for normal
+/// binaries and tests.
 #[macro_export]
 macro_rules! install_system_tracking_allocator {
     ($tracking_allocator:ident, $tracker:ident) => {
@@ -35,6 +48,8 @@ macro_rules! install_system_tracking_allocator {
     };
 }
 
+/// Installs the tracking allocator over Divan's allocation profiler for bench
+/// targets.
 #[macro_export]
 macro_rules! install_divan_tracking_allocator {
     ($tracking_allocator:ident, $tracker:ident) => {
@@ -49,6 +64,8 @@ macro_rules! install_divan_tracking_allocator {
 
 // Benchmark declaration macros
 
+/// Generates `sign_*` and `verify_*` Divan bench entrypoints for parameterized
+/// message-size benchmark helpers that already exist in the crate.
 #[macro_export]
 macro_rules! declare_param_message_benches {
     (
@@ -71,6 +88,8 @@ macro_rules! declare_param_message_benches {
     };
 }
 
+/// Generates the standard signed-message Divan benchmark shape used by the FFI
+/// and wrapper crates.
 #[macro_export]
 macro_rules! declare_signed_message_divan_bench {
     (
@@ -188,6 +207,8 @@ macro_rules! declare_signed_message_divan_bench {
 
 // Scheme/binary wiring macros
 
+/// Generates a small scheme wrapper for implementations that already expose
+/// normal Rust keygen/sign/verify operations and size accessors.
 #[macro_export]
 macro_rules! declare_simple_signed_message_scheme {
     (
@@ -298,6 +319,8 @@ macro_rules! declare_simple_signed_message_scheme {
     };
 }
 
+/// Generates the repeated native-backend shim that exposes byte dimensions and
+/// deterministic RNG initialization for FFI-backed signed-message schemes.
 #[macro_export]
 macro_rules! declare_ffi_signed_message_backend {
     (
@@ -336,6 +359,8 @@ macro_rules! declare_ffi_signed_message_backend {
     };
 }
 
+/// Generates the standard FFI-backed signed-message scheme wrapper used by
+/// crates like `cross` and `less`.
 #[macro_export]
 macro_rules! declare_ffi_signed_message_scheme {
     (
@@ -594,6 +619,8 @@ macro_rules! declare_ffi_signed_message_scheme {
     };
 }
 
+/// Generates the standard standalone benchmark-binary `main` body for
+/// signed-message schemes that already expose the common scheme API.
 #[macro_export]
 macro_rules! run_standard_signed_message_scheme_main {
     (

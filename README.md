@@ -46,6 +46,18 @@ Notes:
 - `LMS` and `HSS` still honor `PARAM_SET` for selecting a non-default parameter set.
 - Some crates are materially slower than others. `XMSS`, `XMSS^MT`, and `LeanSig` can take much longer to complete a single benchmark run.
 
+## Shared crate patterns
+
+`pq_bench` is now the shared support layer for benchmark-facing crate structure. New crates should prefer these patterns instead of open-coding benchmark glue:
+
+- Use normal functions first. The exported macros are intentionally narrow and are only for repeated structural boilerplate.
+- Use the shared binary contract for standalone benchmark executables: parse `--format human|json --message-size N`, build a `BenchmarkBinaryReport`, and emit either human or JSON output through `pq_bench`.
+- Use `declare_simple_signed_message_scheme!` for wrappers around native Rust keygen/sign/verify implementations that already expose normal Rust types.
+- Use `declare_ffi_signed_message_backend!` plus `declare_ffi_signed_message_scheme!` for FFI-backed signed-message crates that need deterministic RNG setup, byte-dimension discovery, and the standard scheme wrapper API.
+- Use `run_standard_signed_message_scheme_main!` for standalone signed-message benchmark binaries once a crate exposes the common scheme API.
+- Use `declare_signed_message_divan_bench!` for the standard Divan bench shape when a crate follows the common signed-message scheme API.
+- Use `build_support/native_cc.rs` for native `cc::Build` setup when a crate vendors C code and only differs by source lists, defines, flags, and output name.
+
 ## Workspace runner
 
 Use the aggregated runner to benchmark multiple schemes and write a CSV summary:
