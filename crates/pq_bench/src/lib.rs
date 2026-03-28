@@ -37,8 +37,9 @@ pub use {
     config::{BenchmarkBinaryConfig, BenchmarkOutputFormat},
     message::{
         bench_message, benchmark_message, benchmark_seed_array,
-        benchmark_seed_u64, signed_message_size, BENCHMARK_SEED_U64,
-        BENCH_MESSAGE, BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
+        benchmark_seed_u64, expand_seed_u64, signed_message_size,
+        BENCHMARK_SEED_U64, BENCH_MESSAGE, BENCH_MESSAGE_BYTE,
+        BENCH_MESSAGE_SIZES,
     },
     reporting::{
         build_standard_binary_report, build_standard_human_benchmark_report,
@@ -87,6 +88,12 @@ mod tests {
     fn benchmark_seed_array_is_deterministic() {
         assert_eq!(benchmark_seed_array::<8>(), benchmark_seed_array::<8>());
         assert_ne!(benchmark_seed_array::<8>(), [0u8; 8]);
+    }
+
+    #[test]
+    fn expand_seed_u64_is_deterministic() {
+        assert_eq!(expand_seed_u64::<16>(7), expand_seed_u64::<16>(7));
+        assert_ne!(expand_seed_u64::<16>(7), expand_seed_u64::<16>(8));
     }
 
     #[test]

@@ -25,7 +25,11 @@ pub fn benchmark_seed_u64() -> u64 {
 }
 
 pub fn benchmark_seed_array<const N: usize>() -> [u8; N] {
-    let mut state = BENCHMARK_SEED_U64;
+    expand_seed_u64(BENCHMARK_SEED_U64)
+}
+
+pub fn expand_seed_u64<const N: usize>(seed_value: u64) -> [u8; N] {
+    let mut state = seed_value;
     let mut output = [0u8; N];
     let mut offset = 0;
 

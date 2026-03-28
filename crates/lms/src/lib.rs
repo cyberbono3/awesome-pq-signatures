@@ -9,9 +9,9 @@ use std::error::Error;
 use std::fmt;
 
 pub use pq_bench::{
-    bench_message, benchmark_seed_u64, measure_time, signed_message_size,
-    AllocationTracker, AllocationTrackingAllocator, BENCH_MESSAGE,
-    BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
+    bench_message, benchmark_seed_u64, expand_seed_u64, measure_time,
+    signed_message_size, AllocationTracker, AllocationTrackingAllocator,
+    BENCH_MESSAGE, BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
 };
 pub const DEFAULT_PARAM_SET_NAME: &str =
     "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4";
@@ -189,7 +189,7 @@ impl LmsScheme {
     ) -> Result<(LmsPublicKey, LmsSecretKey), LmsError> {
         let mut seed = Seed::<Hasher>::default();
         seed.as_mut_slice()
-            .copy_from_slice(&seed_material_from_u64(seed_value));
+            .copy_from_slice(&expand_seed_u64::<32>(seed_value));
 
         let (secret_key, public_key) =
             keygen::<Hasher>(&self.params.parameters(), &seed, None)
@@ -336,45 +336,6 @@ impl Error for LmsError {}
 
 pub fn default_seed() -> u64 {
     benchmark_seed_u64()
-}
-
-fn seed_material_from_u64(seed_value: u64) -> [u8; 32] {
-    let mut rng = XorShift64::new(seed_value);
-    let mut out = [0u8; 32];
-
-    let mut offset = 0;
-    while offset < out.len() {
-        let chunk = rng.next_u64().to_le_bytes();
-        let take = (out.len() - offset).min(chunk.len());
-        out[offset..offset + take].copy_from_slice(&chunk[..take]);
-        offset += take;
-    }
-    out
-}
-
-#[derive(Clone, Copy, Debug)]
-struct XorShift64 {
-    state: u64,
-}
-
-impl XorShift64 {
-    fn new(seed: u64) -> Self {
-        let state = if seed == 0 {
-            0x9e37_79b9_7f4a_7c15
-        } else {
-            seed
-        };
-        Self { state }
-    }
-
-    fn next_u64(&mut self) -> u64 {
-        let mut x = self.state;
-        x ^= x << 13;
-        x ^= x >> 7;
-        x ^= x << 17;
-        self.state = x;
-        x
-    }
 }
 
 pq_bench::declare_peak_memory_api!();
