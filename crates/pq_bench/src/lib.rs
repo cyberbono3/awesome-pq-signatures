@@ -29,10 +29,12 @@ pub use {
     },
     binary::{
         build_standard_benchmark_execution,
+        build_standard_stateful_benchmark_execution,
         parse_benchmark_binary_config_or_exit, run_human_benchmark_binary,
         run_standard_signed_message_benchmark_binary, BenchmarkBinaryExecution,
         StandardBenchmarkExecutionSpec, StandardBenchmarkSizes,
         StandardSignedMessageBinaryLabels,
+        StandardStatefulBenchmarkExecutionSpec,
     },
     config::{BenchmarkBinaryConfig, BenchmarkOutputFormat},
     message::{
@@ -42,12 +44,15 @@ pub use {
         BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
     },
     reporting::{
-        build_standard_binary_report, build_standard_human_benchmark_report,
-        emit_benchmark_report, emit_standard_benchmark_report,
-        print_human_benchmark_report, BenchmarkBinaryReport,
+        build_param_set_benchmark_report, build_standard_binary_report,
+        build_standard_human_benchmark_report, emit_benchmark_report,
+        emit_standard_benchmark_report, print_human_benchmark_report,
+        run_stateful_param_set_benchmark_report, BenchmarkBinaryReport,
         BenchmarkSizeReport, HumanBenchmarkLine, HumanBenchmarkReport,
-        HumanBenchmarkSection, StandardBenchmarkHumanReport,
-        StandardBinaryBenchmarkSpec, StandardHumanBenchmarkSpec,
+        HumanBenchmarkSection, ParamSetBenchmarkReport,
+        ParamSetBenchmarkReportSpec, SignatureMaterialSizes,
+        StandardBenchmarkHumanReport, StandardBinaryBenchmarkSpec,
+        StandardHumanBenchmarkSpec,
     },
     timing::{
         duration_ns, format_ns, measure_time, median, parse_bool_env,

@@ -34,14 +34,14 @@ benchmark_adapter!(
     algorithm = "ML-DSA-65 (Dilithium)",
     param_set = "ML-DSA-65",
     run_once = |message| {
-        use dilithium::{default_seed, SignatureScheme as _, ML_DSA_65};
+        use dilithium::{default_seed, ML_DSA_65};
 
         let seed = default_seed();
         Ok(measure_benchmark_flow(
             || ML_DSA_65.keypair(&seed),
             |keypair| ML_DSA_65.sign(keypair, message, &[]).expect("sign"),
             |keypair, signature| {
-                ML_DSA_65.verify(keypair, message, &[], signature);
+                let _ = ML_DSA_65.verify(keypair, message, &[], signature);
             },
             |keypair, signature| {
                 SizeMetrics::new(
@@ -59,20 +59,22 @@ benchmark_adapter!(
     algorithm = "Falcon-512",
     param_set = "Falcon-512",
     run_once = |message| {
-        use falcon::{signature_size, SignatureScheme as _, FALCON512};
-        use pqcrypto_traits::sign::{PublicKey, SecretKey};
+        use falcon::FALCON512;
 
         Ok(measure_benchmark_flow(
-            || FALCON512.keypair(),
-            |(_, secret_key)| FALCON512.sign(message, secret_key),
-            |(public_key, _), signed_message| {
-                FALCON512.open(signed_message, public_key);
+            || FALCON512.benchmark_keypair().expect("kg"),
+            |keypair| FALCON512.sign_message(keypair, message).expect("sign"),
+            |keypair, signature| {
+                FALCON512
+                    .verify_message(keypair, message, signature)
+                    .expect("verify");
             },
-            |(public_key, secret_key), signed_message| {
+            |keypair, signature| {
+                let sizes = FALCON512.sizes(keypair, signature);
                 SizeMetrics::new(
-                    public_key.as_bytes().len(),
-                    secret_key.as_bytes().len(),
-                    signature_size(signed_message, message.len()),
+                    sizes.public_key,
+                    sizes.secret_key,
+                    sizes.signature,
                 )
             },
         ))
@@ -84,25 +86,31 @@ benchmark_adapter!(
     algorithm = "SPHINCS+-SHAKE-128f",
     param_set = "SPHINCS+-SHAKE-128f-simple",
     run_once = |message| {
-        use pqcrypto_traits::sign::{PublicKey, SecretKey};
-        use sphincs_plus::{
-            signature_size, SignatureScheme as _,
-            SPHINCS_PLUS_SHAKE_128F_SIMPLE,
-        };
+        use sphincs_plus::SPHINCS_PLUS_SHAKE_128F_SIMPLE;
 
         Ok(measure_benchmark_flow(
-            || SPHINCS_PLUS_SHAKE_128F_SIMPLE.keypair(),
-            |(_, secret_key)| {
-                SPHINCS_PLUS_SHAKE_128F_SIMPLE.sign(message, secret_key)
+            || {
+                SPHINCS_PLUS_SHAKE_128F_SIMPLE
+                    .benchmark_keypair()
+                    .expect("kg")
             },
-            |(public_key, _), signed_message| {
-                SPHINCS_PLUS_SHAKE_128F_SIMPLE.open(signed_message, public_key);
+            |keypair| {
+                SPHINCS_PLUS_SHAKE_128F_SIMPLE
+                    .sign_message(keypair, message)
+                    .expect("sign")
             },
-            |(public_key, secret_key), signed_message| {
+            |keypair, signature| {
+                SPHINCS_PLUS_SHAKE_128F_SIMPLE
+                    .verify_message(keypair, message, signature)
+                    .expect("verify");
+            },
+            |keypair, signature| {
+                let sizes =
+                    SPHINCS_PLUS_SHAKE_128F_SIMPLE.sizes(keypair, signature);
                 SizeMetrics::new(
-                    public_key.as_bytes().len(),
-                    secret_key.as_bytes().len(),
-                    signature_size(signed_message, message.len()),
+                    sizes.public_key,
+                    sizes.secret_key,
+                    sizes.signature,
                 )
             },
         ))

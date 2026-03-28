@@ -13,6 +13,7 @@ pub use pq_bench::{
     signed_message_size, AllocationTracker, AllocationTrackingAllocator,
     BENCH_MESSAGE, BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
 };
+pub type LmsSizes = pq_bench::SignatureMaterialSizes;
 pub const DEFAULT_PARAM_SET_NAME: &str =
     "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4";
 pq_bench::declare_tracking_allocator!();
@@ -122,13 +123,6 @@ impl LmsSignature {
     pub fn param_set(&self) -> LmsParamSet {
         self.params
     }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LmsSizes {
-    pub public_key_bytes: usize,
-    pub secret_key_bytes: usize,
-    pub signature_bytes: usize,
 }
 
 #[derive(Clone, Copy, Debug)]

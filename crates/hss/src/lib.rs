@@ -11,6 +11,7 @@ pub use pq_bench::{
     signed_message_size, AllocationTracker, AllocationTrackingAllocator,
     BENCH_MESSAGE, BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
 };
+pub type HssSizes = pq_bench::SignatureMaterialSizes;
 pub const DEFAULT_PARAM_SET_NAME: &str = "HSS-SHA256-H5-W2-L1";
 pq_bench::declare_tracking_allocator!();
 
@@ -98,13 +99,6 @@ impl HssSignature {
     pub fn byte_len(&self) -> usize {
         self.inner.as_ref().len()
     }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct HssSizes {
-    pub public_key_bytes: usize,
-    pub secret_key_bytes: usize,
-    pub signature_bytes: usize,
 }
 
 #[derive(Clone, Copy, Debug)]

@@ -3,8 +3,8 @@ use lms::{
     DEFAULT_PARAM_SET_NAME,
 };
 use pq_bench::{
-    build_standard_benchmark_execution, run_human_benchmark_binary,
-    HumanBenchmarkLine, StandardBenchmarkExecutionSpec,
+    build_standard_stateful_benchmark_execution, run_human_benchmark_binary,
+    HumanBenchmarkLine, StandardStatefulBenchmarkExecutionSpec,
 };
 use std::env;
 
@@ -40,55 +40,43 @@ fn main() {
             .remaining_signatures(&secret_key)
             .expect("LMS key state should be readable");
 
-        build_standard_benchmark_execution(StandardBenchmarkExecutionSpec {
-            banner_lines: &[],
-            heading: format!("LMS ({})", scheme.param_set_name()).into(),
-            intro_lines: vec![
-                HumanBenchmarkLine::new("Backend", scheme.backend_name()),
-                HumanBenchmarkLine::new(
-                    "Tree height",
-                    scheme.tree_height().to_string(),
-                ),
-            ],
-            algorithm: scheme.algorithm_name(),
-            backend: Some(scheme.backend_name()),
-            param_set: Some(scheme.param_set_name()),
-            summary_algorithm: scheme.algorithm_name().into(),
-            summary_intro_lines: vec![HumanBenchmarkLine::new(
-                "Param set",
-                scheme.param_set_name(),
-            )],
-            keygen_duration,
-            sign_duration,
-            verify_duration,
-            verified,
-            public_key_bytes: pk_size,
-            secret_key_bytes: sk_size,
-            signature_bytes: sig_size,
-            signed_message_bytes: Some(signed_message_size(
-                message.len(),
-                sig_size,
-            )),
-            size_lines: vec![
-                HumanBenchmarkLine::bytes("Public key size", pk_size),
-                HumanBenchmarkLine::bytes("Secret key size", sk_size),
-                HumanBenchmarkLine::bytes("Signature size", sig_size),
-                HumanBenchmarkLine::bytes(
-                    "Signed message size",
-                    signed_message_size(message.len(), sig_size),
-                ),
-                HumanBenchmarkLine::new(
+        build_standard_stateful_benchmark_execution(
+            StandardStatefulBenchmarkExecutionSpec {
+                banner_lines: &[],
+                heading: format!("LMS ({})", scheme.param_set_name()).into(),
+                intro_lines: vec![
+                    HumanBenchmarkLine::new("Backend", scheme.backend_name()),
+                    HumanBenchmarkLine::new(
+                        "Tree height",
+                        scheme.tree_height().to_string(),
+                    ),
+                ],
+                algorithm: scheme.algorithm_name(),
+                backend: Some(scheme.backend_name()),
+                param_set: Some(scheme.param_set_name()),
+                summary_algorithm: scheme.algorithm_name().into(),
+                summary_intro_lines: vec![HumanBenchmarkLine::new(
+                    "Param set",
+                    scheme.param_set_name(),
+                )],
+                keygen_duration,
+                sign_duration,
+                verify_duration,
+                verified,
+                sizes: pq_bench::SignatureMaterialSizes {
+                    public_key_bytes: pk_size,
+                    secret_key_bytes: sk_size,
+                    signature_bytes: sig_size,
+                },
+                signed_message_bytes: Some(signed_message_size(
+                    message.len(),
+                    sig_size,
+                )),
+                extra_size_lines: vec![HumanBenchmarkLine::new(
                     "Estimated signatures remaining",
                     remaining_signatures.to_string(),
-                ),
-            ],
-            summary_size_lines: vec![
-                HumanBenchmarkLine::bytes("Public Key", pk_size),
-                HumanBenchmarkLine::bytes("Secret Key", sk_size),
-                HumanBenchmarkLine::bytes("Signature", sig_size),
-            ],
-            sign_peak_bytes: None,
-            verify_peak_bytes: None,
-        })
+                )],
+            },
+        )
     });
 }

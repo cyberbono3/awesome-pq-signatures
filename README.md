@@ -1,6 +1,6 @@
 # Comparing & Benchmarking Post Quantum Digital Security Schemes
 
-Benchmarking post-quantum signature schemes (Falcon-512, Dilithium, SPHINCS+ and more) with real performance numbers, sizes, security assumptions, implementation risks, and zkVM verification overhead to guide production-ready choices.
+Benchmarking post-quantum signature schemes (Falcon-512, Dilithium, SPHINCS+ and more) with real performance numbers, sizes, security assumptions, implementation risks to guide production-ready choices.
 
 ## Workspace schemes
 
@@ -35,10 +35,10 @@ The `human` format keeps each crate's readable benchmark summary. The `json` for
 Representative examples:
 
 ```bash
-cargo run -p dilithium --bin dilithium -- --format json --message-size 64
+cargo run -p dilithium --bin dilithium -- --format json
 cargo run -p hss --bin hss -- --format human --message-size 256
-cargo run -p lamport_ots --bin lamport_ots -- --format json --message-size 64
-cargo run -p leansig-bench --bin leansig -- --format json --message-size 64
+cargo run -p lamport_ots --bin lamport_ots -- --format json
+cargo run -p leansig-bench --bin leansig -- --format json
 ```
 
 Notes:
@@ -52,17 +52,17 @@ This is the implementation architecture of each workspace crate, not the cryptog
 
 | Crate | Architecture |
 |---|---|
-| `pq_bench` | Shared support crate. Owns the canonical benchmark message/seed config, JSON and human report types, binary CLI parsing, allocation tracking, timing helpers, FFI signed-message helpers, and the narrow workspace macros used by other crates. |
+| `pq_bench` | Shared support crate. Owns the canonical benchmark message/seed config, shared size/report value objects, JSON and human report types, binary CLI parsing, allocation tracking, timing helpers, stateful benchmark-report helpers, FFI signed-message helpers, and the narrow workspace macros used by other crates. |
 | `bench_runner` | Workspace orchestrator. Structured as CLI parsing, registry/spec selection, pure and subprocess adapters, app orchestration, and CSV/display reporting. Runs some schemes in-process and others as JSON-speaking subprocesses. |
-| `dilithium` | Pure Rust wrapper over `ml-dsa`, with a small `SignatureScheme` trait, deterministic seeded key generation, allocator tracking, and the shared benchmark binary/Divan surfaces. |
-| `falcon` | Pure Rust wrapper over `pqcrypto-falcon`’s signed-message API, exposed through a minimal local trait plus shared benchmark/reporting glue. |
+| `dilithium` | Pure Rust wrapper over `ml-dsa`, with deterministic seeded key generation, allocator tracking, and the shared benchmark binary/Divan surfaces. |
+| `falcon` | Pure Rust wrapper over `pqcrypto-falcon`’s signed-message API, exposed through the shared `pq_bench` signed-message scheme surface and shared benchmark/reporting glue. |
 | `lamport_ots` | Custom pure Rust implementation using `sha2`, with explicit public/secret/signature types, one-time key semantics, a standard benchmark binary, and a separate direct operation benchmark binary. |
 | `winternitz_ots` | Pure Rust wrapper around `winternitz-ots`, with Blake2b message-digest preprocessing, local size helpers, allocator tracking, and the shared benchmark/reporting contract. |
 | `lms` | Pure Rust benchmark wrapper over `hbs-lms`, with explicit parameter-set enums, stateful key wrappers, derived size logic, and benchmark-facing APIs for stateful signing. |
 | `hss` | Pure Rust benchmark wrapper over `hbs-lms` hierarchical mode, with parameter-set enums, stateful key wrappers, hierarchy-aware reporting, and benchmark-facing APIs for stateful signing. |
 | `mayo` | Pure Rust wrapper over `pq-mayo`, with deterministic seeded key generation, context validation, allocator tracking, and the shared benchmark/reporting contract. |
-| `xmss` | Pure Rust wrapper over RustCrypto `xmss`, using parameter-set dispatch, opaque key wrappers, benchmark report builders, and the shared benchmark binary/Divan structure. |
-| `xmssmt` | Pure Rust wrapper over RustCrypto `xmss` multi-tree types, using parameter-set dispatch, opaque key-pair wrappers, benchmark report builders, and the shared benchmark binary/Divan structure. |
+| `xmss` | Pure Rust wrapper over RustCrypto `xmss`, using parameter-set dispatch, opaque key wrappers, shared stateful benchmark-report helpers, and the shared benchmark binary/Divan structure. |
+| `xmssmt` | Pure Rust wrapper over RustCrypto `xmss` multi-tree types, using parameter-set dispatch, opaque key-pair wrappers, shared stateful benchmark-report helpers, and the shared benchmark binary/Divan structure. |
 | `sphincs_plus` | Pure Rust wrapper over `pqcrypto-sphincsplus`’s signed-message API, with allocator tracking and the shared benchmark/reporting contract. |
 | `cross` | FFI crate over a vendored upstream C reference implementation. Uses shared `pq_bench` FFI signed-message macros/helpers, deterministic RNG seeding, allocator tracking, and a mutex around shared native RNG state. |
 | `less` | FFI crate over a vendored upstream C implementation. Uses the same shared `pq_bench` FFI signed-message architecture as `cross`: deterministic RNG seeding, allocator tracking, and serialized access around native shared state. |
@@ -78,49 +78,49 @@ is a fast smoke check if you only want to validate target wiring.
 ### Scheme crates
 
 - `dilithium`
-  Binary: `cargo run -p dilithium --bin dilithium -- --format json --message-size 64`
+  Binary: `cargo run -p dilithium --bin dilithium -- --format json`
   Divan: `cargo bench -p dilithium --bench dilithium_divan`
 - `falcon`
-  Binary: `cargo run -p falcon --bin falcon-bench -- --format json --message-size 64`
+  Binary: `cargo run -p falcon --bin falcon-bench -- --format json`
   Divan: `cargo bench -p falcon --bench falcon_divan`
 - `lamport_ots`
-  Binary: `cargo run -p lamport_ots --bin lamport_ots -- --format json --message-size 64`
+  Binary: `cargo run -p lamport_ots --bin lamport_ots -- --format json`
   Divan: `cargo bench -p lamport_ots --bench lamport_ots_divan`
   Operation bench: `cargo run -p lamport_ots --bin lamport_ots_bench`
 - `winternitz_ots`
-  Binary: `cargo run -p winternitz_ots --bin winternitz_ots -- --format json --message-size 64`
+  Binary: `cargo run -p winternitz_ots --bin winternitz_ots -- --format json`
   Divan: `cargo bench -p winternitz_ots --bench winternitz_ots_divan`
 - `lms`
-  Binary: `cargo run -p lms --bin lms -- --format json --message-size 64`
+  Binary: `cargo run -p lms --bin lms -- --format json`
   Divan: `cargo bench -p lms --bench lms_divan`
-  Alternate parameter set: `PARAM_SET=<name> cargo run -p lms --bin lms -- --format human --message-size 64`
+  Alternate parameter set: `PARAM_SET=<name> cargo run -p lms --bin lms -- --format human`
 - `hss`
-  Binary: `cargo run -p hss --bin hss -- --format json --message-size 64`
+  Binary: `cargo run -p hss --bin hss -- --format json`
   Divan: `cargo bench -p hss --bench hss_divan`
-  Alternate parameter set: `PARAM_SET=<name> cargo run -p hss --bin hss -- --format human --message-size 64`
+  Alternate parameter set: `PARAM_SET=<name> cargo run -p hss --bin hss -- --format human`
 - `mayo`
-  Binary: `cargo run -p mayo --bin mayo -- --format json --message-size 64`
+  Binary: `cargo run -p mayo --bin mayo -- --format json`
   Divan: `cargo bench -p mayo --bench mayo_divan`
 - `xmss`
-  Binary: `cargo run -p xmss-bench --bin xmss -- --format json --message-size 64`
+  Binary: `cargo run -p xmss-bench --bin xmss -- --format json`
   Divan: `cargo bench -p xmss-bench --bench xmss_divan`
 - `xmssmt`
-  Binary: `cargo run -p xmssmt-bench --bin xmssmt -- --format json --message-size 64`
+  Binary: `cargo run -p xmssmt-bench --bin xmssmt -- --format json`
   Divan: `cargo bench -p xmssmt-bench --bench xmssmt_divan`
 - `sphincs_plus`
-  Binary: `cargo run -p sphincs_plus --bin sphincs-plus-bench -- --format json --message-size 64`
+  Binary: `cargo run -p sphincs_plus --bin sphincs-plus-bench -- --format json`
   Divan: `cargo bench -p sphincs_plus --bench sphincs_plus_divan`
 - `cross`
-  Binary: `cargo run -p cross --bin cross -- --format json --message-size 64`
+  Binary: `cargo run -p cross --bin cross -- --format json`
   Divan: `cargo bench -p cross --bench cross_divan`
 - `less`
-  Binary: `cargo run -p less --bin less -- --format json --message-size 64`
+  Binary: `cargo run -p less --bin less -- --format json`
   Divan: `cargo bench -p less --bench less_divan`
 - `sqisign`
-  Binary: `cargo run -p sqisign --bin sqisign -- --format json --message-size 64`
+  Binary: `cargo run -p sqisign --bin sqisign -- --format json`
   Divan: `cargo bench -p sqisign --bench sqisign_divan`
 - `leansig`
-  Binary: `cargo run -p leansig-bench --bin leansig -- --format json --message-size 64`
+  Binary: `cargo run -p leansig-bench --bin leansig -- --format json`
   Divan: `cargo bench -p leansig-bench --bench leansig_divan`
 
 ### Support crates
@@ -138,11 +138,19 @@ is a fast smoke check if you only want to validate target wiring.
 
 - Use normal functions first. The exported macros are intentionally narrow and are only for repeated structural boilerplate.
 - Use the shared binary contract for standalone benchmark executables: parse `--format human|json --message-size N`, build a `BenchmarkBinaryReport`, and emit either human or JSON output through `pq_bench`.
+- Use the shared size/report value objects from `pq_bench` when a crate only needs benchmark-facing size or report data. Avoid cloning those structs locally.
+- Use the shared stateful benchmark helpers for LMS, HSS, XMSS, and XMSS^MT style flows where key generation returns mutable signing state and report assembly follows the standard timed keygen/sign/verify pattern.
 - Use `declare_simple_signed_message_scheme!` for wrappers around native Rust keygen/sign/verify implementations that already expose normal Rust types.
 - Use `declare_ffi_signed_message_backend!` plus `declare_ffi_signed_message_scheme!` for FFI-backed signed-message crates that need deterministic RNG setup, byte-dimension discovery, and the standard scheme wrapper API.
 - Use `run_standard_signed_message_scheme_main!` for standalone signed-message benchmark binaries once a crate exposes the common scheme API.
 - Use `declare_signed_message_divan_bench!` for the standard Divan bench shape when a crate follows the common signed-message scheme API.
 - Use `build_support/native_cc.rs` for native `cc::Build` setup when a crate vendors C code and only differs by source lists, defines, flags, and output name.
+
+Stateful benchmark boundary:
+
+- `pq_bench` owns the generic timing/report assembly for stateful schemes.
+- Crates such as `lms`, `hss`, `xmss`, and `xmssmt` keep parameter validation, key wrapper types, and cryptographic operations local.
+- `main.rs` files should stay as thin adapters from crate-specific metadata into the shared binary/report contract.
 
 ## Workspace runner
 

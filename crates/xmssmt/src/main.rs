@@ -1,6 +1,6 @@
 use pq_bench::{
-    build_standard_benchmark_execution, run_human_benchmark_binary,
-    HumanBenchmarkLine, StandardBenchmarkExecutionSpec,
+    build_standard_stateful_benchmark_execution, run_human_benchmark_binary,
+    StandardStatefulBenchmarkExecutionSpec,
 };
 use xmssmt_bench::default_benchmark_scheme;
 
@@ -18,44 +18,28 @@ fn main() {
             "╚══════════════════════════════════════════════════╝",
         ];
 
-        build_standard_benchmark_execution(StandardBenchmarkExecutionSpec {
-            banner_lines: &BANNER,
-            heading: report.display_name.clone().into(),
-            intro_lines: Vec::new(),
-            algorithm: "XMSS^MT",
-            backend: Some(scheme.backend_name()),
-            param_set: Some(report.param_set.as_str()),
-            summary_algorithm: report.param_set.as_str().into(),
-            summary_intro_lines: Vec::new(),
-            keygen_duration: report.keygen_duration,
-            sign_duration: report.sign_duration,
-            verify_duration: report.verify_duration,
-            verified: report.verified,
-            public_key_bytes: report.public_key_size,
-            secret_key_bytes: report.secret_key_size,
-            signature_bytes: report.signature_size,
-            signed_message_bytes: None,
-            size_lines: vec![
-                HumanBenchmarkLine::bytes(
-                    "Public key size",
-                    report.public_key_size,
-                ),
-                HumanBenchmarkLine::bytes(
-                    "Secret key size",
-                    report.secret_key_size,
-                ),
-                HumanBenchmarkLine::bytes(
-                    "Signature size",
-                    report.signature_size,
-                ),
-            ],
-            summary_size_lines: vec![
-                HumanBenchmarkLine::bytes("Public Key", report.public_key_size),
-                HumanBenchmarkLine::bytes("Secret Key", report.secret_key_size),
-                HumanBenchmarkLine::bytes("Signature", report.signature_size),
-            ],
-            sign_peak_bytes: None,
-            verify_peak_bytes: None,
-        })
+        build_standard_stateful_benchmark_execution(
+            StandardStatefulBenchmarkExecutionSpec {
+                banner_lines: &BANNER,
+                heading: report.display_name.clone().into(),
+                intro_lines: Vec::new(),
+                algorithm: "XMSS^MT",
+                backend: Some(scheme.backend_name()),
+                param_set: Some(report.param_set.as_str()),
+                summary_algorithm: report.param_set.as_str().into(),
+                summary_intro_lines: Vec::new(),
+                keygen_duration: report.keygen_duration,
+                sign_duration: report.sign_duration,
+                verify_duration: report.verify_duration,
+                verified: report.verified,
+                sizes: xmssmt_bench::XmssmtSizes {
+                    public_key_bytes: report.public_key_size,
+                    secret_key_bytes: report.secret_key_size,
+                    signature_bytes: report.signature_size,
+                },
+                signed_message_bytes: None,
+                extra_size_lines: Vec::new(),
+            },
+        )
     });
 }

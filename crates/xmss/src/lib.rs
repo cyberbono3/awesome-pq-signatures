@@ -9,6 +9,8 @@ use xmss::{
 };
 
 pub use pq_bench::{filled_message, measure_time, BENCH_MESSAGE};
+pub type XmssBenchmarkReport = pq_bench::ParamSetBenchmarkReport<XmssParamSet>;
+pub type XmssSizes = pq_bench::SignatureMaterialSizes;
 
 pub const DEFAULT_XMSS_PARAM_SET: XmssParamSet = XmssParamSet::XmssSha2_10_256;
 pub const DIVAN_BENCH_MESSAGE_SIZES: [usize; 2] = [32, 1024];
@@ -54,94 +56,36 @@ impl XmssParamSet {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct XmssPublicKey {
-    bytes: Vec<u8>,
-    param_set: XmssParamSet,
+macro_rules! declare_xmss_material {
+    ($name:ident) => {
+        #[derive(Clone, Debug)]
+        pub struct $name {
+            bytes: Vec<u8>,
+            param_set: XmssParamSet,
+        }
+
+        impl $name {
+            #[must_use]
+            pub fn as_bytes(&self) -> &[u8] {
+                &self.bytes
+            }
+
+            #[must_use]
+            pub fn len(&self) -> usize {
+                self.bytes.len()
+            }
+
+            #[must_use]
+            pub fn is_empty(&self) -> bool {
+                self.bytes.is_empty()
+            }
+        }
+    };
 }
 
-impl XmssPublicKey {
-    #[must_use]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.bytes.len()
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.bytes.is_empty()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct XmssSecretKey {
-    bytes: Vec<u8>,
-    param_set: XmssParamSet,
-}
-
-impl XmssSecretKey {
-    #[must_use]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.bytes.len()
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.bytes.is_empty()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct XmssSignature {
-    bytes: Vec<u8>,
-    param_set: XmssParamSet,
-}
-
-impl XmssSignature {
-    #[must_use]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.bytes.len()
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.bytes.is_empty()
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct XmssSizes {
-    pub public_key_bytes: usize,
-    pub secret_key_bytes: usize,
-    pub signature_bytes: usize,
-}
-
-#[derive(Clone, Debug)]
-pub struct XmssBenchmarkReport {
-    pub display_name: String,
-    pub param_set: XmssParamSet,
-    pub keygen_duration: Duration,
-    pub sign_duration: Duration,
-    pub verify_duration: Duration,
-    pub public_key_size: usize,
-    pub secret_key_size: usize,
-    pub signature_size: usize,
-    pub verified: bool,
-}
+declare_xmss_material!(XmssPublicKey);
+declare_xmss_material!(XmssSecretKey);
+declare_xmss_material!(XmssSignature);
 
 #[derive(Clone, Copy, Debug)]
 pub struct XmssScheme {
@@ -276,29 +220,19 @@ impl XmssScheme {
         self,
         message: &[u8],
     ) -> Result<XmssBenchmarkReport, XmssError> {
-        let display_name = self.display_name();
-        let (keypair, keygen_duration) = measure_time(|| self.keypair());
-        let (public_key, mut secret_key) = keypair?;
-        let (signature_result, sign_duration) =
-            measure_time(|| self.sign(message, &mut secret_key));
-        let signature = signature_result?;
-
-        let secret_key = secret_key;
-        let (verified_result, verify_duration) =
-            measure_time(|| self.verify(message, &signature, &public_key));
-        let verified = verified_result?;
-
-        Ok(XmssBenchmarkReport {
-            display_name,
-            param_set: self.param_set(),
-            keygen_duration,
-            sign_duration,
-            verify_duration,
-            public_key_size: public_key.len(),
-            secret_key_size: secret_key.len(),
-            signature_size: signature.len(),
-            verified,
-        })
+        pq_bench::run_stateful_param_set_benchmark_report(
+            || (self.display_name(), self.param_set()),
+            || self.keypair(),
+            |(_public_key, secret_key)| self.sign(message, secret_key),
+            |(public_key, _secret_key), signature| {
+                self.verify(message, signature, public_key)
+            },
+            |(public_key, secret_key), signature| XmssSizes {
+                public_key_bytes: public_key.len(),
+                secret_key_bytes: secret_key.len(),
+                signature_bytes: signature.len(),
+            },
+        )
     }
 
     /// # Errors
