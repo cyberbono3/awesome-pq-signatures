@@ -46,6 +46,69 @@ Notes:
 - `LMS` and `HSS` still honor `PARAM_SET` for selecting a non-default parameter set.
 - Some crates are materially slower than others. `XMSS`, `XMSS^MT`, and `LeanSig` can take much longer to complete a single benchmark run.
 
+## Crate commands
+
+The commands below use the exact package and binary names from this workspace.
+For Divan targets, `cargo bench ...` runs the full suite and `cargo bench ... -- --list`
+is a fast smoke check if you only want to validate target wiring.
+
+### Scheme crates
+
+- `dilithium`
+  Binary: `cargo run -p dilithium --bin dilithium -- --format json --message-size 64`
+  Divan: `cargo bench -p dilithium --bench dilithium_divan`
+- `falcon`
+  Binary: `cargo run -p falcon --bin falcon-bench -- --format json --message-size 64`
+  Divan: `cargo bench -p falcon --bench falcon_divan`
+- `lamport_ots`
+  Binary: `cargo run -p lamport_ots --bin lamport_ots -- --format json --message-size 64`
+  Divan: `cargo bench -p lamport_ots --bench lamport_ots_divan`
+  Operation bench: `cargo run -p lamport_ots --bin lamport_ots_bench`
+- `winternitz_ots`
+  Binary: `cargo run -p winternitz_ots --bin winternitz_ots -- --format json --message-size 64`
+  Divan: `cargo bench -p winternitz_ots --bench winternitz_ots_divan`
+- `lms`
+  Binary: `cargo run -p lms --bin lms -- --format json --message-size 64`
+  Divan: `cargo bench -p lms --bench lms_divan`
+  Alternate parameter set: `PARAM_SET=<name> cargo run -p lms --bin lms -- --format human --message-size 64`
+- `hss`
+  Binary: `cargo run -p hss --bin hss -- --format json --message-size 64`
+  Divan: `cargo bench -p hss --bench hss_divan`
+  Alternate parameter set: `PARAM_SET=<name> cargo run -p hss --bin hss -- --format human --message-size 64`
+- `mayo`
+  Binary: `cargo run -p mayo --bin mayo -- --format json --message-size 64`
+  Divan: `cargo bench -p mayo --bench mayo_divan`
+- `xmss`
+  Binary: `cargo run -p xmss-bench --bin xmss -- --format json --message-size 64`
+  Divan: `cargo bench -p xmss-bench --bench xmss_divan`
+- `xmssmt`
+  Binary: `cargo run -p xmssmt-bench --bin xmssmt -- --format json --message-size 64`
+  Divan: `cargo bench -p xmssmt-bench --bench xmssmt_divan`
+- `sphincs_plus`
+  Binary: `cargo run -p sphincs_plus --bin sphincs-plus-bench -- --format json --message-size 64`
+  Divan: `cargo bench -p sphincs_plus --bench sphincs_plus_divan`
+- `cross`
+  Binary: `cargo run -p cross --bin cross -- --format json --message-size 64`
+  Divan: `cargo bench -p cross --bench cross_divan`
+- `less`
+  Binary: `cargo run -p less --bin less -- --format json --message-size 64`
+  Divan: `cargo bench -p less --bench less_divan`
+- `sqisign`
+  Binary: `cargo run -p sqisign --bin sqisign -- --format json --message-size 64`
+  Divan: `cargo bench -p sqisign --bench sqisign_divan`
+- `leansig`
+  Binary: `cargo run -p leansig-bench --bin leansig -- --format json --message-size 64`
+  Divan: `cargo bench -p leansig-bench --bench leansig_divan`
+
+### Support crates
+
+- `pq_bench`
+  Tests: `cargo test -p pq_bench`
+  Binary contract fixture: `cargo test -p pq_bench --test binary_contract`
+- `bench_runner`
+  Aggregate run: `cargo run -p bench_runner --bin bench_runner -- --runs 1 --message-size 64 --output benchmarks/results.csv`
+  Filtered run: `cargo run -p bench_runner --bin bench_runner -- --runs 1 --only dilithium --message-size 64 --output /tmp/bench_runner_dilithium.csv`
+
 ## Shared crate patterns
 
 `pq_bench` is now the shared support layer for benchmark-facing crate structure. New crates should prefer these patterns instead of open-coding benchmark glue:
@@ -63,20 +126,40 @@ Notes:
 Use the aggregated runner to benchmark multiple schemes and write a CSV summary:
 
 ```bash
-cargo run --bin bench_runner -- --runs 3 --message-size 64 --output benchmarks/results.csv
+cargo run -p bench_runner --bin bench_runner -- --runs 3 --message-size 64 --output benchmarks/results.csv
 ```
 
 Useful filters:
 
-- `--only TEXT`
-- `--param-set TEXT`
-- `--skip-ffi`
-- `--skip-subprocess`
+- `--only TEXT`: repeatable substring filter against algorithm names
+- `--param-set TEXT`: repeatable substring filter against parameter-set names
+- `--skip-ffi`: skip only the FFI-backed subprocess crates
+- `--skip-subprocess`: skip all subprocess crates, including LeanSig
+- `--message-size N`: override the shared benchmark message size
 
 Example:
 
 ```bash
-cargo run --bin bench_runner -- --runs 1 --only leansig --message-size 64 --output /tmp/leansig.csv
+cargo run -p bench_runner --bin bench_runner -- --runs 1 --only leansig --message-size 64 --output /tmp/leansig.csv
+```
+
+Common recipes:
+
+```bash
+# Benchmark one pure-Rust crate
+cargo run -p bench_runner --bin bench_runner -- --runs 1 --only dilithium --message-size 64 --output /tmp/dilithium.csv
+
+# Benchmark one subprocess crate
+cargo run -p bench_runner --bin bench_runner -- --runs 1 --only cross --message-size 64 --output /tmp/cross.csv
+
+# Benchmark only in-process crates
+cargo run -p bench_runner --bin bench_runner -- --runs 1 --skip-subprocess --message-size 64 --output /tmp/pure_rust.csv
+
+# Benchmark everything except FFI-backed subprocess crates
+cargo run -p bench_runner --bin bench_runner -- --runs 1 --skip-ffi --message-size 64 --output /tmp/no_ffi.csv
+
+# Narrow by both algorithm and parameter set
+cargo run -p bench_runner --bin bench_runner -- --runs 1 --only xmss --param-set sha2 --message-size 64 --output /tmp/xmss_sha2.csv
 ```
 
 Runner execution model:
