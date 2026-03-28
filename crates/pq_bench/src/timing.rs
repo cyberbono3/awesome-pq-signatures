@@ -1,4 +1,30 @@
-use std::time::{Duration, Instant};
+use std::{
+    env,
+    str::FromStr,
+    time::{Duration, Instant},
+};
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BenchmarkOperation {
+    Keygen,
+    Sign,
+    Verify,
+}
+
+impl FromStr for BenchmarkOperation {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "keygen" => Ok(Self::Keygen),
+            "sign" => Ok(Self::Sign),
+            "verify" => Ok(Self::Verify),
+            other => Err(format!(
+                "unsupported OPERATION={other}; expected one of: keygen, sign, verify"
+            )),
+        }
+    }
+}
 
 pub fn measure_time<T, F>(operation: F) -> (T, Duration)
 where
@@ -47,4 +73,23 @@ pub fn run_with_large_stack(
         .expect("thread should start")
         .join()
         .expect("thread should complete");
+}
+
+pub fn parse_usize_env(
+    name: &str,
+    default: usize,
+) -> Result<usize, Box<dyn std::error::Error>> {
+    match env::var(name) {
+        Ok(value) => Ok(value.parse::<usize>()?),
+        Err(_) => Ok(default),
+    }
+}
+
+pub fn parse_bool_env(name: &str, default: bool) -> bool {
+    match env::var(name) {
+        Ok(value) => {
+            matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES")
+        }
+        Err(_) => default,
+    }
 }

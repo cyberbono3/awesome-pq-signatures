@@ -2,6 +2,7 @@ use std::error::Error;
 use std::fmt;
 use std::time::Duration;
 
+use pq_bench::BenchmarkOperation;
 use rustcrypto_xmss::{
     DetachedSignature, KeyPair, XmssMtSha2_20_2_256, XmssMtSha2_20_4_256,
     XmssMtSha2_40_2_256, XmssParameter,
@@ -386,6 +387,67 @@ impl XmssmtScheme {
             verified,
         })
     }
+
+    /// # Errors
+    ///
+    /// Returns an error if key generation, signing, verification, or
+    /// parameter-derived signature budgeting fails.
+    pub fn benchmark_operation(
+        self,
+        operation: BenchmarkOperation,
+        message: &[u8],
+        iterations: usize,
+    ) -> Result<Duration, XmssmtError> {
+        match operation {
+            BenchmarkOperation::Keygen => {
+                let start = std::time::Instant::now();
+                for _ in 0..iterations {
+                    let keypair = self.keypair()?;
+                    std::hint::black_box(keypair);
+                }
+                Ok(start.elapsed())
+            }
+            BenchmarkOperation::Sign => {
+                let max_signatures = usize::try_from(
+                    self.max_signatures_per_key()?,
+                )
+                .map_err(|_| {
+                    XmssmtError::InvalidHeight(
+                        self.param_set.total_tree_height(),
+                    )
+                })?;
+                let signatures_per_key = max_signatures.max(1);
+                let key_count = iterations.max(1).div_ceil(signatures_per_key);
+
+                let mut keypairs = Vec::with_capacity(key_count);
+                for _ in 0..key_count {
+                    keypairs.push(self.keypair()?);
+                }
+
+                let start = std::time::Instant::now();
+                for i in 0..iterations {
+                    let key_index = i / signatures_per_key;
+                    let signature = keypairs[key_index].sign(message)?;
+                    std::hint::black_box(signature);
+                }
+                Ok(start.elapsed())
+            }
+            BenchmarkOperation::Verify => {
+                let mut keypair = self.keypair()?;
+                let signature = keypair.sign(message)?;
+
+                let start = std::time::Instant::now();
+                for _ in 0..iterations {
+                    let is_valid = keypair.verify(message, &signature)?;
+                    if !is_valid {
+                        return Err(XmssmtError::VerifyFailedDuringBenchmark);
+                    }
+                    std::hint::black_box(is_valid);
+                }
+                Ok(start.elapsed())
+            }
+        }
+    }
 }
 
 #[must_use]
@@ -404,6 +466,7 @@ pub enum XmssmtError {
     KeygenFailed(String),
     SignFailed(String),
     DeserializationFailed(String),
+    VerifyFailedDuringBenchmark,
 }
 
 impl fmt::Display for XmssmtError {
@@ -429,6 +492,9 @@ impl fmt::Display for XmssmtError {
             Self::SignFailed(msg) => write!(f, "XMSS^MT signing failed: {msg}"),
             Self::DeserializationFailed(msg) => {
                 write!(f, "XMSS^MT deserialization failed: {msg}")
+            }
+            Self::VerifyFailedDuringBenchmark => {
+                write!(f, "xmssmt verification failed during benchmark loop")
             }
         }
     }

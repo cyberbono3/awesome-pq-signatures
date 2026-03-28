@@ -50,8 +50,9 @@ pub use {
         StandardBinaryBenchmarkSpec, StandardHumanBenchmarkSpec,
     },
     timing::{
-        duration_ns, format_ns, measure_time, median, print_timing,
-        run_with_large_stack,
+        duration_ns, format_ns, measure_time, median, parse_bool_env,
+        parse_usize_env, print_timing, run_with_large_stack,
+        BenchmarkOperation,
     },
 };
 
