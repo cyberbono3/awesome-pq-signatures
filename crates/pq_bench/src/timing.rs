@@ -34,3 +34,17 @@ pub fn print_timing(label: &str, duration: Duration) {
     println!("Time to {label}: {duration:?}");
     println!("Time to {label} (ns): {}", duration.as_nanos());
 }
+
+pub fn run_with_large_stack(
+    name: &str,
+    stack_size: usize,
+    operation: impl FnOnce() + Send + 'static,
+) {
+    std::thread::Builder::new()
+        .name(name.to_owned())
+        .stack_size(stack_size)
+        .spawn(operation)
+        .expect("thread should start")
+        .join()
+        .expect("thread should complete");
+}

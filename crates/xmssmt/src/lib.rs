@@ -8,7 +8,7 @@ use rustcrypto_xmss::{
     XmssMtSha2_40_2_256, XmssParameter,
 };
 
-pub use pq_bench::{measure_time, BENCH_MESSAGE};
+pub use pq_bench::{filled_message, measure_time, BENCH_MESSAGE};
 
 pub const DEFAULT_XMSSMT_PARAM_SET: XmssmtParamSet =
     XmssmtParamSet::Sha2_20_2_256;
@@ -428,11 +428,6 @@ impl XmssmtScheme {
 #[must_use]
 pub const fn default_benchmark_scheme() -> XmssmtScheme {
     XmssmtScheme::new(DEFAULT_XMSSMT_PARAM_SET)
-}
-
-#[must_use]
-pub fn benchmark_message(size: usize, fill_byte: u8) -> Vec<u8> {
-    vec![fill_byte; size]
 }
 
 #[derive(Debug)]

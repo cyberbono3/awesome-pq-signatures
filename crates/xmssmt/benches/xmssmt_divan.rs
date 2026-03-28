@@ -1,6 +1,6 @@
 use divan::Bencher;
 use xmssmt_bench::{
-    benchmark_message, default_benchmark_scheme, DIVAN_BENCH_MESSAGE_SIZES,
+    default_benchmark_scheme, filled_message, DIVAN_BENCH_MESSAGE_SIZES,
 };
 
 fn main() {
@@ -20,7 +20,7 @@ fn keygen(bencher: Bencher) {
 #[divan::bench(args = DIVAN_BENCH_MESSAGE_SIZES)]
 fn sign(bencher: Bencher, message_size: usize) {
     let scheme = default_benchmark_scheme();
-    let message = benchmark_message(message_size, 0x3C);
+    let message = filled_message(message_size, 0x3C);
 
     bencher.bench(|| {
         let mut kp = scheme.keypair().expect("xmssmt keypair must succeed");
@@ -32,7 +32,7 @@ fn sign(bencher: Bencher, message_size: usize) {
 #[divan::bench(args = DIVAN_BENCH_MESSAGE_SIZES)]
 fn verify(bencher: Bencher, message_size: usize) {
     let scheme = default_benchmark_scheme();
-    let message = benchmark_message(message_size, 0x3C);
+    let message = filled_message(message_size, 0x3C);
     let mut kp = scheme.keypair().expect("xmssmt keypair must succeed");
     let signature = kp.sign(&message).expect("xmssmt sign must succeed");
 

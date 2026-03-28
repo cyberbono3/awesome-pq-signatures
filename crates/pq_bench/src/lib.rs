@@ -37,9 +37,9 @@ pub use {
     config::{BenchmarkBinaryConfig, BenchmarkOutputFormat},
     message::{
         bench_message, benchmark_message, benchmark_seed_array,
-        benchmark_seed_u64, expand_seed_u64, signed_message_size,
-        BENCHMARK_SEED_U64, BENCH_MESSAGE, BENCH_MESSAGE_BYTE,
-        BENCH_MESSAGE_SIZES,
+        benchmark_seed_u64, expand_seed_u64, filled_message,
+        signed_message_size, BENCHMARK_SEED_U64, BENCH_MESSAGE,
+        BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
     },
     reporting::{
         build_standard_binary_report, build_standard_human_benchmark_report,
@@ -49,7 +49,10 @@ pub use {
         HumanBenchmarkSection, StandardBenchmarkHumanReport,
         StandardBinaryBenchmarkSpec, StandardHumanBenchmarkSpec,
     },
-    timing::{duration_ns, format_ns, measure_time, median, print_timing},
+    timing::{
+        duration_ns, format_ns, measure_time, median, print_timing,
+        run_with_large_stack,
+    },
 };
 
 #[cfg(test)]
@@ -74,6 +77,12 @@ mod tests {
         let message = bench_message(16);
         assert_eq!(message.len(), 16);
         assert!(message.iter().all(|&byte| byte == BENCH_MESSAGE_BYTE));
+    }
+
+    #[test]
+    fn filled_message_uses_requested_fill_byte() {
+        let message = filled_message(8, 0x3C);
+        assert_eq!(message, vec![0x3C; 8]);
     }
 
     #[test]

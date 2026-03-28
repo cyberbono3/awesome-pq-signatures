@@ -8,8 +8,12 @@ pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
 pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
 pub const BENCHMARK_SEED_U64: u64 = 0x7A5B_91C3_E4D2_F607;
 
+pub fn filled_message(size: usize, fill_byte: u8) -> Vec<u8> {
+    vec![fill_byte; size]
+}
+
 pub fn bench_message(size: usize) -> Vec<u8> {
-    vec![BENCH_MESSAGE_BYTE; size]
+    filled_message(size, BENCH_MESSAGE_BYTE)
 }
 
 pub fn benchmark_message(size: usize) -> Vec<u8> {

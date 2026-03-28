@@ -315,36 +315,7 @@ fn parameters_for(param_set: HssParamSet) -> Vec<HssParameter<Sha256_256>> {
     }
 }
 
-pub mod memory {
-    use super::ALLOCATION_TRACKER;
-
-    /// Reset all tracking counters and set the baseline to the current heap usage.
-    /// Call this immediately before the operation you want to measure.
-    pub fn reset_peak() {
-        ALLOCATION_TRACKER.reset_peak();
-    }
-
-    /// Stop tracking and return results.
-    pub fn stop_tracking() {
-        ALLOCATION_TRACKER.stop_tracking();
-    }
-
-    /// Peak *net* heap usage above the baseline (high-water mark of live allocations).
-    pub fn peak_bytes() -> usize {
-        ALLOCATION_TRACKER.peak_bytes()
-    }
-
-    /// Total cumulative bytes allocated during the measurement window.
-    /// This counts every allocation, even if it was freed before the next one.
-    pub fn total_allocated_bytes() -> usize {
-        ALLOCATION_TRACKER.total_allocated_bytes()
-    }
-
-    /// Current live heap usage (absolute, not relative to baseline).
-    pub fn current_bytes() -> usize {
-        ALLOCATION_TRACKER.current_bytes()
-    }
-}
+pq_bench::declare_peak_memory_api!();
 
 #[cfg(test)]
 mod tests {
@@ -352,6 +323,7 @@ mod tests {
         bench_message, param_set_by_name, HssScheme, BENCH_MESSAGE_BYTE,
         DEFAULT_PARAM_SET_NAME,
     };
+    use pq_bench::run_with_large_stack;
 
     #[test]
     fn param_set_lookup_works() {
@@ -362,56 +334,39 @@ mod tests {
 
     #[test]
     fn sign_verify_roundtrip() {
-        std::thread::Builder::new()
-            .name("hss-roundtrip".to_owned())
-            .stack_size(32 * 1024 * 1024)
-            .spawn(|| {
-                let scheme =
-                    HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
-                        .expect("param set should resolve");
-                let message = b"hss-roundtrip";
-                let (public_key, mut secret_key) =
-                    scheme.keypair().expect("keypair should succeed");
+        run_with_large_stack("hss-roundtrip", 32 * 1024 * 1024, || {
+            let scheme = HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+                .expect("param set should resolve");
+            let message = b"hss-roundtrip";
+            let (public_key, mut secret_key) =
+                scheme.keypair().expect("keypair should succeed");
 
-                let signature = scheme
-                    .sign(message, &mut secret_key)
-                    .expect("sign should succeed");
-                let verified = scheme
-                    .verify(message, &signature, &public_key)
-                    .expect("verify should succeed");
-                assert!(verified, "signature should verify");
-            })
-            .expect("test thread should start")
-            .join()
-            .expect("test thread should complete");
+            let signature = scheme
+                .sign(message, &mut secret_key)
+                .expect("sign should succeed");
+            let verified = scheme
+                .verify(message, &signature, &public_key)
+                .expect("verify should succeed");
+            assert!(verified, "signature should verify");
+        });
     }
 
     #[test]
     fn verify_fails_for_other_message() {
-        std::thread::Builder::new()
-            .name("hss-verify-fail".to_owned())
-            .stack_size(32 * 1024 * 1024)
-            .spawn(|| {
-                let scheme =
-                    HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
-                        .expect("param set should resolve");
-                let (public_key, mut secret_key) =
-                    scheme.keypair().expect("keypair should succeed");
+        run_with_large_stack("hss-verify-fail", 32 * 1024 * 1024, || {
+            let scheme = HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+                .expect("param set should resolve");
+            let (public_key, mut secret_key) =
+                scheme.keypair().expect("keypair should succeed");
 
-                let signature = scheme
-                    .sign(b"message-a", &mut secret_key)
-                    .expect("sign should succeed");
-                let verified = scheme
-                    .verify(b"message-b", &signature, &public_key)
-                    .expect("verify should succeed");
-                assert!(
-                    !verified,
-                    "different message should fail verification"
-                );
-            })
-            .expect("test thread should start")
-            .join()
-            .expect("test thread should complete");
+            let signature = scheme
+                .sign(b"message-a", &mut secret_key)
+                .expect("sign should succeed");
+            let verified = scheme
+                .verify(b"message-b", &signature, &public_key)
+                .expect("verify should succeed");
+            assert!(!verified, "different message should fail verification");
+        });
     }
 
     #[test]

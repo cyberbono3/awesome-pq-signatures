@@ -346,16 +346,7 @@ mod tests {
         bench_message, param_set_by_name, LmsScheme, BENCH_MESSAGE_BYTE,
         DEFAULT_PARAM_SET_NAME,
     };
-
-    fn run_with_large_stack(name: &str, test: impl FnOnce() + Send + 'static) {
-        std::thread::Builder::new()
-            .name(name.to_owned())
-            .stack_size(32 * 1024 * 1024)
-            .spawn(test)
-            .expect("test thread should start")
-            .join()
-            .expect("test thread should complete");
-    }
+    use pq_bench::run_with_large_stack;
 
     #[test]
     fn param_set_lookup_works() {
@@ -366,7 +357,7 @@ mod tests {
 
     #[test]
     fn sign_verify_roundtrip() {
-        run_with_large_stack("lms-roundtrip", || {
+        run_with_large_stack("lms-roundtrip", 32 * 1024 * 1024, || {
             let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
                 .expect("param set should resolve");
             let message = b"lms-roundtrip";
@@ -385,7 +376,7 @@ mod tests {
 
     #[test]
     fn verify_fails_for_other_message() {
-        run_with_large_stack("lms-verify-fail", || {
+        run_with_large_stack("lms-verify-fail", 32 * 1024 * 1024, || {
             let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
                 .expect("param set should resolve");
             let (public_key, mut secret_key) = scheme

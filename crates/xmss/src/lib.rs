@@ -8,7 +8,7 @@ use xmss::{
     XmssSha2_10_256, XmssSha2_16_256, XmssSha2_20_256,
 };
 
-pub use pq_bench::{measure_time, BENCH_MESSAGE};
+pub use pq_bench::{filled_message, measure_time, BENCH_MESSAGE};
 
 pub const DEFAULT_XMSS_PARAM_SET: XmssParamSet = XmssParamSet::XmssSha2_10_256;
 pub const DIVAN_BENCH_MESSAGE_SIZES: [usize; 2] = [32, 1024];
@@ -341,11 +341,6 @@ impl XmssScheme {
 #[must_use]
 pub const fn default_benchmark_scheme() -> XmssScheme {
     XmssScheme::new(DEFAULT_XMSS_PARAM_SET)
-}
-
-#[must_use]
-pub fn benchmark_message(size: usize, fill_byte: u8) -> Vec<u8> {
-    vec![fill_byte; size]
 }
 
 fn extract_keys<P: XmssParameter>(
