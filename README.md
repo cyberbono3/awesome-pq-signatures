@@ -35,16 +35,39 @@ The `human` format keeps each crate's readable benchmark summary. The `json` for
 Representative examples:
 
 ```bash
-cargo run -p dilithium -- --format json --message-size 64
-cargo run -p hss -- --format human --message-size 256
+cargo run -p dilithium --bin dilithium -- --format json --message-size 64
+cargo run -p hss --bin hss -- --format human --message-size 256
 cargo run -p lamport_ots --bin lamport_ots -- --format json --message-size 64
-cargo run --bin leansig -- --format json --message-size 64
+cargo run -p leansig-bench --bin leansig -- --format json --message-size 64
 ```
 
 Notes:
 
 - `LMS` and `HSS` still honor `PARAM_SET` for selecting a non-default parameter set.
 - Some crates are materially slower than others. `XMSS`, `XMSS^MT`, and `LeanSig` can take much longer to complete a single benchmark run.
+
+## Crate architecture
+
+This is the implementation architecture of each workspace crate, not the cryptographic category.
+
+| Crate | Architecture |
+|---|---|
+| `pq_bench` | Shared support crate. Owns the canonical benchmark message/seed config, JSON and human report types, binary CLI parsing, allocation tracking, timing helpers, FFI signed-message helpers, and the narrow workspace macros used by other crates. |
+| `bench_runner` | Workspace orchestrator. Structured as CLI parsing, registry/spec selection, pure and subprocess adapters, app orchestration, and CSV/display reporting. Runs some schemes in-process and others as JSON-speaking subprocesses. |
+| `dilithium` | Pure Rust wrapper over `ml-dsa`, with a small `SignatureScheme` trait, deterministic seeded key generation, allocator tracking, and the shared benchmark binary/Divan surfaces. |
+| `falcon` | Pure Rust wrapper over `pqcrypto-falcon`’s signed-message API, exposed through a minimal local trait plus shared benchmark/reporting glue. |
+| `lamport_ots` | Custom pure Rust implementation using `sha2`, with explicit public/secret/signature types, one-time key semantics, a standard benchmark binary, and a separate direct operation benchmark binary. |
+| `winternitz_ots` | Pure Rust wrapper around `winternitz-ots`, with Blake2b message-digest preprocessing, local size helpers, allocator tracking, and the shared benchmark/reporting contract. |
+| `lms` | Pure Rust benchmark wrapper over `hbs-lms`, with explicit parameter-set enums, stateful key wrappers, derived size logic, and benchmark-facing APIs for stateful signing. |
+| `hss` | Pure Rust benchmark wrapper over `hbs-lms` hierarchical mode, with parameter-set enums, stateful key wrappers, hierarchy-aware reporting, and benchmark-facing APIs for stateful signing. |
+| `mayo` | Pure Rust wrapper over `pq-mayo`, with deterministic seeded key generation, context validation, allocator tracking, and the shared benchmark/reporting contract. |
+| `xmss` | Pure Rust wrapper over RustCrypto `xmss`, using parameter-set dispatch, opaque key wrappers, benchmark report builders, and the shared benchmark binary/Divan structure. |
+| `xmssmt` | Pure Rust wrapper over RustCrypto `xmss` multi-tree types, using parameter-set dispatch, opaque key-pair wrappers, benchmark report builders, and the shared benchmark binary/Divan structure. |
+| `sphincs_plus` | Pure Rust wrapper over `pqcrypto-sphincsplus`’s signed-message API, with allocator tracking and the shared benchmark/reporting contract. |
+| `cross` | FFI crate over a vendored upstream C reference implementation. Uses shared `pq_bench` FFI signed-message macros/helpers, deterministic RNG seeding, allocator tracking, and a mutex around shared native RNG state. |
+| `less` | FFI crate over a vendored upstream C implementation. Uses the same shared `pq_bench` FFI signed-message architecture as `cross`: deterministic RNG seeding, allocator tracking, and serialized access around native shared state. |
+| `sqisign` | Thin Rust wrapper over `sqisign-lvl1`, generated through the shared simple signed-message scheme macro, with shared benchmark binary and Divan scaffolding. |
+| `leansig-bench` | Benchmark wrapper around the upstream `leansig` git dependency. Adds fixed-size benchmark message conversion, epoch-preparation logic for the secret key, and the shared benchmark/reporting contract. |
 
 ## Crate commands
 
