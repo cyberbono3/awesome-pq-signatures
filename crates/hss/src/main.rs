@@ -3,9 +3,8 @@ use hss::{
     DEFAULT_PARAM_SET_NAME,
 };
 use pq_bench::{
-    build_standard_binary_report, build_standard_human_benchmark_report,
-    run_human_benchmark_binary, BenchmarkBinaryExecution, HumanBenchmarkLine,
-    StandardBinaryBenchmarkSpec, StandardHumanBenchmarkSpec,
+    build_standard_benchmark_execution, run_human_benchmark_binary,
+    HumanBenchmarkLine, StandardBenchmarkExecutionSpec,
 };
 use std::env;
 
@@ -41,71 +40,55 @@ fn main() {
             .lifetime()
             .expect("HSS key lifetime should be available");
 
-        BenchmarkBinaryExecution {
-            report: build_standard_binary_report(StandardBinaryBenchmarkSpec {
-                algorithm: scheme.algorithm_name(),
-                backend: Some(scheme.backend_name()),
-                param_set: Some(scheme.param_set_name()),
-                keygen_duration,
-                sign_duration,
-                verify_duration,
-                verified,
-                public_key_bytes: pk_size,
-                secret_key_bytes: sk_size,
-                signature_bytes: sig_size,
-                signed_message_bytes: Some(signed_message_size(
-                    message.len(),
-                    sig_size,
-                )),
-                sign_peak_bytes: None,
-                verify_peak_bytes: None,
-            }),
-            human: build_standard_human_benchmark_report(
-                StandardHumanBenchmarkSpec {
-                    banner_lines: &[],
-                    heading: format!("HSS ({})", scheme.param_set_name())
-                        .into(),
-                    intro_lines: vec![
-                        HumanBenchmarkLine::new(
-                            "Backend",
-                            scheme.backend_name(),
-                        ),
-                        HumanBenchmarkLine::new(
-                            "Hierarchy levels",
-                            scheme.levels().to_string(),
-                        ),
-                    ],
-                    summary_algorithm: scheme.algorithm_name().into(),
-                    summary_intro_lines: vec![HumanBenchmarkLine::new(
-                        "Param set",
-                        scheme.param_set_name(),
-                    )],
-                    keygen_duration,
-                    sign_duration,
-                    verify_duration,
-                    verified,
-                    size_lines: vec![
-                        HumanBenchmarkLine::bytes("Public key size", pk_size),
-                        HumanBenchmarkLine::bytes("Secret key size", sk_size),
-                        HumanBenchmarkLine::bytes("Signature size", sig_size),
-                        HumanBenchmarkLine::bytes(
-                            "Signed message size",
-                            signed_message_size(message.len(), sig_size),
-                        ),
-                        HumanBenchmarkLine::new(
-                            "Estimated signatures per key",
-                            key_lifetime.to_string(),
-                        ),
-                    ],
-                    summary_size_lines: vec![
-                        HumanBenchmarkLine::bytes("Public Key", pk_size),
-                        HumanBenchmarkLine::bytes("Secret Key", sk_size),
-                        HumanBenchmarkLine::bytes("Signature", sig_size),
-                    ],
-                    sign_peak_bytes: None,
-                    verify_peak_bytes: None,
-                },
-            ),
-        }
+        build_standard_benchmark_execution(StandardBenchmarkExecutionSpec {
+            banner_lines: &[],
+            heading: format!("HSS ({})", scheme.param_set_name()).into(),
+            intro_lines: vec![
+                HumanBenchmarkLine::new("Backend", scheme.backend_name()),
+                HumanBenchmarkLine::new(
+                    "Hierarchy levels",
+                    scheme.levels().to_string(),
+                ),
+            ],
+            algorithm: scheme.algorithm_name(),
+            backend: Some(scheme.backend_name()),
+            param_set: Some(scheme.param_set_name()),
+            summary_algorithm: scheme.algorithm_name().into(),
+            summary_intro_lines: vec![HumanBenchmarkLine::new(
+                "Param set",
+                scheme.param_set_name(),
+            )],
+            keygen_duration,
+            sign_duration,
+            verify_duration,
+            verified,
+            public_key_bytes: pk_size,
+            secret_key_bytes: sk_size,
+            signature_bytes: sig_size,
+            signed_message_bytes: Some(signed_message_size(
+                message.len(),
+                sig_size,
+            )),
+            size_lines: vec![
+                HumanBenchmarkLine::bytes("Public key size", pk_size),
+                HumanBenchmarkLine::bytes("Secret key size", sk_size),
+                HumanBenchmarkLine::bytes("Signature size", sig_size),
+                HumanBenchmarkLine::bytes(
+                    "Signed message size",
+                    signed_message_size(message.len(), sig_size),
+                ),
+                HumanBenchmarkLine::new(
+                    "Estimated signatures per key",
+                    key_lifetime.to_string(),
+                ),
+            ],
+            summary_size_lines: vec![
+                HumanBenchmarkLine::bytes("Public Key", pk_size),
+                HumanBenchmarkLine::bytes("Secret Key", sk_size),
+                HumanBenchmarkLine::bytes("Signature", sig_size),
+            ],
+            sign_peak_bytes: None,
+            verify_peak_bytes: None,
+        })
     });
 }

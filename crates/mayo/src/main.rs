@@ -3,9 +3,8 @@ use mayo::{
     ALLOCATION_TRACKER, MAYO,
 };
 use pq_bench::{
-    build_standard_binary_report, build_standard_human_benchmark_report,
-    run_human_benchmark_binary, BenchmarkBinaryExecution, HumanBenchmarkLine,
-    StandardBinaryBenchmarkSpec, StandardHumanBenchmarkSpec,
+    build_standard_benchmark_execution, run_human_benchmark_binary,
+    HumanBenchmarkLine, StandardBenchmarkExecutionSpec,
 };
 pq_bench::install_system_tracking_allocator!(
     TrackingAllocator,
@@ -47,56 +46,34 @@ fn main() {
             ),
         ];
 
-        BenchmarkBinaryExecution {
-            report: build_standard_binary_report(StandardBinaryBenchmarkSpec {
-                algorithm: scheme.algorithm_name(),
-                backend: None,
-                param_set: Some(scheme.algorithm_name()),
-                keygen_duration,
-                sign_duration,
-                verify_duration,
-                verified,
-                public_key_bytes: sizes.public_key_bytes,
-                secret_key_bytes: sizes.secret_key_bytes,
-                signature_bytes: sizes.signature_bytes,
-                signed_message_bytes: Some(signed_message_size(
-                    message.len(),
-                    sizes.signature_bytes,
-                )),
-                sign_peak_bytes: Some(sign_peak_mem),
-                verify_peak_bytes: Some(verify_peak_mem),
-            }),
-            human: build_standard_human_benchmark_report(
-                StandardHumanBenchmarkSpec {
-                    banner_lines: &[],
-                    heading: format!("MAYO ({})", scheme.algorithm_name())
-                        .into(),
-                    intro_lines: Vec::new(),
-                    summary_algorithm: scheme.algorithm_name().into(),
-                    summary_intro_lines: Vec::new(),
-                    keygen_duration,
-                    sign_duration,
-                    verify_duration,
-                    verified,
-                    size_lines,
-                    summary_size_lines: vec![
-                        HumanBenchmarkLine::bytes(
-                            "Public Key",
-                            sizes.public_key_bytes,
-                        ),
-                        HumanBenchmarkLine::bytes(
-                            "Secret Key",
-                            sizes.secret_key_bytes,
-                        ),
-                        HumanBenchmarkLine::bytes(
-                            "Signature",
-                            sizes.signature_bytes,
-                        ),
-                    ],
-                    sign_peak_bytes: Some(sign_peak_mem),
-                    verify_peak_bytes: Some(verify_peak_mem),
-                },
-            ),
-        }
+        build_standard_benchmark_execution(StandardBenchmarkExecutionSpec {
+            banner_lines: &[],
+            heading: format!("MAYO ({})", scheme.algorithm_name()).into(),
+            intro_lines: Vec::new(),
+            algorithm: scheme.algorithm_name(),
+            backend: None,
+            param_set: Some(scheme.algorithm_name()),
+            summary_algorithm: scheme.algorithm_name().into(),
+            summary_intro_lines: Vec::new(),
+            keygen_duration,
+            sign_duration,
+            verify_duration,
+            verified,
+            public_key_bytes: sizes.public_key_bytes,
+            secret_key_bytes: sizes.secret_key_bytes,
+            signature_bytes: sizes.signature_bytes,
+            signed_message_bytes: Some(signed_message_size(
+                message.len(),
+                sizes.signature_bytes,
+            )),
+            size_lines,
+            summary_size_lines: vec![
+                HumanBenchmarkLine::bytes("Public Key", sizes.public_key_bytes),
+                HumanBenchmarkLine::bytes("Secret Key", sizes.secret_key_bytes),
+                HumanBenchmarkLine::bytes("Signature", sizes.signature_bytes),
+            ],
+            sign_peak_bytes: Some(sign_peak_mem),
+            verify_peak_bytes: Some(verify_peak_mem),
+        })
     });
 }

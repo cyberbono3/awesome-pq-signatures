@@ -28,9 +28,11 @@ pub use {
         signed_fixture,
     },
     binary::{
+        build_standard_benchmark_execution,
         parse_benchmark_binary_config_or_exit, run_human_benchmark_binary,
         run_standard_signed_message_benchmark_binary, BenchmarkBinaryExecution,
-        StandardBenchmarkSizes, StandardSignedMessageBinaryLabels,
+        StandardBenchmarkExecutionSpec, StandardBenchmarkSizes,
+        StandardSignedMessageBinaryLabels,
     },
     config::{BenchmarkBinaryConfig, BenchmarkOutputFormat},
     message::{
