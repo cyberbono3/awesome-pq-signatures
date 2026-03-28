@@ -1,6 +1,5 @@
 use std::error::Error;
 use std::fmt;
-use std::str::FromStr;
 use std::time::Duration;
 
 use xmss::{
@@ -13,79 +12,43 @@ pub use pq_bench::{filled_message, measure_time, BENCH_MESSAGE};
 pub const DEFAULT_XMSS_PARAM_SET: XmssParamSet = XmssParamSet::XmssSha2_10_256;
 pub const DIVAN_BENCH_MESSAGE_SIZES: [usize; 2] = [32, 1024];
 
-macro_rules! dispatch_param_set {
-    ($param_set:expr, $param:ident => $body:expr) => {
-        match $param_set {
-            XmssParamSet::XmssSha2_10_256 => {
-                type $param = XmssSha2_10_256;
-                $body
-            }
-            XmssParamSet::XmssSha2_16_256 => {
-                type $param = XmssSha2_16_256;
-                $body
-            }
-            XmssParamSet::XmssSha2_20_256 => {
-                type $param = XmssSha2_20_256;
-                $body
-            }
-        }
-    };
-}
+pq_bench::declare_param_dispatch!(
+    dispatch_param_set,
+    enum = XmssParamSet,
+    {
+        XmssSha2_10_256 => XmssSha2_10_256,
+        XmssSha2_16_256 => XmssSha2_16_256,
+        XmssSha2_20_256 => XmssSha2_20_256,
+    }
+);
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum XmssParamSet {
-    XmssSha2_10_256,
-    XmssSha2_16_256,
-    XmssSha2_20_256,
-}
+pq_bench::declare_benchmark_param_set!(
+    pub enum XmssParamSet,
+    error = XmssError,
+    unsupported = XmssError::UnsupportedParamSet,
+    {
+        XmssSha2_10_256 => {
+            name: "XMSS-SHA2_10_256",
+            oid: 0x0000_0001
+        },
+        XmssSha2_16_256 => {
+            name: "XMSS-SHA2_16_256",
+            oid: 0x0000_0002
+        },
+        XmssSha2_20_256 => {
+            name: "XMSS-SHA2_20_256",
+            oid: 0x0000_0003
+        },
+    }
+);
 
 impl XmssParamSet {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::XmssSha2_10_256 => "XMSS-SHA2_10_256",
-            Self::XmssSha2_16_256 => "XMSS-SHA2_16_256",
-            Self::XmssSha2_20_256 => "XMSS-SHA2_20_256",
-        }
-    }
-
-    #[must_use]
-    pub const fn oid(self) -> u32 {
-        match self {
-            Self::XmssSha2_10_256 => 0x0000_0001,
-            Self::XmssSha2_16_256 => 0x0000_0002,
-            Self::XmssSha2_20_256 => 0x0000_0003,
-        }
-    }
-
     #[must_use]
     pub const fn tree_height(self) -> u32 {
         match self {
             Self::XmssSha2_10_256 => 10,
             Self::XmssSha2_16_256 => 16,
             Self::XmssSha2_20_256 => 20,
-        }
-    }
-
-    #[must_use]
-    pub const fn all() -> &'static [Self] {
-        &[
-            Self::XmssSha2_10_256,
-            Self::XmssSha2_16_256,
-            Self::XmssSha2_20_256,
-        ]
-    }
-}
-
-impl FromStr for XmssParamSet {
-    type Err = XmssError;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            "XMSS-SHA2_10_256" => Ok(Self::XmssSha2_10_256),
-            "XMSS-SHA2_16_256" => Ok(Self::XmssSha2_16_256),
-            "XMSS-SHA2_20_256" => Ok(Self::XmssSha2_20_256),
-            _ => Err(XmssError::UnsupportedParamSet(value.to_owned())),
         }
     }
 }

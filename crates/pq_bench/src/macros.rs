@@ -207,6 +207,90 @@ macro_rules! declare_signed_message_divan_bench {
 
 // Scheme/binary wiring macros
 
+/// Declares a benchmark parameter-set enum with the common string/OID lookup
+/// surface used by crates that expose multiple named variants.
+#[macro_export]
+macro_rules! declare_benchmark_param_set {
+    (
+        $(#[$meta:meta])*
+        $vis:vis enum $name:ident,
+        error = $error_type:ty,
+        unsupported = $unsupported:path,
+        {
+            $(
+                $variant:ident => {
+                    name: $display_name:expr,
+                    oid: $oid:expr
+                }
+            ),+ $(,)?
+        }
+    ) => {
+        $(#[$meta])*
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        $vis enum $name {
+            $($variant),+
+        }
+
+        impl $name {
+            #[must_use]
+            pub const fn as_str(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $display_name),+
+                }
+            }
+
+            #[must_use]
+            pub const fn oid(self) -> u32 {
+                match self {
+                    $(Self::$variant => $oid),+
+                }
+            }
+
+            #[must_use]
+            pub const fn all() -> &'static [Self] {
+                &[$(Self::$variant),+]
+            }
+        }
+
+        impl std::str::FromStr for $name {
+            type Err = $error_type;
+
+            fn from_str(value: &str) -> Result<Self, Self::Err> {
+                match value {
+                    $($display_name => Ok(Self::$variant)),+,
+                    _ => Err($unsupported(value.to_owned())),
+                }
+            }
+        }
+    };
+}
+
+/// Declares a local parameter-dispatch macro that maps a runtime parameter-set
+/// enum to concrete generic types.
+#[macro_export]
+macro_rules! declare_param_dispatch {
+    (
+        $dispatch_macro:ident,
+        enum = $enum_name:ident,
+        {
+            $( $variant:ident => $param_ty:ty ),+ $(,)?
+        }
+    ) => {
+        macro_rules! $dispatch_macro {
+            ($param_set:expr, $param:ident => $body:expr) => {
+                match $param_set {
+                    $(
+                        $enum_name::$variant => {
+                            type $param = $param_ty;
+                            $body
+                        }
+                    ),+
+                }
+            };
+        }
+    };
+}
+
 /// Generates a small scheme wrapper for implementations that already expose
 /// normal Rust keygen/sign/verify operations and size accessors.
 #[macro_export]
