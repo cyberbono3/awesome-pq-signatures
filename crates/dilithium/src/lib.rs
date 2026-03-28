@@ -7,94 +7,79 @@ pub use pq_bench::{
 pq_bench::declare_tracking_allocator!();
 pq_bench::declare_peak_memory_api!();
 
-pub trait SignatureScheme {
-    type Seed;
-    type KeyPair;
-    type Signature;
-    type Error;
-
-    fn algorithm_name(&self) -> &'static str;
-    fn keypair(&self, seed: &Self::Seed) -> Self::KeyPair;
-    fn sign(
-        &self,
-        keypair: &Self::KeyPair,
-        message: &[u8],
-        context: &[u8],
-    ) -> Result<Self::Signature, Self::Error>;
-    fn verify(
-        &self,
-        keypair: &Self::KeyPair,
-        message: &[u8],
-        context: &[u8],
-        signature: &Self::Signature,
-    ) -> bool;
-    fn public_key_size(&self, keypair: &Self::KeyPair) -> usize;
-    fn secret_key_size(&self, keypair: &Self::KeyPair) -> usize;
-    fn signature_size(&self, signature: &Self::Signature) -> usize;
-}
+pub type MlDsaSeed = B32;
+pub type MlDsaKeyPair = KeyPair<MlDsa65>;
+pub type MlDsaSignature = Signature<MlDsa65>;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MlDsa65Scheme;
 
 pub const ML_DSA_65: MlDsa65Scheme = MlDsa65Scheme;
 
-impl SignatureScheme for MlDsa65Scheme {
-    type Seed = B32;
-    type KeyPair = KeyPair<MlDsa65>;
-    type Signature = Signature<MlDsa65>;
-    type Error = ml_dsa::Error;
-
-    fn algorithm_name(&self) -> &'static str {
+impl MlDsa65Scheme {
+    #[must_use]
+    pub fn algorithm_name(&self) -> &'static str {
         "ML-DSA-65"
     }
 
-    fn keypair(&self, seed: &Self::Seed) -> Self::KeyPair {
+    #[must_use]
+    pub fn keypair(&self, seed: &MlDsaSeed) -> MlDsaKeyPair {
         MlDsa65::key_gen_internal(seed)
     }
 
-    fn sign(
+    #[must_use]
+    pub fn benchmark_keypair(&self) -> MlDsaKeyPair {
+        self.keypair(&default_seed())
+    }
+
+    pub fn sign(
         &self,
-        keypair: &Self::KeyPair,
+        keypair: &MlDsaKeyPair,
         message: &[u8],
         context: &[u8],
-    ) -> Result<Self::Signature, Self::Error> {
+    ) -> Result<MlDsaSignature, ml_dsa::Error> {
         keypair.signing_key().sign_deterministic(message, context)
     }
 
-    fn verify(
+    #[must_use]
+    pub fn verify(
         &self,
-        keypair: &Self::KeyPair,
+        keypair: &MlDsaKeyPair,
         message: &[u8],
         context: &[u8],
-        signature: &Self::Signature,
+        signature: &MlDsaSignature,
     ) -> bool {
         keypair
             .verifying_key()
             .verify_with_context(message, context, signature)
     }
 
-    fn public_key_size(&self, keypair: &Self::KeyPair) -> usize {
+    #[must_use]
+    pub fn public_key_size(&self, keypair: &MlDsaKeyPair) -> usize {
         keypair.verifying_key().encode().len()
     }
 
-    fn secret_key_size(&self, keypair: &Self::KeyPair) -> usize {
+    #[must_use]
+    pub fn secret_key_size(&self, keypair: &MlDsaKeyPair) -> usize {
         keypair.signing_key().encode().len()
     }
 
-    fn signature_size(&self, signature: &Self::Signature) -> usize {
+    #[must_use]
+    pub fn signature_size(&self, signature: &MlDsaSignature) -> usize {
         signature.encode().len()
     }
 }
 
-pub fn default_seed() -> B32 {
+#[must_use]
+pub fn default_seed() -> MlDsaSeed {
     benchmark_seed_array::<32>().into()
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, default_seed, signed_message_size, SignatureScheme,
-        BENCH_MESSAGE_BYTE, ML_DSA_65,
+        bench_message, default_seed, signed_message_size, BENCH_MESSAGE_BYTE,
+        ML_DSA_65,
     };
 
     #[test]

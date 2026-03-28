@@ -1,6 +1,6 @@
 use dilithium::{
-    default_seed, measure_time, memory, signed_message_size, SignatureScheme,
-    TrackingAllocator, ALLOCATION_TRACKER, ML_DSA_65,
+    default_seed, measure_time, memory, signed_message_size, TrackingAllocator,
+    ALLOCATION_TRACKER, ML_DSA_65,
 };
 use pq_bench::{
     build_standard_benchmark_execution, run_human_benchmark_binary,

@@ -1,6 +1,6 @@
 use dilithium::{
-    bench_message, default_seed, memory, SignatureScheme, TrackingAllocator,
-    ALLOCATION_TRACKER, BENCH_MESSAGE_SIZES, ML_DSA_65,
+    bench_message, default_seed, memory, TrackingAllocator, ALLOCATION_TRACKER,
+    BENCH_MESSAGE_SIZES, ML_DSA_65,
 };
 use divan::{black_box, Bencher};
 pq_bench::install_divan_tracking_allocator!(

@@ -10,69 +10,65 @@ pub use pq_bench::{
 pq_bench::declare_tracking_allocator!();
 pq_bench::declare_peak_memory_api!();
 
-pub trait SignatureScheme {
-    type Keypair;
-    type Signature;
-
-    fn algorithm_name(&self) -> &'static str;
-    fn backend_name(&self) -> &'static str;
-    fn param_set_name(&self) -> &'static str;
-    fn keypair(&self) -> Self::Keypair;
-    fn sign(&self, keypair: &Self::Keypair, message: &[u8]) -> Self::Signature;
-    fn verify(&self, signature: &Self::Signature) -> bool;
-    fn public_key_size(&self, keypair: &Self::Keypair) -> usize;
-    fn secret_key_size(&self, keypair: &Self::Keypair) -> usize;
-    fn signature_size(&self, signature: &Self::Signature) -> usize;
-    fn signed_input_size(&self, signature: &Self::Signature) -> usize;
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WinternitzOtsScheme;
 
 pub const WINTERNITZ_OTS: WinternitzOtsScheme = WinternitzOtsScheme;
 
-impl SignatureScheme for WinternitzOtsScheme {
-    type Keypair = Wots;
-    type Signature = WotsSignature;
-
-    fn algorithm_name(&self) -> &'static str {
+impl WinternitzOtsScheme {
+    #[must_use]
+    pub fn algorithm_name(&self) -> &'static str {
         "Winternitz OTS (W-OTS)"
     }
 
-    fn backend_name(&self) -> &'static str {
+    #[must_use]
+    pub fn backend_name(&self) -> &'static str {
         "winternitz-ots-0.3.0"
     }
 
-    fn param_set_name(&self) -> &'static str {
+    #[must_use]
+    pub fn param_set_name(&self) -> &'static str {
         "w=16,n=32,hash=blake2b"
     }
 
-    fn keypair(&self) -> Self::Keypair {
+    #[must_use]
+    pub fn keypair(&self) -> Wots {
         wots::generate_wots()
     }
 
-    fn sign(&self, keypair: &Self::Keypair, message: &[u8]) -> Self::Signature {
+    #[must_use]
+    pub fn benchmark_keypair(&self) -> Wots {
+        self.keypair()
+    }
+
+    #[must_use]
+    pub fn sign(&self, keypair: &Wots, message: &[u8]) -> WotsSignature {
         keypair.sign(message_digest_hex(message))
     }
 
-    fn verify(&self, signature: &Self::Signature) -> bool {
+    #[must_use]
+    pub fn verify(&self, signature: &WotsSignature) -> bool {
         std::panic::catch_unwind(AssertUnwindSafe(|| signature.verify()))
             .unwrap_or(false)
     }
 
-    fn public_key_size(&self, keypair: &Self::Keypair) -> usize {
+    #[must_use]
+    pub fn public_key_size(&self, keypair: &Wots) -> usize {
         hex_vec_byte_len(&keypair.pk)
     }
 
-    fn secret_key_size(&self, keypair: &Self::Keypair) -> usize {
+    #[must_use]
+    pub fn secret_key_size(&self, keypair: &Wots) -> usize {
         hex_vec_byte_len(&keypair.sk)
     }
 
-    fn signature_size(&self, signature: &Self::Signature) -> usize {
+    #[must_use]
+    pub fn signature_size(&self, signature: &WotsSignature) -> usize {
         hex_vec_byte_len(&signature.signature)
     }
 
-    fn signed_input_size(&self, signature: &Self::Signature) -> usize {
+    #[must_use]
+    pub fn signed_input_size(&self, signature: &WotsSignature) -> usize {
         hex_string_byte_len(&signature.input)
     }
 }
@@ -93,8 +89,7 @@ fn hex_string_byte_len(value: &str) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, message_digest_hex, SignatureScheme, BENCH_MESSAGE_BYTE,
-        WINTERNITZ_OTS,
+        bench_message, message_digest_hex, BENCH_MESSAGE_BYTE, WINTERNITZ_OTS,
     };
 
     #[test]

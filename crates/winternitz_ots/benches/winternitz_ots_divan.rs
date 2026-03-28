@@ -1,8 +1,8 @@
 use divan::{black_box, Bencher};
 use std::sync::atomic::{AtomicU64, Ordering};
 use winternitz_ots::{
-    bench_message, memory, SignatureScheme, TrackingAllocator,
-    ALLOCATION_TRACKER, BENCH_MESSAGE_SIZES, WINTERNITZ_OTS,
+    bench_message, memory, TrackingAllocator, ALLOCATION_TRACKER,
+    BENCH_MESSAGE_SIZES, WINTERNITZ_OTS,
 };
 
 const EXPECTED_ALGORITHM: &str = "Winternitz OTS (W-OTS)";

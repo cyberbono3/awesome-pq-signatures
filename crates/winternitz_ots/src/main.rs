@@ -3,8 +3,7 @@ use pq_bench::{
     HumanBenchmarkLine, StandardBenchmarkExecutionSpec,
 };
 use winternitz_ots::{
-    measure_time, memory, SignatureScheme, TrackingAllocator,
-    ALLOCATION_TRACKER, WINTERNITZ_OTS,
+    measure_time, memory, TrackingAllocator, ALLOCATION_TRACKER, WINTERNITZ_OTS,
 };
 pq_bench::install_system_tracking_allocator!(
     TrackingAllocator,
