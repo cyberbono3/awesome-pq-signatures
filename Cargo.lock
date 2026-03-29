@@ -321,7 +321,6 @@ dependencies = [
  "dilithium",
  "falcon",
  "hss",
- "lamport_ots",
  "lms",
  "mayo",
  "pq_bench",
@@ -1297,15 +1296,6 @@ checksum = "b646a74e746cd25045aa0fd42f4f7f78aa6d119380182c7e63a5593c4ab8df6f"
 dependencies = [
  "digest 0.10.7",
  "sha3-asm",
-]
-
-[[package]]
-name = "lamport_ots"
-version = "0.1.0"
-dependencies = [
- "divan",
- "pq_bench",
- "sha2",
 ]
 
 [[package]]

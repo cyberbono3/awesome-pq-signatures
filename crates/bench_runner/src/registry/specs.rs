@@ -1,7 +1,7 @@
 use crate::adapters::{
     build_binary_adapter, build_pure_adapter, DilithiumAdapter, FalconAdapter,
-    HssAdapter, LamportAdapter, LmsAdapter, MayoAdapter, RunnerContext,
-    SphincsPlusAdapter, XmssAdapter, XmssmtAdapter,
+    HssAdapter, LmsAdapter, MayoAdapter, RunnerContext, SphincsPlusAdapter,
+    XmssAdapter, XmssmtAdapter,
 };
 use crate::cli::CliConfig;
 use crate::types::DsaBenchmark;
@@ -68,7 +68,6 @@ pub static ADAPTER_SPECS: &[AdapterSpec] = &[
         SphincsPlusAdapter
     ),
     pure_spec!("MAYO-1", "MAYO-1", MayoAdapter),
-    pure_spec!("Lamport OTS", "Lamport-OTS-256", LamportAdapter),
     pure_spec!("LMS", "LMS-SHA256-M32-H5", LmsAdapter),
     pure_spec!("HSS", "HSS-SHA256-H5-W2-L1", HssAdapter),
     pure_spec!("XMSS", "XMSS-SHA2_10_256", XmssAdapter),

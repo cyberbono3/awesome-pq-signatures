@@ -143,39 +143,6 @@ benchmark_adapter!(
 );
 
 benchmark_adapter!(
-    LamportAdapter,
-    algorithm = "Lamport OTS",
-    param_set = "Lamport-OTS-256",
-    run_once = |message| {
-        use lamport_ots::LAMPORT_OTS_SCHEME;
-
-        Ok(measure_benchmark_flow(
-            || {
-                LAMPORT_OTS_SCHEME.keypair_with_seed(
-                    lamport_ots::seed_from_str("bench-runner-lamport"),
-                )
-            },
-            |(_, secret_key)| {
-                LAMPORT_OTS_SCHEME.sign(message, secret_key).expect("sign")
-            },
-            |(public_key, _), signature| {
-                LAMPORT_OTS_SCHEME
-                    .verify(message, signature, public_key)
-                    .expect("verify");
-            },
-            |_, _| {
-                let sizes = LAMPORT_OTS_SCHEME.sizes();
-                SizeMetrics::new(
-                    sizes.public_key_bytes,
-                    sizes.secret_key_bytes,
-                    sizes.signature_bytes,
-                )
-            },
-        ))
-    }
-);
-
-benchmark_adapter!(
     LmsAdapter,
     algorithm = "LMS",
     param_set = "LMS-SHA256-M32-H5",

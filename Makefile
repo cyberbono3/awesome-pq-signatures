@@ -3,8 +3,6 @@
 .PHONY: help format build test run \
 	dilithium dilithium-divan \
 	falcon falcon-divan \
-	lamport_ots lamport_ots_divan lamport_ots_op \
-	lamport-ots lamport-ots-divan lamport-ots-op \
 	winternitz_ots winternitz_ots_divan \
 	winternitz-ots winternitz-ots-divan \
 	lms lms-divan \
@@ -39,8 +37,6 @@ help:
 	'Scheme crates:' \
 	'  make dilithium            make dilithium-divan' \
 	'  make falcon               make falcon-divan' \
-	'  make lamport-ots          make lamport-ots-divan' \
-	'  make lamport-ots-op' \
 	'  make winternitz-ots       make winternitz-ots-divan' \
 	'  make lms                  make lms-divan' \
 	'  make hss                  make hss-divan' \
@@ -54,7 +50,6 @@ help:
 	'  make leansig              make leansig-divan' \
 	'' \
 	'Exact crate-name aliases also work:' \
-	'  make lamport_ots          make lamport_ots_divan          make lamport_ots_op' \
 	'  make winternitz_ots       make winternitz_ots_divan' \
 	'  make sphincs_plus         make sphincs_plus_divan' \
 	'' \
@@ -86,21 +81,6 @@ falcon:
 
 falcon-divan:
 	cargo bench -p falcon --bench falcon_divan
-
-lamport_ots:
-	cargo run -p lamport_ots --bin lamport_ots $(SCHEME_RUN_ARGS)
-
-lamport-ots: lamport_ots
-
-lamport_ots_divan:
-	cargo bench -p lamport_ots --bench lamport_ots_divan
-
-lamport-ots-divan: lamport_ots_divan
-
-lamport_ots_op:
-	cargo run -p lamport_ots --bin lamport_ots_bench
-
-lamport-ots-op: lamport_ots_op
 
 winternitz_ots:
 	cargo run -p winternitz_ots --bin winternitz_ots $(SCHEME_RUN_ARGS)
