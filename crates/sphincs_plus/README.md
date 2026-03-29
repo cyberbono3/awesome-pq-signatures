@@ -8,43 +8,38 @@ Stateless hash-based signature benchmarking crate.
 
 ## `src/main.rs` (`sphincs-plus-bench` binary)
 
-`src/main.rs` is a single-run benchmark/report binary for `SPHINCS+-SHAKE-128f-simple`. It performs:
+`src/main.rs` is the standard workspace benchmark binary for `SPHINCS+-SHAKE-128f-simple`. It performs:
 - key generation timing
 - sign timing + peak heap allocation tracking
 - verify timing + peak heap allocation tracking
 - key/signature size reporting
 
+The binary uses the shared `pq_bench` workspace contract and accepts
+`--format human|json --message-size N`.
+
 Run it with:
 
 ```bash
-cargo run -p sphincs_plus --bin sphincs-plus-bench
+cargo run -p sphincs_plus --bin sphincs-plus-bench -- --format human --message-size 64
 ```
 
-Latest run result (captured on 2026-02-18 18:56:27 UTC):
+JSON output:
+
+```bash
+cargo run -p sphincs_plus --bin sphincs-plus-bench -- --format json --message-size 64
+```
+
+Representative local run:
 
 ```text
 === SPHINCS+-SHAKE-128f-simple Benchmark ===
 
---- Key Generation ---
-Time to generate keys: 7.854833ms
-Time to generate keys (ns): 7854833
-
---- Signing ---
-Time to sign: 193.986458ms
-Time to sign (ns): 193986458
-Peak memory during signing: 17153 bytes
-
---- Verification ---
-Time to verify: 10.147625ms
-Time to verify (ns): 10147625
-Peak memory during verification: 17153 bytes
-Signature verification: SUCCESS
-
---- Size Measurements ---
-Public key size: 32 bytes
-Secret key size: 64 bytes
-Signature size: 17088 bytes
-Signed message size: 17153 bytes
+Key generation: 7.854833 ms
+Signing:        193.986458 ms
+Verification:   10.147625 ms
+Public key:     32 bytes
+Secret key:     64 bytes
+Signature:      17088 bytes
 ```
 
 ## `benches/sphincs_plus_divan.rs` (Divan benchmark suite)
@@ -54,7 +49,7 @@ Signed message size: 17153 bytes
 - `sign` across multiple message sizes
 - `verify` across multiple message sizes
 
-It also prints key/signature size and peak heap allocation summaries before executing Divan benches.
+It also prints key/signature size and peak heap allocation summaries before executing Divan benches, using the shared `pq_bench` bench helpers.
 
 Run it with:
 
@@ -62,7 +57,7 @@ Run it with:
 cargo bench -p sphincs_plus --bench sphincs_plus_divan
 ```
 
-Latest run result (captured on 2026-02-18 18:56:27 UTC):
+Representative local Divan run:
 
 ```text
 SPHINCS+-SHAKE-128f-simple sizes:
@@ -91,16 +86,4 @@ Divan timing summary (median):
   verify(4096): 1.515 ms
 ```
 
-Note: benchmark timings and allocation metrics vary by machine, compiler version, and system load.
-
-## Benchmark Environment
-
-The benchmark results above were recorded on:
-
-- machine: MacBook Pro (`MacBookPro18,1`)
-- chip: Apple M1 Pro (10 cores: 8 performance + 2 efficiency)
-- memory: 16 GB
-- OS: macOS 26.1 (`25B78`)
-- kernel/arch: Darwin 25.1.0, `arm64`
-- rust toolchain: `rustc 1.87.0-nightly (f4a216d28 2025-03-02)`
-- cargo: `cargo 1.87.0-nightly (2622e844b 2025-02-28)`
+Note: timings and allocation figures vary by machine, compiler version, and system load.

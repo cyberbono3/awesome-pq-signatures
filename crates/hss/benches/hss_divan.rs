@@ -1,19 +1,21 @@
-use divan::{black_box, AllocProfiler, Bencher};
+use divan::{black_box, Bencher};
 use hss::{
-    bench_message, default_seed, memory, signed_message_size, HssScheme, TrackingAllocator,
-    BENCH_MESSAGE_SIZES, DEFAULT_PARAM_SET_NAME, HSS_PARAM_SETS,
+    bench_message, default_seed, memory, signed_message_size, HssScheme,
+    TrackingAllocator, ALLOCATION_TRACKER, BENCH_MESSAGE_SIZES,
+    DEFAULT_PARAM_SET_NAME, HSS_PARAM_SETS,
 };
+pq_bench::install_divan_tracking_allocator!(
+    TrackingAllocator,
+    ALLOCATION_TRACKER
+);
 
-static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
-
-#[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> = TrackingAllocator::new(&DIVAN_ALLOC);
-
-const PARAM_SET_NAMES: [&str; 2] = ["HSS-SHA256-H5-W2-L1", "HSS-SHA256-H5-W2-L2"];
+const PARAM_SET_NAMES: [&str; 2] =
+    ["HSS-SHA256-H5-W2-L1", "HSS-SHA256-H5-W2-L2"];
 
 #[divan::bench(args = PARAM_SET_NAMES)]
 fn keygen(bencher: Bencher, param_set_name: &'static str) {
-    let scheme = HssScheme::from_param_set_name(param_set_name).expect("known HSS param set");
+    let scheme = HssScheme::from_param_set_name(param_set_name)
+        .expect("known HSS param set");
     let seed = default_seed();
 
     bencher.bench(|| {
@@ -25,28 +27,24 @@ fn keygen(bencher: Bencher, param_set_name: &'static str) {
     });
 }
 
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn sign_l1(bencher: Bencher, message_size: usize) {
-    sign_bench(bencher, "HSS-SHA256-H5-W2-L1", message_size);
-}
+pq_bench::declare_param_message_benches!(
+    sign = {
+        sign_l1 => "HSS-SHA256-H5-W2-L1",
+        sign_l2 => "HSS-SHA256-H5-W2-L2"
+    },
+    verify = {
+        verify_l1 => "HSS-SHA256-H5-W2-L1",
+        verify_l2 => "HSS-SHA256-H5-W2-L2"
+    }
+);
 
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn sign_l2(bencher: Bencher, message_size: usize) {
-    sign_bench(bencher, "HSS-SHA256-H5-W2-L2", message_size);
-}
-
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn verify_l1(bencher: Bencher, message_size: usize) {
-    verify_bench(bencher, "HSS-SHA256-H5-W2-L1", message_size);
-}
-
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn verify_l2(bencher: Bencher, message_size: usize) {
-    verify_bench(bencher, "HSS-SHA256-H5-W2-L2", message_size);
-}
-
-fn sign_bench(bencher: Bencher, param_set_name: &'static str, message_size: usize) {
-    let scheme = HssScheme::from_param_set_name(param_set_name).expect("known HSS param set");
+fn sign_bench(
+    bencher: Bencher,
+    param_set_name: &'static str,
+    message_size: usize,
+) {
+    let scheme = HssScheme::from_param_set_name(param_set_name)
+        .expect("known HSS param set");
     let message = bench_message(message_size);
     let seed = default_seed();
 
@@ -66,8 +64,13 @@ fn sign_bench(bencher: Bencher, param_set_name: &'static str, message_size: usiz
         });
 }
 
-fn verify_bench(bencher: Bencher, param_set_name: &'static str, message_size: usize) {
-    let scheme = HssScheme::from_param_set_name(param_set_name).expect("known HSS param set");
+fn verify_bench(
+    bencher: Bencher,
+    param_set_name: &'static str,
+    message_size: usize,
+) {
+    let scheme = HssScheme::from_param_set_name(param_set_name)
+        .expect("known HSS param set");
     let message = bench_message(message_size);
     let (public_key, mut secret_key) = scheme
         .keypair_with_seed(default_seed())

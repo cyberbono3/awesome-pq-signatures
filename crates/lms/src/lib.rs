@@ -1,21 +1,22 @@
 use hbs_lms::{
     keygen,
     signature::{SignerMut, Verifier},
-    HssParameter, LmotsAlgorithm, LmsAlgorithm, Seed, Sha256_256, Signature as RawSignature,
-    SigningKey as RawSigningKey, VerifyingKey as RawVerifyingKey,
+    HssParameter, LmotsAlgorithm, LmsAlgorithm, Seed, Sha256_256,
+    Signature as RawSignature, SigningKey as RawSigningKey,
+    VerifyingKey as RawVerifyingKey,
 };
-use std::alloc::{GlobalAlloc, Layout};
 use std::error::Error;
 use std::fmt;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_bench::BENCH_MESSAGE;
-
-pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
-pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
-pub const DEFAULT_PARAM_SET_NAME: &str = "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4";
+pub use pq_bench::{
+    bench_message, benchmark_seed_u64, expand_seed_u64, measure_time,
+    signed_message_size, AllocationTracker, AllocationTrackingAllocator,
+    BENCH_MESSAGE, BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
+};
+pub type LmsSizes = pq_bench::SignatureMaterialSizes;
+pub const DEFAULT_PARAM_SET_NAME: &str =
+    "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4";
+pq_bench::declare_tracking_allocator!();
 
 const LMS_PUBLIC_KEY_BYTES: usize = 56;
 const LMS_SECRET_KEY_BYTES: usize = 48;
@@ -50,7 +51,8 @@ impl LmsParamSet {
     }
 
     pub const fn signature_size_bytes(self) -> usize {
-        16 + SHA256_OUTPUT_BYTES * (1 + LMOTS_W4_CHAIN_COUNT + self.tree_height())
+        16 + SHA256_OUTPUT_BYTES
+            * (1 + LMOTS_W4_CHAIN_COUNT + self.tree_height())
     }
 
     fn lms_algorithm(self) -> LmsAlgorithm {
@@ -68,7 +70,8 @@ impl LmsParamSet {
     }
 }
 
-pub const LMS_PARAM_SETS: [LmsParamSet; 2] = [LmsParamSet::H5W4, LmsParamSet::H10W4];
+pub const LMS_PARAM_SETS: [LmsParamSet; 2] =
+    [LmsParamSet::H5W4, LmsParamSet::H10W4];
 
 pub fn param_set_by_name(name: &str) -> Option<LmsParamSet> {
     LMS_PARAM_SETS
@@ -122,13 +125,6 @@ impl LmsSignature {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LmsSizes {
-    pub public_key_bytes: usize,
-    pub secret_key_bytes: usize,
-    pub signature_bytes: usize,
-}
-
 #[derive(Clone, Copy, Debug)]
 pub struct LmsScheme {
     params: LmsParamSet,
@@ -140,8 +136,10 @@ impl LmsScheme {
     }
 
     pub fn from_param_set_name(name: &str) -> Result<Self, LmsError> {
-        let params = param_set_by_name(name).ok_or_else(|| LmsError::UnknownParamSet {
-            name: name.to_owned(),
+        let params = param_set_by_name(name).ok_or_else(|| {
+            LmsError::UnknownParamSet {
+                name: name.to_owned(),
+            }
         })?;
         Ok(Self::new(params))
     }
@@ -185,10 +183,11 @@ impl LmsScheme {
     ) -> Result<(LmsPublicKey, LmsSecretKey), LmsError> {
         let mut seed = Seed::<Hasher>::default();
         seed.as_mut_slice()
-            .copy_from_slice(&seed_material_from_u64(seed_value));
+            .copy_from_slice(&expand_seed_u64::<32>(seed_value));
 
-        let (secret_key, public_key) = keygen::<Hasher>(&self.params.parameters(), &seed, None)
-            .map_err(|_| LmsError::KeygenFailed)?;
+        let (secret_key, public_key) =
+            keygen::<Hasher>(&self.params.parameters(), &seed, None)
+                .map_err(|_| LmsError::KeygenFailed)?;
 
         Ok((
             LmsPublicKey {
@@ -242,12 +241,18 @@ impl LmsScheme {
         signature.signature.as_ref().len()
     }
 
-    pub fn remaining_signatures(&self, secret_key: &LmsSecretKey) -> Result<u32, LmsError> {
+    pub fn remaining_signatures(
+        &self,
+        secret_key: &LmsSecretKey,
+    ) -> Result<u32, LmsError> {
         self.ensure_secret_key_params(secret_key)?;
         secret_key.remaining_signatures()
     }
 
-    fn ensure_secret_key_params(&self, secret_key: &LmsSecretKey) -> Result<(), LmsError> {
+    fn ensure_secret_key_params(
+        &self,
+        secret_key: &LmsSecretKey,
+    ) -> Result<(), LmsError> {
         if secret_key.param_set() != self.params {
             return Err(LmsError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -257,7 +262,10 @@ impl LmsScheme {
         Ok(())
     }
 
-    fn ensure_public_key_params(&self, public_key: &LmsPublicKey) -> Result<(), LmsError> {
+    fn ensure_public_key_params(
+        &self,
+        public_key: &LmsPublicKey,
+    ) -> Result<(), LmsError> {
         if public_key.param_set() != self.params {
             return Err(LmsError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -267,7 +275,10 @@ impl LmsScheme {
         Ok(())
     }
 
-    fn ensure_signature_params(&self, signature: &LmsSignature) -> Result<(), LmsError> {
+    fn ensure_signature_params(
+        &self,
+        signature: &LmsSignature,
+    ) -> Result<(), LmsError> {
         if signature.param_set() != self.params {
             return Err(LmsError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -317,181 +328,63 @@ impl fmt::Display for LmsError {
 
 impl Error for LmsError {}
 
-pub fn bench_message(size: usize) -> Vec<u8> {
-    vec![BENCH_MESSAGE_BYTE; size]
-}
-
-pub fn signed_message_size(message_len: usize, signature_len: usize) -> usize {
-    message_len.saturating_add(signature_len)
-}
-
-pub fn measure_time<T, F>(operation: F) -> (T, Duration)
-where
-    F: FnOnce() -> T,
-{
-    let start = Instant::now();
-    let value = operation();
-    (value, start.elapsed())
-}
-
 pub fn default_seed() -> u64 {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
-    let pid = std::process::id() as u64;
-    now.as_nanos() as u64 ^ (pid << 32)
+    benchmark_seed_u64()
 }
 
-fn seed_material_from_u64(seed_value: u64) -> [u8; 32] {
-    let mut rng = XorShift64::new(seed_value);
-    let mut out = [0u8; 32];
-
-    let mut offset = 0;
-    while offset < out.len() {
-        let chunk = rng.next_u64().to_le_bytes();
-        let take = (out.len() - offset).min(chunk.len());
-        out[offset..offset + take].copy_from_slice(&chunk[..take]);
-        offset += take;
-    }
-    out
-}
-
-#[derive(Clone, Copy, Debug)]
-struct XorShift64 {
-    state: u64,
-}
-
-impl XorShift64 {
-    fn new(seed: u64) -> Self {
-        let state = if seed == 0 {
-            0x9e37_79b9_7f4a_7c15
-        } else {
-            seed
-        };
-        Self { state }
-    }
-
-    fn next_u64(&mut self) -> u64 {
-        let mut x = self.state;
-        x ^= x << 13;
-        x ^= x >> 7;
-        x ^= x << 17;
-        self.state = x;
-        x
-    }
-}
-
-static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static BASELINE: AtomicUsize = AtomicUsize::new(0);
-
-pub struct TrackingAllocator<A: GlobalAlloc + Sync + 'static> {
-    inner: &'static A,
-}
-
-impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
-    pub const fn new(inner: &'static A) -> Self {
-        Self { inner }
-    }
-}
-
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { self.inner.alloc(layout) };
-        if !ptr.is_null() {
-            track_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        unsafe { self.inner.dealloc(ptr, layout) };
-        track_dealloc(layout.size());
-    }
-}
-
-fn track_alloc(size: usize) {
-    let current = ALLOCATED.fetch_add(size, Ordering::SeqCst) + size;
-    let baseline = BASELINE.load(Ordering::SeqCst);
-    let relative_current = current.saturating_sub(baseline);
-    let mut peak = PEAK_ALLOCATED.load(Ordering::SeqCst);
-
-    while relative_current > peak {
-        match PEAK_ALLOCATED.compare_exchange_weak(
-            peak,
-            relative_current,
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-        ) {
-            Ok(_) => break,
-            Err(observed) => peak = observed,
-        }
-    }
-}
-
-fn track_dealloc(size: usize) {
-    ALLOCATED.fetch_sub(size, Ordering::SeqCst);
-}
-
-pub mod memory {
-    use super::{Ordering, ALLOCATED, BASELINE, PEAK_ALLOCATED};
-
-    pub fn reset_peak() {
-        let current = ALLOCATED.load(Ordering::SeqCst);
-        BASELINE.store(current, Ordering::SeqCst);
-        PEAK_ALLOCATED.store(0, Ordering::SeqCst);
-    }
-
-    pub fn peak_bytes() -> usize {
-        PEAK_ALLOCATED.load(Ordering::SeqCst)
-    }
-}
+pq_bench::declare_peak_memory_api!();
 
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, param_set_by_name, LmsScheme, BENCH_MESSAGE_BYTE, DEFAULT_PARAM_SET_NAME,
+        bench_message, param_set_by_name, LmsScheme, BENCH_MESSAGE_BYTE,
+        DEFAULT_PARAM_SET_NAME,
     };
+    use pq_bench::run_with_large_stack;
 
     #[test]
     fn param_set_lookup_works() {
-        let found =
-            param_set_by_name(DEFAULT_PARAM_SET_NAME).expect("known param set should resolve");
+        let found = param_set_by_name(DEFAULT_PARAM_SET_NAME)
+            .expect("known param set should resolve");
         assert_eq!(found.name(), DEFAULT_PARAM_SET_NAME);
     }
 
     #[test]
     fn sign_verify_roundtrip() {
-        let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
-            .expect("param set should resolve");
-        let message = b"lms-roundtrip";
-        let (public_key, mut secret_key) =
-            scheme.keypair_with_seed(7).expect("keypair should succeed");
+        run_with_large_stack("lms-roundtrip", 32 * 1024 * 1024, || {
+            let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+                .expect("param set should resolve");
+            let message = b"lms-roundtrip";
+            let (public_key, mut secret_key) =
+                scheme.keypair_with_seed(7).expect("keypair should succeed");
 
-        let signature = scheme
-            .sign(message, &mut secret_key)
-            .expect("sign should succeed");
-        let verified = scheme
-            .verify(message, &signature, &public_key)
-            .expect("verify should succeed");
-        assert!(verified, "signature should verify");
+            let signature = scheme
+                .sign(message, &mut secret_key)
+                .expect("sign should succeed");
+            let verified = scheme
+                .verify(message, &signature, &public_key)
+                .expect("verify should succeed");
+            assert!(verified, "signature should verify");
+        });
     }
 
     #[test]
     fn verify_fails_for_other_message() {
-        let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
-            .expect("param set should resolve");
-        let (public_key, mut secret_key) = scheme
-            .keypair_with_seed(11)
-            .expect("keypair should succeed");
+        run_with_large_stack("lms-verify-fail", 32 * 1024 * 1024, || {
+            let scheme = LmsScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+                .expect("param set should resolve");
+            let (public_key, mut secret_key) = scheme
+                .keypair_with_seed(11)
+                .expect("keypair should succeed");
 
-        let signature = scheme
-            .sign(b"message-a", &mut secret_key)
-            .expect("sign should succeed");
-        let verified = scheme
-            .verify(b"message-b", &signature, &public_key)
-            .expect("verify should succeed");
-        assert!(!verified, "different message should fail verification");
+            let signature = scheme
+                .sign(b"message-a", &mut secret_key)
+                .expect("sign should succeed");
+            let verified = scheme
+                .verify(b"message-b", &signature, &public_key)
+                .expect("verify should succeed");
+            assert!(!verified, "different message should fail verification");
+        });
     }
 
     #[test]

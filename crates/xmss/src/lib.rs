@@ -1,64 +1,51 @@
 use std::error::Error;
 use std::fmt;
-use std::str::FromStr;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
+use pq_bench::BenchmarkOperation;
 use xmss::{
-    DetachedSignature, KeyPair, SigningKey, VerifyingKey, XmssParameter, XmssSha2_10_256,
-    XmssSha2_16_256, XmssSha2_20_256,
+    DetachedSignature, KeyPair, SigningKey, VerifyingKey, XmssParameter,
+    XmssSha2_10_256, XmssSha2_16_256, XmssSha2_20_256,
 };
 
-/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_bench::BENCH_MESSAGE;
+pub use pq_bench::{filled_message, measure_time, BENCH_MESSAGE};
+pub type XmssBenchmarkReport = pq_bench::ParamSetBenchmarkReport<XmssParamSet>;
+pub type XmssSizes = pq_bench::SignatureMaterialSizes;
 
 pub const DEFAULT_XMSS_PARAM_SET: XmssParamSet = XmssParamSet::XmssSha2_10_256;
 pub const DIVAN_BENCH_MESSAGE_SIZES: [usize; 2] = [32, 1024];
 
-macro_rules! dispatch_param_set {
-    ($param_set:expr, $param:ident => $body:expr) => {
-        match $param_set {
-            XmssParamSet::XmssSha2_10_256 => {
-                type $param = XmssSha2_10_256;
-                $body
-            }
-            XmssParamSet::XmssSha2_16_256 => {
-                type $param = XmssSha2_16_256;
-                $body
-            }
-            XmssParamSet::XmssSha2_20_256 => {
-                type $param = XmssSha2_20_256;
-                $body
-            }
-        }
-    };
-}
+pq_bench::declare_param_dispatch!(
+    dispatch_param_set,
+    enum = XmssParamSet,
+    {
+        XmssSha2_10_256 => XmssSha2_10_256,
+        XmssSha2_16_256 => XmssSha2_16_256,
+        XmssSha2_20_256 => XmssSha2_20_256,
+    }
+);
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum XmssParamSet {
-    XmssSha2_10_256,
-    XmssSha2_16_256,
-    XmssSha2_20_256,
-}
+pq_bench::declare_benchmark_param_set!(
+    pub enum XmssParamSet,
+    error = XmssError,
+    unsupported = XmssError::UnsupportedParamSet,
+    {
+        XmssSha2_10_256 => {
+            name: "XMSS-SHA2_10_256",
+            oid: 0x0000_0001
+        },
+        XmssSha2_16_256 => {
+            name: "XMSS-SHA2_16_256",
+            oid: 0x0000_0002
+        },
+        XmssSha2_20_256 => {
+            name: "XMSS-SHA2_20_256",
+            oid: 0x0000_0003
+        },
+    }
+);
 
 impl XmssParamSet {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::XmssSha2_10_256 => "XMSS-SHA2_10_256",
-            Self::XmssSha2_16_256 => "XMSS-SHA2_16_256",
-            Self::XmssSha2_20_256 => "XMSS-SHA2_20_256",
-        }
-    }
-
-    #[must_use]
-    pub const fn oid(self) -> u32 {
-        match self {
-            Self::XmssSha2_10_256 => 0x0000_0001,
-            Self::XmssSha2_16_256 => 0x0000_0002,
-            Self::XmssSha2_20_256 => 0x0000_0003,
-        }
-    }
-
     #[must_use]
     pub const fn tree_height(self) -> u32 {
         match self {
@@ -67,118 +54,38 @@ impl XmssParamSet {
             Self::XmssSha2_20_256 => 20,
         }
     }
-
-    #[must_use]
-    pub const fn all() -> &'static [Self] {
-        &[
-            Self::XmssSha2_10_256,
-            Self::XmssSha2_16_256,
-            Self::XmssSha2_20_256,
-        ]
-    }
 }
 
-impl FromStr for XmssParamSet {
-    type Err = XmssError;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            "XMSS-SHA2_10_256" => Ok(Self::XmssSha2_10_256),
-            "XMSS-SHA2_16_256" => Ok(Self::XmssSha2_16_256),
-            "XMSS-SHA2_20_256" => Ok(Self::XmssSha2_20_256),
-            _ => Err(XmssError::UnsupportedParamSet(value.to_owned())),
+macro_rules! declare_xmss_material {
+    ($name:ident) => {
+        #[derive(Clone, Debug)]
+        pub struct $name {
+            bytes: Vec<u8>,
+            param_set: XmssParamSet,
         }
-    }
+
+        impl $name {
+            #[must_use]
+            pub fn as_bytes(&self) -> &[u8] {
+                &self.bytes
+            }
+
+            #[must_use]
+            pub fn len(&self) -> usize {
+                self.bytes.len()
+            }
+
+            #[must_use]
+            pub fn is_empty(&self) -> bool {
+                self.bytes.is_empty()
+            }
+        }
+    };
 }
 
-#[derive(Clone, Debug)]
-pub struct XmssPublicKey {
-    bytes: Vec<u8>,
-    param_set: XmssParamSet,
-}
-
-impl XmssPublicKey {
-    #[must_use]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.bytes.len()
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.bytes.is_empty()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct XmssSecretKey {
-    bytes: Vec<u8>,
-    param_set: XmssParamSet,
-}
-
-impl XmssSecretKey {
-    #[must_use]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.bytes.len()
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.bytes.is_empty()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct XmssSignature {
-    bytes: Vec<u8>,
-    param_set: XmssParamSet,
-}
-
-impl XmssSignature {
-    #[must_use]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.bytes.len()
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.bytes.is_empty()
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct XmssSizes {
-    pub public_key_bytes: usize,
-    pub secret_key_bytes: usize,
-    pub signature_bytes: usize,
-}
-
-#[derive(Clone, Debug)]
-pub struct XmssBenchmarkReport {
-    pub display_name: String,
-    pub param_set: XmssParamSet,
-    pub keygen_duration: Duration,
-    pub sign_duration: Duration,
-    pub verify_duration: Duration,
-    pub public_key_size: usize,
-    pub secret_key_size: usize,
-    pub signature_size: usize,
-    pub verified: bool,
-}
+declare_xmss_material!(XmssPublicKey);
+declare_xmss_material!(XmssSecretKey);
+declare_xmss_material!(XmssSignature);
 
 #[derive(Clone, Copy, Debug)]
 pub struct XmssScheme {
@@ -309,51 +216,91 @@ impl XmssScheme {
     ///
     /// Returns an error if any step of the key generation, signing, or
     /// verification flow fails.
-    pub fn benchmark_report(self, message: &[u8]) -> Result<XmssBenchmarkReport, XmssError> {
-        let display_name = self.display_name();
-        let (keypair, keygen_duration) = measure_time(|| self.keypair());
-        let (public_key, mut secret_key) = keypair?;
-        let (signature_result, sign_duration) =
-            measure_time(|| self.sign(message, &mut secret_key));
-        let signature = signature_result?;
+    pub fn benchmark_report(
+        self,
+        message: &[u8],
+    ) -> Result<XmssBenchmarkReport, XmssError> {
+        pq_bench::run_stateful_param_set_benchmark_report(
+            || (self.display_name(), self.param_set()),
+            || self.keypair(),
+            |(_public_key, secret_key)| self.sign(message, secret_key),
+            |(public_key, _secret_key), signature| {
+                self.verify(message, signature, public_key)
+            },
+            |(public_key, secret_key), signature| XmssSizes {
+                public_key_bytes: public_key.len(),
+                secret_key_bytes: secret_key.len(),
+                signature_bytes: signature.len(),
+            },
+        )
+    }
 
-        let secret_key = secret_key;
-        let (verified_result, verify_duration) =
-            measure_time(|| self.verify(message, &signature, &public_key));
-        let verified = verified_result?;
+    /// # Errors
+    ///
+    /// Returns an error if key generation, signing, verification, or
+    /// parameter-derived signature budgeting fails.
+    pub fn benchmark_operation(
+        self,
+        operation: BenchmarkOperation,
+        message: &[u8],
+        iterations: usize,
+    ) -> Result<Duration, XmssError> {
+        match operation {
+            BenchmarkOperation::Keygen => {
+                let start = std::time::Instant::now();
+                for _ in 0..iterations {
+                    let keypair = self.keypair()?;
+                    std::hint::black_box(keypair);
+                }
+                Ok(start.elapsed())
+            }
+            BenchmarkOperation::Sign => {
+                let max_signatures = usize::try_from(
+                    self.max_signatures_per_key()?,
+                )
+                .map_err(|_| {
+                    XmssError::InvalidHeight(self.param_set.tree_height())
+                })?;
+                let signatures_per_key = max_signatures.max(1);
+                let key_count = iterations.max(1).div_ceil(signatures_per_key);
 
-        Ok(XmssBenchmarkReport {
-            display_name,
-            param_set: self.param_set(),
-            keygen_duration,
-            sign_duration,
-            verify_duration,
-            public_key_size: public_key.len(),
-            secret_key_size: secret_key.len(),
-            signature_size: signature.len(),
-            verified,
-        })
+                let mut secret_keys = Vec::with_capacity(key_count);
+                for _ in 0..key_count {
+                    let (_, secret_key) = self.keypair()?;
+                    secret_keys.push(secret_key);
+                }
+
+                let start = std::time::Instant::now();
+                for i in 0..iterations {
+                    let key_index = i / signatures_per_key;
+                    let signature =
+                        self.sign(message, &mut secret_keys[key_index])?;
+                    std::hint::black_box(signature);
+                }
+                Ok(start.elapsed())
+            }
+            BenchmarkOperation::Verify => {
+                let (public_key, mut secret_key) = self.keypair()?;
+                let signature = self.sign(message, &mut secret_key)?;
+
+                let start = std::time::Instant::now();
+                for _ in 0..iterations {
+                    let is_valid =
+                        self.verify(message, &signature, &public_key)?;
+                    if !is_valid {
+                        return Err(XmssError::VerifyFailedDuringBenchmark);
+                    }
+                    std::hint::black_box(is_valid);
+                }
+                Ok(start.elapsed())
+            }
+        }
     }
 }
 
 #[must_use]
 pub const fn default_benchmark_scheme() -> XmssScheme {
     XmssScheme::new(DEFAULT_XMSS_PARAM_SET)
-}
-
-#[must_use]
-pub fn benchmark_message(size: usize, fill_byte: u8) -> Vec<u8> {
-    vec![fill_byte; size]
-}
-
-/// Measure wall-clock time of a closure.
-pub fn measure_time<T, F>(operation: F) -> (T, Duration)
-where
-    F: FnOnce() -> T,
-{
-    let start = Instant::now();
-    let value = operation();
-    (value, start.elapsed())
 }
 
 fn extract_keys<P: XmssParameter>(
@@ -424,6 +371,7 @@ pub enum XmssError {
     KeygenFailed(String),
     SignFailed(String),
     DeserializationFailed(String),
+    VerifyFailedDuringBenchmark,
 }
 
 impl fmt::Display for XmssError {
@@ -450,6 +398,9 @@ impl fmt::Display for XmssError {
             Self::DeserializationFailed(msg) => {
                 write!(f, "XMSS deserialization failed: {msg}")
             }
+            Self::VerifyFailedDuringBenchmark => {
+                write!(f, "xmss verification failed during benchmark loop")
+            }
         }
     }
 }
@@ -465,7 +416,8 @@ mod tests {
         let scheme = XmssScheme::new(XmssParamSet::XmssSha2_10_256);
         let message = b"xmss-roundtrip-test";
 
-        let (public_key, mut secret_key) = scheme.keypair().expect("keypair must succeed");
+        let (public_key, mut secret_key) =
+            scheme.keypair().expect("keypair must succeed");
         let signature = scheme
             .sign(message, &mut secret_key)
             .expect("sign must succeed");
@@ -481,7 +433,8 @@ mod tests {
     fn wrong_message_fails_verification() {
         let scheme = XmssScheme::new(XmssParamSet::XmssSha2_10_256);
 
-        let (public_key, mut secret_key) = scheme.keypair().expect("keypair must succeed");
+        let (public_key, mut secret_key) =
+            scheme.keypair().expect("keypair must succeed");
         let signature = scheme
             .sign(b"message-a", &mut secret_key)
             .expect("sign must succeed");

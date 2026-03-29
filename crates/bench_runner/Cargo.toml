@@ -8,7 +8,9 @@ name = "bench_runner"
 path = "src/main.rs"
 
 [dependencies]
+csv = "1"
 pq_bench = { path = "../pq_bench" }
+serde_json = "1"
 
 # Pure-Rust DSA crates (no C FFI)
 dilithium = { path = "../dilithium" }
@@ -19,13 +21,10 @@ lms = { path = "../lms" }
 hss = { path = "../hss" }
 xmss-bench = { path = "../xmss" }
 xmssmt-bench = { path = "../xmssmt" }
-leansig-bench = { path = "../leansig" }
 
 # External crates needed by adapters
 pqcrypto-traits = "0.3"
-leansig = { git = "https://github.com/leanEthereum/leanSig.git", rev = "16c660e" }
-rand = "0.9"
 
-# NOTE: cross, sqisign, and less are NOT linked here.
-# They use C FFI with global state that conflicts when loaded together.
-# Instead, the runner invokes their standalone binaries as subprocesses.
+# NOTE: cross, sqisign, less, and leansig run as standalone benchmark binaries.
+# FFI crates avoid in-process global-state conflicts, and LeanSig stays out of
+# the runner's direct dependency graph.

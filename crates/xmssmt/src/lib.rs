@@ -1,64 +1,53 @@
 use std::error::Error;
 use std::fmt;
-use std::str::FromStr;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
+use pq_bench::BenchmarkOperation;
 use rustcrypto_xmss::{
-    DetachedSignature, KeyPair, XmssMtSha2_20_2_256, XmssMtSha2_20_4_256, XmssMtSha2_40_2_256,
-    XmssParameter,
+    DetachedSignature, KeyPair, XmssMtSha2_20_2_256, XmssMtSha2_20_4_256,
+    XmssMtSha2_40_2_256, XmssParameter,
 };
 
-/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_bench::BENCH_MESSAGE;
+pub use pq_bench::{filled_message, measure_time, BENCH_MESSAGE};
+pub type XmssmtBenchmarkReport =
+    pq_bench::ParamSetBenchmarkReport<XmssmtParamSet>;
+pub type XmssmtSizes = pq_bench::SignatureMaterialSizes;
 
-pub const DEFAULT_XMSSMT_PARAM_SET: XmssmtParamSet = XmssmtParamSet::Sha2_20_2_256;
+pub const DEFAULT_XMSSMT_PARAM_SET: XmssmtParamSet =
+    XmssmtParamSet::Sha2_20_2_256;
 pub const DIVAN_BENCH_MESSAGE_SIZES: [usize; 2] = [32, 1024];
 
-macro_rules! dispatch_param_set {
-    ($param_set:expr, $param:ident => $body:expr) => {
-        match $param_set {
-            XmssmtParamSet::Sha2_20_2_256 => {
-                type $param = XmssMtSha2_20_2_256;
-                $body
-            }
-            XmssmtParamSet::Sha2_20_4_256 => {
-                type $param = XmssMtSha2_20_4_256;
-                $body
-            }
-            XmssmtParamSet::Sha2_40_2_256 => {
-                type $param = XmssMtSha2_40_2_256;
-                $body
-            }
-        }
-    };
-}
+pq_bench::declare_param_dispatch!(
+    dispatch_param_set,
+    enum = XmssmtParamSet,
+    {
+        Sha2_20_2_256 => XmssMtSha2_20_2_256,
+        Sha2_20_4_256 => XmssMtSha2_20_4_256,
+        Sha2_40_2_256 => XmssMtSha2_40_2_256,
+    }
+);
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum XmssmtParamSet {
-    Sha2_20_2_256,
-    Sha2_20_4_256,
-    Sha2_40_2_256,
-}
+pq_bench::declare_benchmark_param_set!(
+    pub enum XmssmtParamSet,
+    error = XmssmtError,
+    unsupported = XmssmtError::UnsupportedParamSet,
+    {
+        Sha2_20_2_256 => {
+            name: "XMSSMT-SHA2_20/2_256",
+            oid: 0x0001_0001
+        },
+        Sha2_20_4_256 => {
+            name: "XMSSMT-SHA2_20/4_256",
+            oid: 0x0001_0002
+        },
+        Sha2_40_2_256 => {
+            name: "XMSSMT-SHA2_40/2_256",
+            oid: 0x0001_0003
+        },
+    }
+);
 
 impl XmssmtParamSet {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Sha2_20_2_256 => "XMSSMT-SHA2_20/2_256",
-            Self::Sha2_20_4_256 => "XMSSMT-SHA2_20/4_256",
-            Self::Sha2_40_2_256 => "XMSSMT-SHA2_40/2_256",
-        }
-    }
-
-    #[must_use]
-    pub const fn oid(self) -> u32 {
-        match self {
-            Self::Sha2_20_2_256 => 0x0001_0001,
-            Self::Sha2_20_4_256 => 0x0001_0002,
-            Self::Sha2_40_2_256 => 0x0001_0003,
-        }
-    }
-
     #[must_use]
     pub const fn total_tree_height(self) -> u32 {
         match self {
@@ -72,28 +61,6 @@ impl XmssmtParamSet {
         match self {
             Self::Sha2_20_4_256 => 4,
             Self::Sha2_20_2_256 | Self::Sha2_40_2_256 => 2,
-        }
-    }
-
-    #[must_use]
-    pub const fn all() -> &'static [Self] {
-        &[
-            Self::Sha2_20_2_256,
-            Self::Sha2_20_4_256,
-            Self::Sha2_40_2_256,
-        ]
-    }
-}
-
-impl FromStr for XmssmtParamSet {
-    type Err = XmssmtError;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            "XMSSMT-SHA2_20/2_256" => Ok(Self::Sha2_20_2_256),
-            "XMSSMT-SHA2_20/4_256" => Ok(Self::Sha2_20_4_256),
-            "XMSSMT-SHA2_40/2_256" => Ok(Self::Sha2_40_2_256),
-            _ => Err(XmssmtError::UnsupportedParamSet(value.to_owned())),
         }
     }
 }
@@ -114,37 +81,50 @@ enum XmssmtKeyPairInner {
     Sha2_40_2(KeyPair<XmssMtSha2_40_2_256>),
 }
 
+macro_rules! dispatch_xmssmt_keypair_inner {
+    ($inner:expr, $keypair:ident => $body:expr) => {
+        match $inner {
+            XmssmtKeyPairInner::Sha2_20_2($keypair) => $body,
+            XmssmtKeyPairInner::Sha2_20_4($keypair) => $body,
+            XmssmtKeyPairInner::Sha2_40_2($keypair) => $body,
+        }
+    };
+}
+
 impl XmssmtKeyPairInner {
     fn public_key_len(&self) -> usize {
-        match self {
-            Self::Sha2_20_2(keypair) => keypair.verifying_key().as_ref().len(),
-            Self::Sha2_20_4(keypair) => keypair.verifying_key().as_ref().len(),
-            Self::Sha2_40_2(keypair) => keypair.verifying_key().as_ref().len(),
-        }
+        dispatch_xmssmt_keypair_inner!(
+            self,
+            keypair => keypair.verifying_key().as_ref().len()
+        )
     }
 
     fn secret_key_len(&mut self) -> usize {
-        match self {
-            Self::Sha2_20_2(keypair) => keypair.signing_key().as_ref().len(),
-            Self::Sha2_20_4(keypair) => keypair.signing_key().as_ref().len(),
-            Self::Sha2_40_2(keypair) => keypair.signing_key().as_ref().len(),
-        }
+        dispatch_xmssmt_keypair_inner!(
+            self,
+            keypair => keypair.signing_key().as_ref().len()
+        )
     }
 
-    fn sign_detached(&mut self, message: &[u8]) -> Result<Vec<u8>, XmssmtError> {
-        match self {
-            Self::Sha2_20_2(keypair) => sign_detached_with_keypair(keypair, message),
-            Self::Sha2_20_4(keypair) => sign_detached_with_keypair(keypair, message),
-            Self::Sha2_40_2(keypair) => sign_detached_with_keypair(keypair, message),
-        }
+    fn sign_detached(
+        &mut self,
+        message: &[u8],
+    ) -> Result<Vec<u8>, XmssmtError> {
+        dispatch_xmssmt_keypair_inner!(
+            self,
+            keypair => sign_detached_with_keypair(keypair, message)
+        )
     }
 
-    fn verify_detached(&self, message: &[u8], signature: &[u8]) -> Result<bool, XmssmtError> {
-        match self {
-            Self::Sha2_20_2(keypair) => verify_detached_with_keypair(keypair, message, signature),
-            Self::Sha2_20_4(keypair) => verify_detached_with_keypair(keypair, message, signature),
-            Self::Sha2_40_2(keypair) => verify_detached_with_keypair(keypair, message, signature),
-        }
+    fn verify_detached(
+        &self,
+        message: &[u8],
+        signature: &[u8],
+    ) -> Result<bool, XmssmtError> {
+        dispatch_xmssmt_keypair_inner!(
+            self,
+            keypair => verify_detached_with_keypair(keypair, message, signature)
+        )
     }
 }
 
@@ -170,7 +150,10 @@ impl XmssmtKeyPair {
     /// # Errors
     ///
     /// Returns an error if the underlying XMSS^MT signing operation fails.
-    pub fn sign(&mut self, message: &[u8]) -> Result<XmssmtSignature, XmssmtError> {
+    pub fn sign(
+        &mut self,
+        message: &[u8],
+    ) -> Result<XmssmtSignature, XmssmtError> {
         let sig_bytes = self.inner.sign_detached(message)?;
 
         Ok(XmssmtSignature {
@@ -185,7 +168,11 @@ impl XmssmtKeyPair {
     ///
     /// Returns an error if the signature belongs to a different parameter set
     /// or detached signature decoding fails.
-    pub fn verify(&self, message: &[u8], signature: &XmssmtSignature) -> Result<bool, XmssmtError> {
+    pub fn verify(
+        &self,
+        message: &[u8],
+        signature: &XmssmtSignature,
+    ) -> Result<bool, XmssmtError> {
         if signature.param_set != self.param_set {
             return Err(XmssmtError::MismatchedParamSet {
                 expected: self.param_set,
@@ -242,26 +229,6 @@ impl XmssmtSignature {
     pub fn is_empty(&self) -> bool {
         self.bytes.is_empty()
     }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct XmssmtSizes {
-    pub public_key_bytes: usize,
-    pub secret_key_bytes: usize,
-    pub signature_bytes: usize,
-}
-
-#[derive(Clone, Debug)]
-pub struct XmssmtBenchmarkReport {
-    pub display_name: String,
-    pub param_set: XmssmtParamSet,
-    pub keygen_duration: Duration,
-    pub sign_duration: Duration,
-    pub verify_duration: Duration,
-    pub public_key_size: usize,
-    pub secret_key_size: usize,
-    pub signature_size: usize,
-    pub verified: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -332,18 +299,27 @@ impl XmssmtScheme {
 
         let inner = match self.param_set {
             XmssmtParamSet::Sha2_20_2_256 => {
-                let keypair = KeyPair::<XmssMtSha2_20_2_256>::generate(&mut rng)
-                    .map_err(|e| XmssmtError::KeygenFailed(e.to_string()))?;
+                let keypair =
+                    KeyPair::<XmssMtSha2_20_2_256>::generate(&mut rng)
+                        .map_err(|e| {
+                            XmssmtError::KeygenFailed(e.to_string())
+                        })?;
                 XmssmtKeyPairInner::Sha2_20_2(keypair)
             }
             XmssmtParamSet::Sha2_20_4_256 => {
-                let keypair = KeyPair::<XmssMtSha2_20_4_256>::generate(&mut rng)
-                    .map_err(|e| XmssmtError::KeygenFailed(e.to_string()))?;
+                let keypair =
+                    KeyPair::<XmssMtSha2_20_4_256>::generate(&mut rng)
+                        .map_err(|e| {
+                            XmssmtError::KeygenFailed(e.to_string())
+                        })?;
                 XmssmtKeyPairInner::Sha2_20_4(keypair)
             }
             XmssmtParamSet::Sha2_40_2_256 => {
-                let keypair = KeyPair::<XmssMtSha2_40_2_256>::generate(&mut rng)
-                    .map_err(|e| XmssmtError::KeygenFailed(e.to_string()))?;
+                let keypair =
+                    KeyPair::<XmssMtSha2_40_2_256>::generate(&mut rng)
+                        .map_err(|e| {
+                            XmssmtError::KeygenFailed(e.to_string())
+                        })?;
                 XmssmtKeyPairInner::Sha2_40_2(keypair)
             }
         };
@@ -358,52 +334,88 @@ impl XmssmtScheme {
     ///
     /// Returns an error if any step of the key generation, signing, or
     /// verification flow fails.
-    pub fn benchmark_report(self, message: &[u8]) -> Result<XmssmtBenchmarkReport, XmssmtError> {
-        let display_name = self.display_name();
-        let (keypair_result, keygen_duration) = measure_time(|| self.keypair());
-        let mut keypair = keypair_result?;
-        let public_key_size = keypair.public_key_len();
-        let secret_key_size = keypair.secret_key_len();
+    pub fn benchmark_report(
+        self,
+        message: &[u8],
+    ) -> Result<XmssmtBenchmarkReport, XmssmtError> {
+        pq_bench::run_stateful_param_set_benchmark_report(
+            || (self.display_name(), self.param_set()),
+            || self.keypair(),
+            |keypair| keypair.sign(message),
+            |keypair, signature| keypair.verify(message, signature),
+            |keypair, signature| XmssmtSizes {
+                public_key_bytes: keypair.public_key_len(),
+                secret_key_bytes: keypair.secret_key_len(),
+                signature_bytes: signature.len(),
+            },
+        )
+    }
 
-        let (signature_result, sign_duration) = measure_time(|| keypair.sign(message));
-        let signature = signature_result?;
+    /// # Errors
+    ///
+    /// Returns an error if key generation, signing, verification, or
+    /// parameter-derived signature budgeting fails.
+    pub fn benchmark_operation(
+        self,
+        operation: BenchmarkOperation,
+        message: &[u8],
+        iterations: usize,
+    ) -> Result<Duration, XmssmtError> {
+        match operation {
+            BenchmarkOperation::Keygen => {
+                let start = std::time::Instant::now();
+                for _ in 0..iterations {
+                    let keypair = self.keypair()?;
+                    std::hint::black_box(keypair);
+                }
+                Ok(start.elapsed())
+            }
+            BenchmarkOperation::Sign => {
+                let max_signatures = usize::try_from(
+                    self.max_signatures_per_key()?,
+                )
+                .map_err(|_| {
+                    XmssmtError::InvalidHeight(
+                        self.param_set.total_tree_height(),
+                    )
+                })?;
+                let signatures_per_key = max_signatures.max(1);
+                let key_count = iterations.max(1).div_ceil(signatures_per_key);
 
-        let (verified_result, verify_duration) =
-            measure_time(|| keypair.verify(message, &signature));
-        let verified = verified_result?;
+                let mut keypairs = Vec::with_capacity(key_count);
+                for _ in 0..key_count {
+                    keypairs.push(self.keypair()?);
+                }
 
-        Ok(XmssmtBenchmarkReport {
-            display_name,
-            param_set: self.param_set(),
-            keygen_duration,
-            sign_duration,
-            verify_duration,
-            public_key_size,
-            secret_key_size,
-            signature_size: signature.len(),
-            verified,
-        })
+                let start = std::time::Instant::now();
+                for i in 0..iterations {
+                    let key_index = i / signatures_per_key;
+                    let signature = keypairs[key_index].sign(message)?;
+                    std::hint::black_box(signature);
+                }
+                Ok(start.elapsed())
+            }
+            BenchmarkOperation::Verify => {
+                let mut keypair = self.keypair()?;
+                let signature = keypair.sign(message)?;
+
+                let start = std::time::Instant::now();
+                for _ in 0..iterations {
+                    let is_valid = keypair.verify(message, &signature)?;
+                    if !is_valid {
+                        return Err(XmssmtError::VerifyFailedDuringBenchmark);
+                    }
+                    std::hint::black_box(is_valid);
+                }
+                Ok(start.elapsed())
+            }
+        }
     }
 }
 
 #[must_use]
 pub const fn default_benchmark_scheme() -> XmssmtScheme {
     XmssmtScheme::new(DEFAULT_XMSSMT_PARAM_SET)
-}
-
-#[must_use]
-pub fn benchmark_message(size: usize, fill_byte: u8) -> Vec<u8> {
-    vec![fill_byte; size]
-}
-
-/// Measure wall-clock time of a closure.
-pub fn measure_time<T, F>(operation: F) -> (T, Duration)
-where
-    F: FnOnce() -> T,
-{
-    let start = Instant::now();
-    let value = operation();
-    (value, start.elapsed())
 }
 
 #[derive(Debug)]
@@ -417,6 +429,7 @@ pub enum XmssmtError {
     KeygenFailed(String),
     SignFailed(String),
     DeserializationFailed(String),
+    VerifyFailedDuringBenchmark,
 }
 
 impl fmt::Display for XmssmtError {
@@ -443,6 +456,9 @@ impl fmt::Display for XmssmtError {
             Self::DeserializationFailed(msg) => {
                 write!(f, "XMSS^MT deserialization failed: {msg}")
             }
+            Self::VerifyFailedDuringBenchmark => {
+                write!(f, "xmssmt verification failed during benchmark loop")
+            }
         }
     }
 }
@@ -452,7 +468,9 @@ impl Error for XmssmtError {}
 #[cfg(test)]
 mod tests {
     use super::{XmssmtParamSet, XmssmtScheme};
-    use rustcrypto_xmss::{XmssMtSha2_20_2_256, XmssParameter, XmssSha2_20_256};
+    use rustcrypto_xmss::{
+        XmssMtSha2_20_2_256, XmssParameter, XmssSha2_20_256,
+    };
 
     #[test]
     fn sign_and_verify_roundtrip() {

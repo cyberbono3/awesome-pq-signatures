@@ -1,184 +1,84 @@
 use ml_dsa::{KeyGen, KeyPair, MlDsa65, Signature, B32};
-use std::alloc::{GlobalAlloc, Layout};
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
+pub use pq_bench::{
+    bench_message, benchmark_seed_array, measure_time, signed_message_size,
+    AllocationTracker, AllocationTrackingAllocator, BENCH_MESSAGE,
+    BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
+};
+pq_bench::declare_tracking_allocator!();
+pq_bench::declare_peak_memory_api!();
 
-/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_bench::BENCH_MESSAGE;
-
-pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
-pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
-
-static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static BASELINE: AtomicUsize = AtomicUsize::new(0);
-
-pub struct TrackingAllocator<A: GlobalAlloc + Sync + 'static> {
-    inner: &'static A,
-}
-
-impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
-    pub const fn new(inner: &'static A) -> Self {
-        Self { inner }
-    }
-}
-
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { self.inner.alloc(layout) };
-        if !ptr.is_null() {
-            track_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        unsafe { self.inner.dealloc(ptr, layout) };
-        track_dealloc(layout.size());
-    }
-}
-
-fn track_alloc(size: usize) {
-    let current = ALLOCATED.fetch_add(size, Ordering::SeqCst) + size;
-    let baseline = BASELINE.load(Ordering::SeqCst);
-    let relative_current = current.saturating_sub(baseline);
-    let mut peak = PEAK_ALLOCATED.load(Ordering::SeqCst);
-
-    while relative_current > peak {
-        match PEAK_ALLOCATED.compare_exchange_weak(
-            peak,
-            relative_current,
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-        ) {
-            Ok(_) => break,
-            Err(observed) => peak = observed,
-        }
-    }
-}
-
-fn track_dealloc(size: usize) {
-    ALLOCATED.fetch_sub(size, Ordering::SeqCst);
-}
-
-pub mod memory {
-    use super::{Ordering, ALLOCATED, BASELINE, PEAK_ALLOCATED};
-
-    pub fn reset_peak() {
-        let current = ALLOCATED.load(Ordering::SeqCst);
-        BASELINE.store(current, Ordering::SeqCst);
-        PEAK_ALLOCATED.store(0, Ordering::SeqCst);
-    }
-
-    pub fn peak_bytes() -> usize {
-        PEAK_ALLOCATED.load(Ordering::SeqCst)
-    }
-}
-
-pub trait SignatureScheme {
-    type Seed;
-    type KeyPair;
-    type Signature;
-    type Error;
-
-    fn algorithm_name(&self) -> &'static str;
-    fn keypair(&self, seed: &Self::Seed) -> Self::KeyPair;
-    fn sign(
-        &self,
-        keypair: &Self::KeyPair,
-        message: &[u8],
-        context: &[u8],
-    ) -> Result<Self::Signature, Self::Error>;
-    fn verify(
-        &self,
-        keypair: &Self::KeyPair,
-        message: &[u8],
-        context: &[u8],
-        signature: &Self::Signature,
-    ) -> bool;
-    fn public_key_size(&self, keypair: &Self::KeyPair) -> usize;
-    fn secret_key_size(&self, keypair: &Self::KeyPair) -> usize;
-    fn signature_size(&self, signature: &Self::Signature) -> usize;
-}
+pub type MlDsaSeed = B32;
+pub type MlDsaKeyPair = KeyPair<MlDsa65>;
+pub type MlDsaSignature = Signature<MlDsa65>;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MlDsa65Scheme;
 
 pub const ML_DSA_65: MlDsa65Scheme = MlDsa65Scheme;
 
-impl SignatureScheme for MlDsa65Scheme {
-    type Seed = B32;
-    type KeyPair = KeyPair<MlDsa65>;
-    type Signature = Signature<MlDsa65>;
-    type Error = ml_dsa::Error;
-
-    fn algorithm_name(&self) -> &'static str {
+impl MlDsa65Scheme {
+    #[must_use]
+    pub fn algorithm_name(&self) -> &'static str {
         "ML-DSA-65"
     }
 
-    fn keypair(&self, seed: &Self::Seed) -> Self::KeyPair {
+    #[must_use]
+    pub fn keypair(&self, seed: &MlDsaSeed) -> MlDsaKeyPair {
         MlDsa65::key_gen_internal(seed)
     }
 
-    fn sign(
+    #[must_use]
+    pub fn benchmark_keypair(&self) -> MlDsaKeyPair {
+        self.keypair(&default_seed())
+    }
+
+    pub fn sign(
         &self,
-        keypair: &Self::KeyPair,
+        keypair: &MlDsaKeyPair,
         message: &[u8],
         context: &[u8],
-    ) -> Result<Self::Signature, Self::Error> {
+    ) -> Result<MlDsaSignature, ml_dsa::Error> {
         keypair.signing_key().sign_deterministic(message, context)
     }
 
-    fn verify(
+    #[must_use]
+    pub fn verify(
         &self,
-        keypair: &Self::KeyPair,
+        keypair: &MlDsaKeyPair,
         message: &[u8],
         context: &[u8],
-        signature: &Self::Signature,
+        signature: &MlDsaSignature,
     ) -> bool {
         keypair
             .verifying_key()
             .verify_with_context(message, context, signature)
     }
 
-    fn public_key_size(&self, keypair: &Self::KeyPair) -> usize {
+    #[must_use]
+    pub fn public_key_size(&self, keypair: &MlDsaKeyPair) -> usize {
         keypair.verifying_key().encode().len()
     }
 
-    fn secret_key_size(&self, keypair: &Self::KeyPair) -> usize {
+    #[must_use]
+    pub fn secret_key_size(&self, keypair: &MlDsaKeyPair) -> usize {
         keypair.signing_key().encode().len()
     }
 
-    fn signature_size(&self, signature: &Self::Signature) -> usize {
+    #[must_use]
+    pub fn signature_size(&self, signature: &MlDsaSignature) -> usize {
         signature.encode().len()
     }
 }
 
-pub fn default_seed() -> B32 {
-    [7_u8; 32].into()
-}
-
-pub fn bench_message(size: usize) -> Vec<u8> {
-    vec![BENCH_MESSAGE_BYTE; size]
-}
-
-pub fn signed_message_size(message_len: usize, signature_len: usize) -> usize {
-    message_len.saturating_add(signature_len)
-}
-
-pub fn measure_time<T, F>(operation: F) -> (T, Duration)
-where
-    F: FnOnce() -> T,
-{
-    let start = Instant::now();
-    let value = operation();
-    (value, start.elapsed())
+#[must_use]
+pub fn default_seed() -> MlDsaSeed {
+    benchmark_seed_array::<32>().into()
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, default_seed, signed_message_size, SignatureScheme, BENCH_MESSAGE_BYTE,
+        bench_message, default_seed, signed_message_size, BENCH_MESSAGE_BYTE,
         ML_DSA_65,
     };
 

@@ -1,81 +1,13 @@
+pub use pq_bench::{
+    bench_message, benchmark_seed_array, measure_time, signed_message_size,
+    AllocationTracker, AllocationTrackingAllocator, BENCH_MESSAGE,
+    BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
+};
 use pq_mayo::{KeyPair, Mayo1, Signature as RawMayoSignature};
 use signature::{Error as SignatureError, Signer, Verifier};
-use std::alloc::{GlobalAlloc, Layout};
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
-
-/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_bench::BENCH_MESSAGE;
-
-pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
-pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
 pub const DEFAULT_CONTEXT: &[u8] = &[];
-
-static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static BASELINE: AtomicUsize = AtomicUsize::new(0);
-
-pub struct TrackingAllocator<A: GlobalAlloc + Sync + 'static> {
-    inner: &'static A,
-}
-
-impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
-    pub const fn new(inner: &'static A) -> Self {
-        Self { inner }
-    }
-}
-
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { self.inner.alloc(layout) };
-        if !ptr.is_null() {
-            track_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        unsafe { self.inner.dealloc(ptr, layout) };
-        track_dealloc(layout.size());
-    }
-}
-
-fn track_alloc(size: usize) {
-    let current = ALLOCATED.fetch_add(size, Ordering::SeqCst) + size;
-    let baseline = BASELINE.load(Ordering::SeqCst);
-    let relative_current = current.saturating_sub(baseline);
-    let mut peak = PEAK_ALLOCATED.load(Ordering::SeqCst);
-
-    while relative_current > peak {
-        match PEAK_ALLOCATED.compare_exchange_weak(
-            peak,
-            relative_current,
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-        ) {
-            Ok(_) => break,
-            Err(observed) => peak = observed,
-        }
-    }
-}
-
-fn track_dealloc(size: usize) {
-    ALLOCATED.fetch_sub(size, Ordering::SeqCst);
-}
-
-pub mod memory {
-    use super::{Ordering, ALLOCATED, BASELINE, PEAK_ALLOCATED};
-
-    pub fn reset_peak() {
-        let current = ALLOCATED.load(Ordering::SeqCst);
-        BASELINE.store(current, Ordering::SeqCst);
-        PEAK_ALLOCATED.store(0, Ordering::SeqCst);
-    }
-
-    pub fn peak_bytes() -> usize {
-        PEAK_ALLOCATED.load(Ordering::SeqCst)
-    }
-}
+pq_bench::declare_tracking_allocator!();
+pq_bench::declare_peak_memory_api!();
 
 pub type MayoSeed = [u8; 24];
 pub type MayoKeyPair = KeyPair<Mayo1>;
@@ -105,7 +37,8 @@ impl MayoScheme {
     }
 
     pub fn keypair(&self, seed: &MayoSeed) -> MayoKeyPair {
-        MayoKeyPair::from_seed(seed).expect("MAYO key generation from seed should succeed")
+        MayoKeyPair::from_seed(seed)
+            .expect("MAYO key generation from seed should succeed")
     }
 
     pub fn benchmark_keypair(&self) -> MayoKeyPair {
@@ -169,7 +102,11 @@ impl MayoScheme {
         signature.as_ref().len()
     }
 
-    pub fn sizes(&self, keypair: &MayoKeyPair, signature: &MayoSignature) -> MayoSizes {
+    pub fn sizes(
+        &self,
+        keypair: &MayoKeyPair,
+        signature: &MayoSignature,
+    ) -> MayoSizes {
         MayoSizes {
             public_key_bytes: self.public_key_size(keypair),
             secret_key_bytes: self.secret_key_size(keypair),
@@ -177,7 +114,10 @@ impl MayoScheme {
         }
     }
 
-    fn ensure_context_supported(&self, context: &[u8]) -> Result<(), MayoError> {
+    fn ensure_context_supported(
+        &self,
+        context: &[u8],
+    ) -> Result<(), MayoError> {
         if context.is_empty() {
             Ok(())
         } else {
@@ -187,29 +127,15 @@ impl MayoScheme {
 }
 
 pub fn default_seed() -> MayoSeed {
-    [7_u8; 24]
-}
-
-pub fn bench_message(size: usize) -> Vec<u8> {
-    vec![BENCH_MESSAGE_BYTE; size]
-}
-
-pub fn signed_message_size(message_len: usize, signature_len: usize) -> usize {
-    message_len.saturating_add(signature_len)
-}
-
-pub fn measure_time<T, F>(operation: F) -> (T, Duration)
-where
-    F: FnOnce() -> T,
-{
-    let start = Instant::now();
-    let value = operation();
-    (value, start.elapsed())
+    benchmark_seed_array::<24>()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{bench_message, default_seed, signed_message_size, BENCH_MESSAGE_BYTE, MAYO};
+    use super::{
+        bench_message, default_seed, signed_message_size, BENCH_MESSAGE_BYTE,
+        MAYO,
+    };
 
     #[test]
     fn bench_message_uses_expected_fill_byte() {

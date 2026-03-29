@@ -31,38 +31,36 @@ In this repository:
 ## Project layout
 
 - `src/lib.rs`: safe Rust wrapper (`XmssScheme`, keypair/sign/verify, sizes, parameter parsing)
-- `src/main.rs`: executable benchmark summary for keygen/sign/verify
+- `src/main.rs`: standard workspace benchmark binary (`--format human|json --message-size N`)
 - `src/bin/xmss_bench.rs`: bench command used by `bench/run.sh`
 - `benches/xmss_divan.rs`: `divan` benchmark suite
 
 ## Run
 
+The `xmss` benchmark binary uses the shared workspace CLI contract and accepts
+`--format human|json --message-size N`.
+
 ```bash
-cargo run --release --bin xmss
+cargo run --bin xmss -- --format human --message-size 64
 ```
 
-Latest run result (captured on 2026-03-18 09:59:22 UTC):
+JSON output:
+
+```bash
+cargo run --bin xmss -- --format json --message-size 64
+```
+
+Representative local run:
 
 ```text
 === XMSS-SHA2_10_256 (RustCrypto xmss (pure Rust)) Benchmark ===
 
---- Key Generation ---
-Time to generate keys: 1.633048625s
-Time to generate keys (ns): 1633048625
-
---- Signing ---
-Time to sign: 1.627532625s
-Time to sign (ns): 1627532625
-
---- Verification ---
-Time to verify: 888.083 us
-Time to verify (ns): 888083
-Signature verification: SUCCESS
-
---- Size Measurements ---
-Public key size: 68 bytes
-Secret key size: 136 bytes
-Signature size: 2500 bytes
+Key generation: 1.633048625 s
+Signing:        1.627532625 s
+Verification:   888.083 us
+Public key:     68 bytes
+Secret key:     136 bytes
+Signature:      2500 bytes
 ```
 
 Run the Divan benchmarks with:
@@ -71,7 +69,7 @@ Run the Divan benchmarks with:
 cargo bench -p xmss-bench --bench xmss_divan
 ```
 
-Median result (captured on 2026-03-18 09:58:33 UTC, bounded run with `--sample-count 10 --max-time 1`):
+Representative local Divan result (bounded run with `--sample-count 10 --max-time 1`):
 
 ```text
 Divan timing summary (median):
@@ -82,8 +80,5 @@ Divan timing summary (median):
   verify(1024): 853.8 us
 ```
 
-Environment overrides:
-
-- `XMSS_PARAM_SET` (default `XMSS-SHA2_10_256`)
-- `XMSS_MESSAGE_SIZE` (default `1024`)
-- `XMSS_ITERATIONS` (default `100`)
+The separate
+`src/bin/xmss_bench.rs` helper keeps its own environment-based interface.

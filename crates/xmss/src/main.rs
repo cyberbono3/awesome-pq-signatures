@@ -1,64 +1,45 @@
-use std::time::Duration;
-
-use xmss_bench::{default_benchmark_scheme, BENCH_MESSAGE};
-
-const MESSAGE: &[u8] = &BENCH_MESSAGE;
-
-fn print_timing(label: &str, duration: Duration) {
-    println!("Time to {label}: {duration:?}");
-    println!("Time to {label} (ns): {}", duration.as_nanos());
-}
+use pq_bench::{
+    build_standard_stateful_benchmark_execution, run_human_benchmark_binary,
+    StandardStatefulBenchmarkExecutionSpec,
+};
+use xmss_bench::default_benchmark_scheme;
 
 fn main() {
-    let scheme = default_benchmark_scheme();
-    let report = scheme
-        .benchmark_report(MESSAGE)
-        .expect("xmss benchmark report must succeed");
+    run_human_benchmark_binary(std::env::args().skip(1), |message| {
+        let scheme = default_benchmark_scheme();
+        let report = scheme
+            .benchmark_report(message)
+            .expect("xmss benchmark report must succeed");
 
-    println!("╔══════════════════════════════════════════════════╗");
-    println!("║              XMSS Benchmark                      ║");
-    println!("║  NIST SP 800-208 Hash-Based Signature Scheme    ║");
-    println!("╚══════════════════════════════════════════════════╝\n");
+        const BANNER: [&str; 4] = [
+            "╔══════════════════════════════════════════════════╗",
+            "║              XMSS Benchmark                      ║",
+            "║  NIST SP 800-208 Hash-Based Signature Scheme    ║",
+            "╚══════════════════════════════════════════════════╝",
+        ];
 
-    println!("=== {} Benchmark ===\n", report.display_name);
-    println!("--- Key Generation ---");
-    print_timing("generate keys", report.keygen_duration);
-    println!("\n--- Signing ---");
-    print_timing("sign", report.sign_duration);
-    println!("\n--- Verification ---");
-    print_timing("verify", report.verify_duration);
-
-    if report.verified {
-        println!("Signature verification: SUCCESS");
-    } else {
-        println!("Signature verification: FAILED");
-    }
-
-    println!("\n--- Size Measurements ---");
-    println!("Public key size: {} bytes", report.public_key_size);
-    println!("Secret key size: {} bytes", report.secret_key_size);
-    println!("Signature size:  {} bytes", report.signature_size);
-
-    println!("\n=== Summary ===");
-    println!("Algorithm: {}", report.param_set.as_str());
-    println!("\nTiming:");
-    println!(
-        "  Key Generation: {:?} ({} ns)",
-        report.keygen_duration,
-        report.keygen_duration.as_nanos()
-    );
-    println!(
-        "  Signing:        {:?} ({} ns)",
-        report.sign_duration,
-        report.sign_duration.as_nanos()
-    );
-    println!(
-        "  Verification:   {:?} ({} ns)",
-        report.verify_duration,
-        report.verify_duration.as_nanos()
-    );
-    println!("\nSizes:");
-    println!("  Public Key:  {} bytes", report.public_key_size);
-    println!("  Secret Key:  {} bytes", report.secret_key_size);
-    println!("  Signature:   {} bytes", report.signature_size);
+        build_standard_stateful_benchmark_execution(
+            StandardStatefulBenchmarkExecutionSpec {
+                banner_lines: &BANNER,
+                heading: report.display_name.clone().into(),
+                intro_lines: Vec::new(),
+                algorithm: "XMSS",
+                backend: Some(scheme.backend_name()),
+                param_set: Some(report.param_set.as_str()),
+                summary_algorithm: report.param_set.as_str().into(),
+                summary_intro_lines: Vec::new(),
+                keygen_duration: report.keygen_duration,
+                sign_duration: report.sign_duration,
+                verify_duration: report.verify_duration,
+                verified: report.verified,
+                sizes: xmss_bench::XmssSizes {
+                    public_key_bytes: report.public_key_size,
+                    secret_key_bytes: report.secret_key_size,
+                    signature_bytes: report.signature_size,
+                },
+                signed_message_bytes: None,
+                extra_size_lines: Vec::new(),
+            },
+        )
+    });
 }

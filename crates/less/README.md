@@ -40,21 +40,30 @@ Important local choices:
 - the wrapper exposes the NIST-style byte API and maps it into Rust `LessKeyPair` and `LessSignature` types
 - benchmark runs use deterministic RNG seeding inside the wrapper so repeated runs are reproducible
 - signing and verification are serialized behind a mutex because the vendored C code uses shared RNG state through the shim
+- the crate now uses shared `pq_bench` scaffolding for the FFI backend wrapper, standard signed-message scheme API, benchmark binary entrypoint, and Divan benchmark shape
 
 That makes the crate suitable for benchmarking and comparative inspection, but it is not yet a polished general-purpose Rust LESS library API.
 
 ## `src/main.rs` (`less` binary)
 
-`src/main.rs` is a single-run benchmark/report binary for the selected LESS variant. It performs:
+`src/main.rs` is the standard workspace benchmark binary for the selected LESS variant. It performs:
 - key generation timing
 - sign timing + peak heap allocation tracking
 - verify timing + peak heap allocation tracking
 - key/signature size reporting
 
+The binary is wired through the shared `pq_bench` signed-message runner rather than a crate-local reporting implementation.
+
 Run it with:
 
 ```bash
-cargo run -p less --bin less --release
+cargo run -p less --bin less -- --format human --message-size 64
+```
+
+JSON output:
+
+```bash
+cargo run -p less --bin less -- --format json --message-size 64
 ```
 
 ## `benches/less_divan.rs` (Divan benchmark suite)
@@ -64,7 +73,7 @@ cargo run -p less --bin less --release
 - `sign` across multiple message sizes
 - `verify` across multiple message sizes
 
-It also prints key/signature size and peak heap allocation summaries before executing Divan benches.
+It also prints key/signature size and peak heap allocation summaries before executing Divan benches, using the shared `pq_bench` Divan benchmark scaffolding.
 
 Run it with:
 

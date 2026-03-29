@@ -1,13 +1,13 @@
-use divan::{black_box, AllocProfiler, Bencher};
+use divan::{black_box, Bencher};
 use lms::{
-    bench_message, default_seed, memory, signed_message_size, LmsScheme, TrackingAllocator,
-    BENCH_MESSAGE_SIZES, DEFAULT_PARAM_SET_NAME, LMS_PARAM_SETS,
+    bench_message, default_seed, memory, signed_message_size, LmsScheme,
+    TrackingAllocator, ALLOCATION_TRACKER, BENCH_MESSAGE_SIZES,
+    DEFAULT_PARAM_SET_NAME, LMS_PARAM_SETS,
 };
-
-static DIVAN_ALLOC: AllocProfiler = AllocProfiler::system();
-
-#[global_allocator]
-static ALLOC: TrackingAllocator<AllocProfiler> = TrackingAllocator::new(&DIVAN_ALLOC);
+pq_bench::install_divan_tracking_allocator!(
+    TrackingAllocator,
+    ALLOCATION_TRACKER
+);
 
 const PARAM_SET_NAMES: [&str; 2] = [
     "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4",
@@ -16,7 +16,8 @@ const PARAM_SET_NAMES: [&str; 2] = [
 
 #[divan::bench(args = PARAM_SET_NAMES)]
 fn keygen(bencher: Bencher, param_set_name: &'static str) {
-    let scheme = LmsScheme::from_param_set_name(param_set_name).expect("known LMS param set");
+    let scheme = LmsScheme::from_param_set_name(param_set_name)
+        .expect("known LMS param set");
     let seed = default_seed();
 
     bencher.bench(|| {
@@ -28,44 +29,24 @@ fn keygen(bencher: Bencher, param_set_name: &'static str) {
     });
 }
 
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn sign_h5w4(bencher: Bencher, message_size: usize) {
-    sign_bench(
-        bencher,
-        "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4",
-        message_size,
-    );
-}
+pq_bench::declare_param_message_benches!(
+    sign = {
+        sign_h5w4 => "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4",
+        sign_h10w4 => "LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4"
+    },
+    verify = {
+        verify_h5w4 => "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4",
+        verify_h10w4 => "LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4"
+    }
+);
 
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn sign_h10w4(bencher: Bencher, message_size: usize) {
-    sign_bench(
-        bencher,
-        "LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4",
-        message_size,
-    );
-}
-
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn verify_h5w4(bencher: Bencher, message_size: usize) {
-    verify_bench(
-        bencher,
-        "LMS-SHA256-M32-H5+LMOTS-SHA256-N32-W4",
-        message_size,
-    );
-}
-
-#[divan::bench(args = BENCH_MESSAGE_SIZES)]
-fn verify_h10w4(bencher: Bencher, message_size: usize) {
-    verify_bench(
-        bencher,
-        "LMS-SHA256-M32-H10+LMOTS-SHA256-N32-W4",
-        message_size,
-    );
-}
-
-fn sign_bench(bencher: Bencher, param_set_name: &'static str, message_size: usize) {
-    let scheme = LmsScheme::from_param_set_name(param_set_name).expect("known LMS param set");
+fn sign_bench(
+    bencher: Bencher,
+    param_set_name: &'static str,
+    message_size: usize,
+) {
+    let scheme = LmsScheme::from_param_set_name(param_set_name)
+        .expect("known LMS param set");
     let message = bench_message(message_size);
     let seed = default_seed();
 
@@ -85,8 +66,13 @@ fn sign_bench(bencher: Bencher, param_set_name: &'static str, message_size: usiz
         });
 }
 
-fn verify_bench(bencher: Bencher, param_set_name: &'static str, message_size: usize) {
-    let scheme = LmsScheme::from_param_set_name(param_set_name).expect("known LMS param set");
+fn verify_bench(
+    bencher: Bencher,
+    param_set_name: &'static str,
+    message_size: usize,
+) {
+    let scheme = LmsScheme::from_param_set_name(param_set_name)
+        .expect("known LMS param set");
     let message = bench_message(message_size);
     let (public_key, mut secret_key) = scheme
         .keypair_with_seed(default_seed())

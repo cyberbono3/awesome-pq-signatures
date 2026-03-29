@@ -1,20 +1,19 @@
 use hbs_lms::signature::{SignerMut, Verifier};
 use hbs_lms::{
-    keygen, HssParameter, LmotsAlgorithm, LmsAlgorithm, Seed, Sha256_256, Signature, SigningKey,
-    VerifyingKey,
+    keygen, HssParameter, LmotsAlgorithm, LmsAlgorithm, Seed, Sha256_256,
+    Signature, SigningKey, VerifyingKey,
 };
-use std::alloc::{GlobalAlloc, Layout};
 use std::error::Error;
 use std::fmt;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-/// Canonical 32-byte message (SHA-256 digest) that every DSA crate signs.
-pub use pq_bench::BENCH_MESSAGE;
-
-pub const BENCH_MESSAGE_SIZES: [usize; 4] = [32, 256, 1024, 4096];
-pub const BENCH_MESSAGE_BYTE: u8 = 0x42;
+pub use pq_bench::{
+    bench_message, benchmark_seed_u64, expand_seed_u64, measure_time,
+    signed_message_size, AllocationTracker, AllocationTrackingAllocator,
+    BENCH_MESSAGE, BENCH_MESSAGE_BYTE, BENCH_MESSAGE_SIZES,
+};
+pub type HssSizes = pq_bench::SignatureMaterialSizes;
 pub const DEFAULT_PARAM_SET_NAME: &str = "HSS-SHA256-H5-W2-L1";
+pq_bench::declare_tracking_allocator!();
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HssParamSet {
@@ -38,7 +37,8 @@ impl HssParamSet {
     }
 }
 
-pub const HSS_PARAM_SETS: [HssParamSet; 2] = [HssParamSet::L1H5W2, HssParamSet::L2H5W2];
+pub const HSS_PARAM_SETS: [HssParamSet; 2] =
+    [HssParamSet::L1H5W2, HssParamSet::L2H5W2];
 
 pub fn param_set_by_name(name: &str) -> Option<HssParamSet> {
     HSS_PARAM_SETS
@@ -101,13 +101,6 @@ impl HssSignature {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct HssSizes {
-    pub public_key_bytes: usize,
-    pub secret_key_bytes: usize,
-    pub signature_bytes: usize,
-}
-
 #[derive(Clone, Copy, Debug)]
 pub struct HssScheme {
     params: HssParamSet,
@@ -119,8 +112,10 @@ impl HssScheme {
     }
 
     pub fn from_param_set_name(name: &str) -> Result<Self, HssError> {
-        let params = param_set_by_name(name).ok_or_else(|| HssError::UnknownParamSet {
-            name: name.to_owned(),
+        let params = param_set_by_name(name).ok_or_else(|| {
+            HssError::UnknownParamSet {
+                name: name.to_owned(),
+            }
         })?;
         Ok(Self::new(params))
     }
@@ -161,10 +156,12 @@ impl HssScheme {
         seed_value: u64,
     ) -> Result<(HssPublicKey, HssSecretKey), HssError> {
         let mut seed = Seed::<Sha256_256>::default();
-        fill_seed_from_u64(seed_value, &mut seed);
+        seed.as_mut_slice()
+            .copy_from_slice(&expand_seed_u64::<32>(seed_value));
         let parameters = parameters_for(self.params);
         let (secret_key, public_key) =
-            keygen::<Sha256_256>(&parameters, &seed, None).map_err(|_| HssError::KeygenFailed)?;
+            keygen::<Sha256_256>(&parameters, &seed, None)
+                .map_err(|_| HssError::KeygenFailed)?;
 
         Ok((
             HssPublicKey {
@@ -218,7 +215,10 @@ impl HssScheme {
         signature.byte_len()
     }
 
-    fn ensure_secret_key_params(&self, secret_key: &HssSecretKey) -> Result<(), HssError> {
+    fn ensure_secret_key_params(
+        &self,
+        secret_key: &HssSecretKey,
+    ) -> Result<(), HssError> {
         if secret_key.params != self.params {
             return Err(HssError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -228,7 +228,10 @@ impl HssScheme {
         Ok(())
     }
 
-    fn ensure_public_key_params(&self, public_key: &HssPublicKey) -> Result<(), HssError> {
+    fn ensure_public_key_params(
+        &self,
+        public_key: &HssPublicKey,
+    ) -> Result<(), HssError> {
         if public_key.params != self.params {
             return Err(HssError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -238,7 +241,10 @@ impl HssScheme {
         Ok(())
     }
 
-    fn ensure_signature_params(&self, signature: &HssSignature) -> Result<(), HssError> {
+    fn ensure_signature_params(
+        &self,
+        signature: &HssSignature,
+    ) -> Result<(), HssError> {
         if signature.params != self.params {
             return Err(HssError::ParamSetMismatch {
                 expected: self.params.name(),
@@ -286,42 +292,8 @@ impl fmt::Display for HssError {
 
 impl Error for HssError {}
 
-pub fn bench_message(size: usize) -> Vec<u8> {
-    vec![BENCH_MESSAGE_BYTE; size]
-}
-
-pub fn signed_message_size(message_len: usize, signature_len: usize) -> usize {
-    message_len.saturating_add(signature_len)
-}
-
-pub fn measure_time<T, F>(operation: F) -> (T, Duration)
-where
-    F: FnOnce() -> T,
-{
-    let start = Instant::now();
-    let value = operation();
-    (value, start.elapsed())
-}
-
 pub fn default_seed() -> u64 {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
-    let pid = std::process::id() as u64;
-    now.as_nanos() as u64 ^ (pid << 32)
-}
-
-fn fill_seed_from_u64(seed_value: u64, seed: &mut Seed<Sha256_256>) {
-    let mut rng = XorShift64::new(seed_value);
-    let out = seed.as_mut_slice();
-
-    let mut offset = 0;
-    while offset < out.len() {
-        let chunk = rng.next_u64().to_le_bytes();
-        let take = (out.len() - offset).min(chunk.len());
-        out[offset..offset + take].copy_from_slice(&chunk[..take]);
-        offset += take;
-    }
+    benchmark_seed_u64()
 }
 
 fn parameters_for(param_set: HssParamSet) -> Vec<HssParameter<Sha256_256>> {
@@ -337,185 +309,58 @@ fn parameters_for(param_set: HssParamSet) -> Vec<HssParameter<Sha256_256>> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-struct XorShift64 {
-    state: u64,
-}
-
-impl XorShift64 {
-    fn new(seed: u64) -> Self {
-        let state = if seed == 0 {
-            0x9e37_79b9_7f4a_7c15
-        } else {
-            seed
-        };
-        Self { state }
-    }
-
-    fn next_u64(&mut self) -> u64 {
-        let mut x = self.state;
-        x ^= x << 13;
-        x ^= x >> 7;
-        x ^= x << 17;
-        self.state = x;
-        x
-    }
-}
-
-static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static PEAK_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static BASELINE: AtomicUsize = AtomicUsize::new(0);
-static TOTAL_ALLOCATED: AtomicUsize = AtomicUsize::new(0);
-static TRACKING_ENABLED: AtomicUsize = AtomicUsize::new(0);
-
-pub struct TrackingAllocator<A: GlobalAlloc + Sync + 'static> {
-    inner: &'static A,
-}
-
-impl<A: GlobalAlloc + Sync + 'static> TrackingAllocator<A> {
-    pub const fn new(inner: &'static A) -> Self {
-        Self { inner }
-    }
-}
-
-unsafe impl<A: GlobalAlloc + Sync + 'static> GlobalAlloc for TrackingAllocator<A> {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = unsafe { self.inner.alloc(layout) };
-        if !ptr.is_null() {
-            track_alloc(layout.size());
-        }
-        ptr
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        unsafe { self.inner.dealloc(ptr, layout) };
-        track_dealloc(layout.size());
-    }
-}
-
-fn track_alloc(size: usize) {
-    let current = ALLOCATED.fetch_add(size, Ordering::SeqCst) + size;
-
-    if TRACKING_ENABLED.load(Ordering::SeqCst) != 0 {
-        TOTAL_ALLOCATED.fetch_add(size, Ordering::SeqCst);
-    }
-
-    let baseline = BASELINE.load(Ordering::SeqCst);
-    let relative_current = current.saturating_sub(baseline);
-    let mut peak = PEAK_ALLOCATED.load(Ordering::SeqCst);
-
-    while relative_current > peak {
-        match PEAK_ALLOCATED.compare_exchange_weak(
-            peak,
-            relative_current,
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-        ) {
-            Ok(_) => break,
-            Err(observed) => peak = observed,
-        }
-    }
-}
-
-fn track_dealloc(size: usize) {
-    ALLOCATED.fetch_sub(size, Ordering::SeqCst);
-}
-
-pub mod memory {
-    use super::{Ordering, ALLOCATED, BASELINE, PEAK_ALLOCATED, TOTAL_ALLOCATED, TRACKING_ENABLED};
-
-    /// Reset all tracking counters and set the baseline to the current heap usage.
-    /// Call this immediately before the operation you want to measure.
-    pub fn reset_peak() {
-        let current = ALLOCATED.load(Ordering::SeqCst);
-        BASELINE.store(current, Ordering::SeqCst);
-        PEAK_ALLOCATED.store(0, Ordering::SeqCst);
-        TOTAL_ALLOCATED.store(0, Ordering::SeqCst);
-        TRACKING_ENABLED.store(1, Ordering::SeqCst);
-    }
-
-    /// Stop tracking and return results.
-    pub fn stop_tracking() {
-        TRACKING_ENABLED.store(0, Ordering::SeqCst);
-    }
-
-    /// Peak *net* heap usage above the baseline (high-water mark of live allocations).
-    pub fn peak_bytes() -> usize {
-        PEAK_ALLOCATED.load(Ordering::SeqCst)
-    }
-
-    /// Total cumulative bytes allocated during the measurement window.
-    /// This counts every allocation, even if it was freed before the next one.
-    pub fn total_allocated_bytes() -> usize {
-        TOTAL_ALLOCATED.load(Ordering::SeqCst)
-    }
-
-    /// Current live heap usage (absolute, not relative to baseline).
-    pub fn current_bytes() -> usize {
-        ALLOCATED.load(Ordering::SeqCst)
-    }
-}
+pq_bench::declare_peak_memory_api!();
 
 #[cfg(test)]
 mod tests {
     use super::{
-        bench_message, param_set_by_name, HssScheme, BENCH_MESSAGE_BYTE, DEFAULT_PARAM_SET_NAME,
+        bench_message, param_set_by_name, HssScheme, BENCH_MESSAGE_BYTE,
+        DEFAULT_PARAM_SET_NAME,
     };
+    use pq_bench::run_with_large_stack;
 
     #[test]
     fn param_set_lookup_works() {
-        let found =
-            param_set_by_name(DEFAULT_PARAM_SET_NAME).expect("known param set should resolve");
+        let found = param_set_by_name(DEFAULT_PARAM_SET_NAME)
+            .expect("known param set should resolve");
         assert_eq!(found.name(), DEFAULT_PARAM_SET_NAME);
     }
 
     #[test]
     fn sign_verify_roundtrip() {
-        std::thread::Builder::new()
-            .name("hss-roundtrip".to_owned())
-            .stack_size(32 * 1024 * 1024)
-            .spawn(|| {
-                let scheme = HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
-                    .expect("param set should resolve");
-                let message = b"hss-roundtrip";
-                let (public_key, mut secret_key) =
-                    scheme.keypair().expect("keypair should succeed");
+        run_with_large_stack("hss-roundtrip", 32 * 1024 * 1024, || {
+            let scheme = HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+                .expect("param set should resolve");
+            let message = b"hss-roundtrip";
+            let (public_key, mut secret_key) =
+                scheme.keypair().expect("keypair should succeed");
 
-                let signature = scheme
-                    .sign(message, &mut secret_key)
-                    .expect("sign should succeed");
-                let verified = scheme
-                    .verify(message, &signature, &public_key)
-                    .expect("verify should succeed");
-                assert!(verified, "signature should verify");
-            })
-            .expect("test thread should start")
-            .join()
-            .expect("test thread should complete");
+            let signature = scheme
+                .sign(message, &mut secret_key)
+                .expect("sign should succeed");
+            let verified = scheme
+                .verify(message, &signature, &public_key)
+                .expect("verify should succeed");
+            assert!(verified, "signature should verify");
+        });
     }
 
     #[test]
     fn verify_fails_for_other_message() {
-        std::thread::Builder::new()
-            .name("hss-verify-fail".to_owned())
-            .stack_size(32 * 1024 * 1024)
-            .spawn(|| {
-                let scheme = HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
-                    .expect("param set should resolve");
-                let (public_key, mut secret_key) =
-                    scheme.keypair().expect("keypair should succeed");
+        run_with_large_stack("hss-verify-fail", 32 * 1024 * 1024, || {
+            let scheme = HssScheme::from_param_set_name(DEFAULT_PARAM_SET_NAME)
+                .expect("param set should resolve");
+            let (public_key, mut secret_key) =
+                scheme.keypair().expect("keypair should succeed");
 
-                let signature = scheme
-                    .sign(b"message-a", &mut secret_key)
-                    .expect("sign should succeed");
-                let verified = scheme
-                    .verify(b"message-b", &signature, &public_key)
-                    .expect("verify should succeed");
-                assert!(!verified, "different message should fail verification");
-            })
-            .expect("test thread should start")
-            .join()
-            .expect("test thread should complete");
+            let signature = scheme
+                .sign(b"message-a", &mut secret_key)
+                .expect("sign should succeed");
+            let verified = scheme
+                .verify(b"message-b", &signature, &public_key)
+                .expect("verify should succeed");
+            assert!(!verified, "different message should fail verification");
+        });
     }
 
     #[test]

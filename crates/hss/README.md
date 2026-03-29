@@ -21,23 +21,31 @@ Notes:
 
 ## `src/main.rs` (`hss` binary)
 
-`src/main.rs` is a single-run benchmark/report binary. It performs:
+`src/main.rs` is the standard workspace benchmark binary. It performs:
 
 - key generation timing
 - sign timing
 - verify timing
 - key/signature size and estimated key lifetime reporting
 
+The binary uses the shared `pq_bench` workspace contract and accepts
+`--format human|json --message-size N`.
+
 Run it with:
 
 ```bash
-cargo run -p hss --release --bin hss
+cargo run -p hss --bin hss -- --format human --message-size 64
+```
+
+JSON output:
+
+```bash
+cargo run -p hss --bin hss -- --format json --message-size 64
 ```
 
 Environment overrides:
 
 - `PARAM_SET` (default `HSS-SHA256-H5-W2-L1`)
-- `MESSAGE_SIZE` (default `1024`)
 
 ## `benches/hss_divan.rs` (Divan benchmark suite)
 
@@ -47,7 +55,7 @@ Environment overrides:
 - `sign` across message sizes and parameter sets
 - `verify` across message sizes and parameter sets
 
-It also prints key/signature sizes, signed-message size, lifetime, and peak heap usage before running Divan.
+It also prints key/signature sizes, signed-message size, lifetime, and peak heap usage before running Divan, using shared `pq_bench` bench helpers where possible.
 
 Run it with:
 
@@ -56,28 +64,20 @@ cargo bench -p hss --bench hss_divan
 ```
 
 
-## Latest benchmark results
-
-Run timestamp (UTC): `2026-02-19 11:02:56 UTC`
-
-Environment:
-- OS: `Darwin 25.1.0 arm64`
-- `rustc`: `1.87.0-nightly (f4a216d28 2025-03-02)`
-- `cargo`: `1.87.0-nightly (2622e844b 2025-02-28)`
+## Representative benchmark results
 
 ### `hss` (`src/main.rs`)
 
 Command:
 
 ```bash
-cargo run -p hss --release --bin hss
+cargo run -p hss --bin hss -- --format human --message-size 64
 ```
 
 Configuration used:
 - `PARAM_SET=HSS-SHA256-H5-W2-L1` (default)
-- `MESSAGE_SIZE=1024` (default)
 
-Results:
+Representative local results:
 - Key generation: `7.881083 ms` (`7,881,083 ns`)
 - Signing: `7.372208 ms` (`7,372,208 ns`)
 - Verification: `108.375 µs` (`108,375 ns`)
@@ -99,7 +99,7 @@ Reported sizes:
 - `HSS-SHA256-H5-W2-L1`: `pk=60`, `sk=48`, `sig(32B)=4464`, `signed(32B)=4496`, `lifetime=31`
 - `HSS-SHA256-H5-W2-L2`: `pk=60`, `sk=48`, `sig(32B)=8980`, `signed(32B)=9012`, `lifetime=1023`
 
-Divan timing summary (median, from latest run):
+Representative local Divan timing summary (median):
 - `keygen`
   - `HSS-SHA256-H5-W2-L1`: `3.822 ms`
   - `HSS-SHA256-H5-W2-L2`: `3.820 ms`

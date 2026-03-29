@@ -1,85 +1,79 @@
-use mayo::{measure_time, memory, signed_message_size, TrackingAllocator, BENCH_MESSAGE, MAYO};
-use std::alloc::System;
-use std::time::Duration;
-
-static SYSTEM_ALLOC: System = System;
-
-#[global_allocator]
-static GLOBAL: TrackingAllocator<System> = TrackingAllocator::new(&SYSTEM_ALLOC);
-
-const MESSAGE: &[u8] = &BENCH_MESSAGE;
-fn print_timing(label: &str, duration: Duration) {
-    println!("Time to {label}: {duration:?}");
-    println!("Time to {label} (ns): {}", duration.as_nanos());
-}
+use mayo::{
+    measure_time, memory, signed_message_size, TrackingAllocator,
+    ALLOCATION_TRACKER, MAYO,
+};
+use pq_bench::{
+    build_standard_benchmark_execution, run_human_benchmark_binary,
+    HumanBenchmarkLine, StandardBenchmarkExecutionSpec,
+};
+pq_bench::install_system_tracking_allocator!(
+    TrackingAllocator,
+    ALLOCATION_TRACKER
+);
 
 fn main() {
-    let scheme = MAYO;
-    println!("=== MAYO ({}) Benchmark ===\n", scheme.algorithm_name());
+    run_human_benchmark_binary(std::env::args().skip(1), |message| {
+        let scheme = MAYO;
+        let (keypair, keygen_duration) =
+            measure_time(|| scheme.benchmark_keypair());
+        memory::reset_peak();
+        let (signature, sign_duration) = measure_time(|| {
+            scheme
+                .sign_message(&keypair, message)
+                .expect("signing should succeed")
+        });
+        let sign_peak_mem = memory::peak_bytes();
+        memory::reset_peak();
+        let (verified, verify_duration) = measure_time(|| {
+            scheme.verify_message(&keypair, message, &signature)
+        });
+        let verify_peak_mem = memory::peak_bytes();
 
-    println!("--- Key Generation ---");
-    let (keypair, keygen_duration) = measure_time(|| scheme.benchmark_keypair());
-    print_timing("generate keys", keygen_duration);
+        let sizes = scheme.sizes(&keypair, &signature);
+        let size_lines = vec![
+            HumanBenchmarkLine::bytes(
+                "Public key size",
+                sizes.public_key_bytes,
+            ),
+            HumanBenchmarkLine::bytes(
+                "Secret key size",
+                sizes.secret_key_bytes,
+            ),
+            HumanBenchmarkLine::bytes("Signature size", sizes.signature_bytes),
+            HumanBenchmarkLine::bytes(
+                "Signed message size",
+                signed_message_size(message.len(), sizes.signature_bytes),
+            ),
+        ];
 
-    println!("\n--- Signing ---");
-    memory::reset_peak();
-    let (signature, sign_duration) = measure_time(|| {
-        scheme
-            .sign_message(&keypair, MESSAGE)
-            .expect("signing should succeed")
+        build_standard_benchmark_execution(StandardBenchmarkExecutionSpec {
+            banner_lines: &[],
+            heading: format!("MAYO ({})", scheme.algorithm_name()).into(),
+            intro_lines: Vec::new(),
+            algorithm: scheme.algorithm_name(),
+            backend: None,
+            param_set: Some(scheme.algorithm_name()),
+            summary_algorithm: scheme.algorithm_name().into(),
+            summary_intro_lines: Vec::new(),
+            keygen_duration,
+            sign_duration,
+            verify_duration,
+            verified,
+            public_key_bytes: sizes.public_key_bytes,
+            secret_key_bytes: sizes.secret_key_bytes,
+            signature_bytes: sizes.signature_bytes,
+            signed_message_bytes: Some(signed_message_size(
+                message.len(),
+                sizes.signature_bytes,
+            )),
+            size_lines,
+            summary_size_lines: vec![
+                HumanBenchmarkLine::bytes("Public Key", sizes.public_key_bytes),
+                HumanBenchmarkLine::bytes("Secret Key", sizes.secret_key_bytes),
+                HumanBenchmarkLine::bytes("Signature", sizes.signature_bytes),
+            ],
+            sign_peak_bytes: Some(sign_peak_mem),
+            verify_peak_bytes: Some(verify_peak_mem),
+        })
     });
-    print_timing("sign", sign_duration);
-    let sign_peak_mem = memory::peak_bytes();
-    println!("Peak memory during signing: {sign_peak_mem} bytes");
-
-    println!("\n--- Verification ---");
-    memory::reset_peak();
-    let (verified, verify_duration) =
-        measure_time(|| scheme.verify_message(&keypair, MESSAGE, &signature));
-    print_timing("verify", verify_duration);
-    let verify_peak_mem = memory::peak_bytes();
-    println!("Peak memory during verification: {verify_peak_mem} bytes");
-
-    if verified {
-        println!("Signature verification: SUCCESS");
-    } else {
-        println!("Signature verification: FAILED");
-    }
-
-    let sizes = scheme.sizes(&keypair, &signature);
-
-    println!("\n--- Size Measurements ---");
-    println!("Public key size: {} bytes", sizes.public_key_bytes);
-    println!("Secret key size: {} bytes", sizes.secret_key_bytes);
-    println!("Signature size: {} bytes", sizes.signature_bytes);
-    println!(
-        "Signed message size: {} bytes",
-        signed_message_size(MESSAGE.len(), sizes.signature_bytes)
-    );
-
-    println!("\n=== Summary ===");
-    println!("Algorithm: {}", scheme.algorithm_name());
-    println!("\nTiming:");
-    println!(
-        "  Key Generation: {:?} ({} ns)",
-        keygen_duration,
-        keygen_duration.as_nanos()
-    );
-    println!(
-        "  Signing:        {:?} ({} ns)",
-        sign_duration,
-        sign_duration.as_nanos()
-    );
-    println!(
-        "  Verification:   {:?} ({} ns)",
-        verify_duration,
-        verify_duration.as_nanos()
-    );
-    println!("\nSizes:");
-    println!("  Public Key:  {} bytes", sizes.public_key_bytes);
-    println!("  Secret Key:  {} bytes", sizes.secret_key_bytes);
-    println!("  Signature:   {} bytes", sizes.signature_bytes);
-    println!("\nMemory Usage (heap allocations):");
-    println!("  Signing:      {sign_peak_mem} bytes");
-    println!("  Verification: {verify_peak_mem} bytes");
 }
