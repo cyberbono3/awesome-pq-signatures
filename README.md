@@ -11,16 +11,15 @@ LM-OTS is typically used inside LMS as its one-time signature component, so LMS 
 |---:|---|---|---|---|---|---|
 | 1 | Falcon | Lattice-based | Stateless | Lattice-based signature scheme with small signatures. | [falcon](./crates/falcon/README.md) | [pqcrypto-falcon](https://crates.io/crates/pqcrypto-falcon) |
 | 2 | Dilithium (ML-DSA) | Lattice-based | Stateless | Lattice-based signature scheme standardized as ML-DSA. | [dilithium](./crates/dilithium/README.md) | [ml-dsa](https://crates.io/crates/ml-dsa) |
-| 3 | Winternitz OTS (W-OTS) | Hash-based | Stateful | One-time hash-based signature with Winternitz chaining. | [winternitz_ots](./crates/winternitz_ots/README.md) | [winternitz-ots](https://crates.io/crates/winternitz-ots) |
-| 4 | LMS | Hash-based | Stateful | Stateful Merkle tree signature scheme (RFC 8554). | [lms](./crates/lms/README.md) | [hbs-lms](https://crates.io/crates/hbs-lms) |
-| 5 | HSS | Hash-based | Stateful | Hierarchical LMS for large key hierarchies. | [hss](./crates/hss/README.md) | [hbs-lms](https://crates.io/crates/hbs-lms) |
-| 6 | XMSS | Hash-based | Stateful | Hash-based Merkle signature scheme (RFC 8391). | [xmss](./crates/xmss/README.md) | [xmss](https://crates.io/crates/xmss) |
-| 7 | XMSSMT | Hash-based | Stateful | Multi-tree XMSS variant for faster signing. | [xmssmt](./crates/xmssmt/README.md) | [xmss](https://crates.io/crates/xmss) |
-| 8 | SPHINCS+ (SLH-DSA) | Hash-based | Stateless | Stateless hash-based signature scheme. | [sphincs_plus](./crates/sphincs_plus/README.md) | [pqcrypto-sphincsplus](https://crates.io/crates/pqcrypto-sphincsplus) |
-| 9 | SQIsign | Isogeny-based | Stateless | Isogeny-based signature scheme from supersingular isogenies. | [sqisign](./crates/sqisign/README.md) | [sqisign-lvl1](https://crates.io/crates/sqisign-lvl1) |
-| 10 | Mayo | System-of-equations | Stateless | Multivariate post-quantum signature scheme (MAYO). | [mayo](./crates/mayo/README.md) | [pq-mayo](https://crates.io/crates/pq-mayo) |
-| 11 | CROSS | Code-based | Stateless | Code-based post-quantum signature candidate (CROSS). | [cross](./crates/cross/README.md) | [CROSS C reference implementation](https://github.com/CROSS-signature/CROSS-implementation) |
-| 12 | LESS | Code-based | Stateless | Code-based post-quantum signature candidate (LESS). | [less](./crates/less/README.md) | [LESS C implementation](https://github.com/less-sig/LESS) |
+| 3 | LMS | Hash-based | Stateful | Stateful Merkle tree signature scheme (RFC 8554). | [lms](./crates/lms/README.md) | [hbs-lms](https://crates.io/crates/hbs-lms) |
+| 4 | HSS | Hash-based | Stateful | Hierarchical LMS for large key hierarchies. | [hss](./crates/hss/README.md) | [hbs-lms](https://crates.io/crates/hbs-lms) |
+| 5 | XMSS | Hash-based | Stateful | Hash-based Merkle signature scheme (RFC 8391). | [xmss](./crates/xmss/README.md) | [xmss](https://crates.io/crates/xmss) |
+| 6 | XMSSMT | Hash-based | Stateful | Multi-tree XMSS variant for faster signing. | [xmssmt](./crates/xmssmt/README.md) | [xmss](https://crates.io/crates/xmss) |
+| 7 | SPHINCS+ (SLH-DSA) | Hash-based | Stateless | Stateless hash-based signature scheme. | [sphincs_plus](./crates/sphincs_plus/README.md) | [pqcrypto-sphincsplus](https://crates.io/crates/pqcrypto-sphincsplus) |
+| 8 | SQIsign | Isogeny-based | Stateless | Isogeny-based signature scheme from supersingular isogenies. | [sqisign](./crates/sqisign/README.md) | [sqisign-lvl1](https://crates.io/crates/sqisign-lvl1) |
+| 9 | Mayo | System-of-equations | Stateless | Multivariate post-quantum signature scheme (MAYO). | [mayo](./crates/mayo/README.md) | [pq-mayo](https://crates.io/crates/pq-mayo) |
+| 10 | CROSS | Code-based | Stateless | Code-based post-quantum signature candidate (CROSS). | [cross](./crates/cross/README.md) | [CROSS C reference implementation](https://github.com/CROSS-signature/CROSS-implementation) |
+| 11 | LESS | Code-based | Stateless | Code-based post-quantum signature candidate (LESS). | [less](./crates/less/README.md) | [LESS C implementation](https://github.com/less-sig/LESS) |
 
 ## Benchmark interfaces
 
@@ -54,7 +53,6 @@ This is the implementation architecture of each workspace crate, not the cryptog
 | `bench_runner` | Workspace orchestrator. Structured as CLI parsing, registry/spec selection, pure and subprocess adapters, app orchestration, and CSV/display reporting. Runs some schemes in-process and others as JSON-speaking subprocesses. |
 | `dilithium` | Pure Rust wrapper over `ml-dsa`, with deterministic seeded key generation, allocator tracking, and the shared benchmark binary/Divan surfaces. |
 | `falcon` | Pure Rust wrapper over `pqcrypto-falcon`’s signed-message API, exposed through the shared `pq_bench` signed-message scheme surface and shared benchmark/reporting glue. |
-| `winternitz_ots` | Pure Rust wrapper around `winternitz-ots`, with Blake2b message-digest preprocessing, local size helpers, allocator tracking, and the shared benchmark/reporting contract. |
 | `lms` | Pure Rust benchmark wrapper over `hbs-lms`, with explicit parameter-set enums, stateful key wrappers, derived size logic, and benchmark-facing APIs for stateful signing. |
 | `hss` | Pure Rust benchmark wrapper over `hbs-lms` hierarchical mode, with parameter-set enums, stateful key wrappers, hierarchy-aware reporting, and benchmark-facing APIs for stateful signing. |
 | `mayo` | Pure Rust wrapper over `pq-mayo`, with deterministic seeded key generation, context validation, allocator tracking, and the shared benchmark/reporting contract. |
@@ -80,9 +78,6 @@ is a fast smoke check if you only want to validate target wiring.
 - `falcon`
   Binary: `cargo run -p falcon --bin falcon-bench -- --format json`
   Divan: `cargo bench -p falcon --bench falcon_divan`
-- `winternitz_ots`
-  Binary: `cargo run -p winternitz_ots --bin winternitz_ots -- --format json`
-  Divan: `cargo bench -p winternitz_ots --bench winternitz_ots_divan`
 - `lms`
   Binary: `cargo run -p lms --bin lms -- --format json`
   Divan: `cargo bench -p lms --bench lms_divan`
@@ -188,7 +183,7 @@ cargo run -p bench_runner --bin bench_runner -- --runs 1 --only xmss --param-set
 
 Runner execution model:
 
-- Pure Rust schemes such as Dilithium, Falcon, Mayo, Winternitz OTS, LMS, HSS, XMSS, and XMSS^MT run in-process.
+- Pure Rust schemes such as Dilithium, Falcon, Mayo, LMS, HSS, XMSS, and XMSS^MT run in-process.
 - Standalone binaries such as CROSS, LESS, SQISign, and LeanSig run as subprocesses and return JSON back to `bench_runner`.
 
 Filter behavior:

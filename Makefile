@@ -3,8 +3,6 @@
 .PHONY: help format build test run \
 	dilithium dilithium-divan \
 	falcon falcon-divan \
-	winternitz_ots winternitz_ots_divan \
-	winternitz-ots winternitz-ots-divan \
 	lms lms-divan \
 	hss hss-divan \
 	mayo mayo-divan \
@@ -37,7 +35,6 @@ help:
 	'Scheme crates:' \
 	'  make dilithium            make dilithium-divan' \
 	'  make falcon               make falcon-divan' \
-	'  make winternitz-ots       make winternitz-ots-divan' \
 	'  make lms                  make lms-divan' \
 	'  make hss                  make hss-divan' \
 	'  make mayo                 make mayo-divan' \
@@ -50,7 +47,6 @@ help:
 	'  make leansig              make leansig-divan' \
 	'' \
 	'Exact crate-name aliases also work:' \
-	'  make winternitz_ots       make winternitz_ots_divan' \
 	'  make sphincs_plus         make sphincs_plus_divan' \
 	'' \
 	'Optional variables:' \
@@ -81,16 +77,6 @@ falcon:
 
 falcon-divan:
 	cargo bench -p falcon --bench falcon_divan
-
-winternitz_ots:
-	cargo run -p winternitz_ots --bin winternitz_ots $(SCHEME_RUN_ARGS)
-
-winternitz-ots: winternitz_ots
-
-winternitz_ots_divan:
-	cargo bench -p winternitz_ots --bench winternitz_ots_divan
-
-winternitz-ots-divan: winternitz_ots_divan
 
 lms:
 	$(PARAM_SET_PREFIX)cargo run -p lms --bin lms $(SCHEME_RUN_ARGS)

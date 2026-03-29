@@ -3,7 +3,6 @@ members = [
     "crates/pq_bench",
     "crates/falcon",
     "crates/dilithium",
-    "crates/winternitz_ots",
     "crates/lms",
     "crates/mayo",
     "crates/hss",

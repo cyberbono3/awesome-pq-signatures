@@ -8,7 +8,7 @@ Add divan benchmarks to the one missing crate (leansig), rename `pq_config` → 
 
 ### Crates with divan benchmarks (13/14 DSA crates)
 All crates except `leansig` already have `benches/<name>_divan.rs`:
-- `cross`, `dilithium`, `falcon`, `hss`, `less`, `lms`, `mayo`, `sphincs_plus`, `sqisign`, `winternitz_ots`, `xmss`, `xmssmt`
+- `cross`, `dilithium`, `falcon`, `hss`, `less`, `lms`, `mayo`, `sphincs_plus`, `sqisign`, `xmss`, `xmssmt`
 
 ### Missing: `leansig`
 - No `benches/` directory
@@ -150,7 +150,7 @@ Each adapter implements `DsaBenchmark` by calling the crate's keygen/sign/verify
 
 | Pattern | Crates | API Style |
 |---------|--------|-----------|
-| Trait-based scheme | dilithium, falcon, sphincs_plus, mayo, winternitz_ots | `scheme.keypair()`, `scheme.sign()`, `scheme.verify()` |
+| Trait-based scheme | dilithium, falcon, sphincs_plus, mayo | `scheme.keypair()`, `scheme.sign()`, `scheme.verify()` |
 | Stateful hash-based | hss, lms, xmss, xmssmt | `scheme.keypair()`, `scheme.sign(&mut sk)`, `scheme.verify()` |
 | FFI-based | cross, less, sqisign | `scheme.benchmark_keypair()`, `scheme.sign_message()`, `scheme.verify_message()` |
 | Epoch-based | leansig | `S::key_gen()`, `S::sign(&sk, epoch, &msg)`, `S::verify()` |
@@ -230,7 +230,6 @@ graph TD
     R --> F[falcon]
     R --> SP[sphincs_plus]
     R --> M[mayo]
-    R --> W[winternitz_ots]
     R --> LMS[lms]
     R --> HSS[hss]
     R --> X[xmss]
